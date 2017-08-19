@@ -41,9 +41,9 @@ def set_up_parser():
     """Sets up the commandline argument parser"""
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--debug', action='store_true',
-                        default=False, help="Enable debugging the program")
+                        default=False, help="enable debugging the program")
     parser.add_argument("-t", "--test", action="store_true",
-                        default=False, help="Enable code testing")
+                        default=False, help="enable code testing")
     return parser
 
 def set_log_level(parser):
@@ -60,6 +60,8 @@ def set_log_level(parser):
     else:
         logging.basicConfig(level=logging.WARN, format=LOG_FORMAT,
                             datefmt=LOG_DATE_FORMAT)
+
+# TODO: Add test harness
 
 def set_internationalization():
     """Set application internationalization"""
