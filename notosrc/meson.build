@@ -4,10 +4,11 @@ app_sources = [
 	'window.py'
 ]
 
-mistune_sources = [
-	'__init__.py',
-	'mistune/mistune.py'
+utils_sources = [
+	'utils/__init__.py',
+	'utils/mistune.py',
+	'utils/gi_composites.py'
 ]
 
 install_data(app_sources, install_dir: notosrcdir)
-install_data(mistune_sources, install_dir: notosrcdir + '/mistune')
+install_data(utils_sources, install_dir: notosrcdir + '/utils')

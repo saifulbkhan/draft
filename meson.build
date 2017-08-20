@@ -31,7 +31,7 @@ conf.set('LIBEXECDIR', libexecdir)
 conf.set('LOCALEDIR', localedir)
 conf.set('PYTHONDIR', pythondir)
 conf.set('PKGDATADIR', pkgdatadir)
-conf.set('MISTUNEDIR', join_paths(notosrcdir, 'mistune'))
+conf.set('UTILSDIR', join_paths(notosrcdir, 'utils'))
 conf.set('VERSION', meson.project_version())
 
 configure_file(
