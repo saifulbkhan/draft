@@ -1,6 +1,7 @@
 app_sources = [
 	'__init__.py',
-	'app.py'
+	'app.py',
+	'window.py'
 ]
 
 mistune_sources = [

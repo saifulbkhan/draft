@@ -4,6 +4,8 @@ import gi
 gi.require_version('Notify', '0.7')
 from gi.repository import Gtk, GLib, Gio, Notify
 
+from notosrc.window import ApplicationWindow
+
 class Application(Gtk.Application):
     def __repr__(self):
         return '<Application>'
@@ -47,13 +49,3 @@ class Application(Gtk.Application):
         if not self._window:
             self._window = ApplicationWindow(self)
         self._window.present()
-
-class ApplicationWindow(Gtk.ApplicationWindow):
-    def __repr__(self):
-        return '<ApplicationWindow>'
-
-    def __init__(self, app):
-        Gtk.ApplicationWindow.__init__(self,
-                                       application=app,
-                                       title="Noto")
-        self.set_size_request(950, 600) 
