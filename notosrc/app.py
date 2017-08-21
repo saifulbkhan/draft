@@ -33,6 +33,10 @@ class Application(Gtk.Application):
         self._window = None
 
     def _build_app_menu(self):
+        self.builder.add_from_resource('/org/gnome/Noto/appmenu.ui')
+        appmenu = self.builder.get_object('appmenu')
+        self.set_app_menu(appmenu)
+
         action_entries = [
             ('about', self._about),
             ('quit', self.quit),
@@ -41,8 +45,9 @@ class Application(Gtk.Application):
         for action, callback in action_entries:
             simple_action = Gio.SimpleAction.new(action, None)
             simple_action.connect('activate', callback)
+            self.add_action(simple_action)
 
-    def _about(self):
+    def _about(self, action, param):
 
         def about_response(dialog, response):
             dialog.destroy()
@@ -52,12 +57,13 @@ class Application(Gtk.Application):
         about.connect("response", about_response)
         about.show()
 
-    def quit(self):
+    def quit(self, action=None, param=None):
         self._window.destroy()
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
         Notify.init("Noto")
+        self.builder = Gtk.Builder()
         self._build_app_menu()
 
     def do_activate(self):
