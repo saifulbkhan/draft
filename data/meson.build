@@ -11,7 +11,13 @@ gnome.compile_resources(
   install: true,
 )
 
-# TODO: Compile schemas
+message('Installing schemas')
+gnome.compile_schemas()
+install_data(
+  project_id + '.gschema.xml',
+  install_dir: 'share/glib-2.0/schemas'
+)
+
 # TODO: Making a desktop file
 # TODO: Preparing appdata
 # TODO: Install icons
