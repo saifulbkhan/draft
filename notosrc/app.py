@@ -17,7 +17,7 @@ import sys
 import gi
 
 gi.require_version('Notify', '0.7')
-from gi.repository import Gtk, GLib, Gio, Notify
+from gi.repository import Gtk, GLib, Gio, Gdk, Notify
 
 from notosrc.window import ApplicationWindow
 
@@ -30,7 +30,18 @@ class Application(Gtk.Application):
                                  flags=Gio.ApplicationFlags.FLAGS_NONE)
         GLib.set_application_name("Noto")
         GLib.set_prgname('noto')
+        self._init_style()
         self._window = None
+
+    def _init_style(self):
+        css_provider_file = Gio.File.new_for_uri(
+            'resource:///org/gnome/Noto/application.css')
+        css_provider = Gtk.CssProvider()
+        css_provider.load_from_file(css_provider_file)
+        screen = Gdk.Screen.get_default()
+        style_context = Gtk.StyleContext()
+        style_context.add_provider_for_screen(
+            screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def _build_app_menu(self):
         self.builder.add_from_resource('/org/gnome/Noto/appmenu.ui')

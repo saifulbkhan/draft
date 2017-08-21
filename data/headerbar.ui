@@ -45,6 +45,7 @@
         </child>
         <style>
           <class name="titlebar"/>
+          <class name="noto-titlebar-left"/>
         </style>
       </object>
       <packing>
@@ -97,6 +98,7 @@
         </child>
         <style>
           <class name="titlebar"/>
+          <class name="noto-titlebar-right"/>
         </style>
       </object>
       <packing>

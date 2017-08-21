@@ -1,0 +1,13 @@
+.sidebar {
+    border-width: 0 0 0 0;
+}
+
+.noto-titlebar-left:dir(ltr),
+.noto-titlebar-right:dir(rtl) {
+    border-top-right-radius: 0;
+}
+
+.noto-titlebar-right:dir(ltr),
+.noto-titlebar-left:dir(rtl) {
+    border-top-left-radius: 0;
+}
