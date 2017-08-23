@@ -69,6 +69,16 @@ class _HeaderBar(Gtk.Box):
         self.init_template()
         self.parent = parent
         parent.hsize_group.add_widget(self.left_header)
+        self._update_decorations (Gtk.Settings.get_default(), None)
+
+    def _update_decorations(self, settings, pspec):
+        layout_desc = settings.props.gtk_decoration_layout;
+        tokens = layout_desc.split(":", 1)
+        if len(tokens) > 1:
+            self.right_header.props.decoration_layout = ":" + tokens[1]
+        else:
+            self.right_header.props.decoration_layout = ""
+        self.left_header.props.decoration_layout = tokens[0]
 
     @GtkTemplate.Callback
     def _on_search_toggled(self, widget):
