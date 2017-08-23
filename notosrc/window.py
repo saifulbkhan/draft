@@ -21,7 +21,8 @@ from notosrc.utils.gi_composites import GtkTemplate
 @GtkTemplate(ui='/org/gnome/Noto/window.ui')
 class ApplicationWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'ApplicationWindow'
-    sidebar = GtkTemplate.Child()
+    sidebar, search_bar, search_entry, notes_list, \
+    content_stack, editor, status_bar = GtkTemplate.Child.widgets(7)
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -38,11 +39,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.set_icon_name("noto")
         self.hsize_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         self._add_widgets()
-        
-    def _add_widgets(self):    
+
+    def _add_widgets(self):
         self.hsize_group.add_widget(self.sidebar)
-        
-        titlebar = _HeaderBar(self.hsize_group)
+
+        titlebar = _HeaderBar(self)
         self.set_titlebar(titlebar)
 
     @GtkTemplate.Callback
@@ -57,19 +58,26 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
 class _HeaderBar(Gtk.Box):
     __gtype_name__ = 'HeaderBar'
-    left_header = GtkTemplate.Child()
+    left_header, right_header, content_title, \
+    search_button, preview_button = GtkTemplate.Child.widgets(5)
 
     def __repr__(self):
         return '<HeaderBar>'
 
-    def __init__(self, hsize_group):
+    def __init__(self, parent):
         Gtk.Box.__init__(self)
         self.init_template()
-        hsize_group.add_widget(self.left_header)
+        self.parent = parent
+        parent.hsize_group.add_widget(self.left_header)
 
     @GtkTemplate.Callback
     def _on_search_toggled(self, widget):
-        pass
+        if self.parent.search_bar.get_search_mode():
+            self.parent.search_bar.set_search_mode(False)
+            self.parent.search_entry.set_text("")
+        else:
+            self.parent.search_bar.set_search_mode(True)
+            self.parent.search_entry.grab_focus()
 
     @GtkTemplate.Callback
     def _on_preview_toggled(self, widget):
