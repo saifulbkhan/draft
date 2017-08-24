@@ -52,6 +52,9 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         content_editor = TextView('editor')
         self.content_stack.add_titled(content_editor, 'editor', 'Editor')
 
+        content_preview = TextView('webview')
+        self.content_stack.add_titled(content_preview, 'preview', 'Preview')
+
         self.content_stack.show_all()
         self.content_stack.set_visible_child_name('editor')
 
@@ -100,4 +103,7 @@ class _HeaderBar(Gtk.Box):
 
     @GtkTemplate.Callback
     def _on_preview_toggled(self, widget):
-        pass
+        if self.parent.content_stack.get_visible_child_name() == 'editor':
+            self.parent.content_stack.set_visible_child_name('preview')
+        else:
+            self.parent.content_stack.set_visible_child_name('editor')

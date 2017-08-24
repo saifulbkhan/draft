@@ -14,10 +14,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
-from warnings import warn, UserWarning
+from warnings import warn
 
-from gi.repository import Gtk, Gio, GLib
+import gi
+gi.require_version('WebKit', '3.0')
+
+from gi.repository import Gtk, GObject, Gio, GLib, WebKit
 from gettext import gettext as _
+
+# Ensure that GtkBuilder actually recognises WebView in UI file
+GObject.type_ensure(GObject.GType(WebKit.WebView))
 
 class TextView(Gtk.Box):
     def __repr__(self):
@@ -29,22 +35,28 @@ class TextView(Gtk.Box):
         try:
             assert view_type in ('editor', 'webview')
         except AssertionError:
-            warn("TextView can only be of 'webview' or 'editor' type",
-                 UserWarning)
+            warn("TextView can only be of 'webview' or 'editor' type")
 
+        self.view_type = view_type
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
+        self._set_up_widgets()
+
+    def _set_up_widgets(self):
         widgets = {}
 
-        if view_type == 'editor':
+        # Use OrderedDict so that packing occurs in order of declaration
+        if self.view_type == 'editor':
             widgets = OrderedDict({
                 'scrollable_editor': (True, True, 0),
                 'status_bar': (False, False, 0)
             })
             self.builder.connect_signals(EditorHandlers())
         else:
-            # TODO: Generate the other type of TextView and connect handlers
-            pass
+            widgets = OrderedDict({
+                'scrollable_webview': (True, True, 0)
+            })
+            self.builder.connect_signals(WebviewHandlers())
 
         self._generate_text_view(widgets)
 
@@ -56,4 +68,8 @@ class TextView(Gtk.Box):
 
 class EditorHandlers():
     # TODO: Define signal handlers for the editor textview
+    pass
+
+class WebviewHandlers():
+    # TODO: Define signal handlers for the webview
     pass
