@@ -5,5 +5,6 @@
     <file preprocess="xml-stripblanks">window.ui</file>
     <file preprocess="xml-stripblanks">headerbar.ui</file>
     <file preprocess="xml-stripblanks">appmenu.ui</file>
+	  <file preprocess="xml-stripblanks">textview.ui</file>
   </gresource>
 </gresources>

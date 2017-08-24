@@ -16,13 +16,14 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
+from notosrc.textview import TextView
 from notosrc.utils.gi_composites import GtkTemplate
 
 @GtkTemplate(ui='/org/gnome/Noto/window.ui')
 class ApplicationWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'ApplicationWindow'
-    sidebar, search_bar, search_entry, notes_list, \
-    content_stack, editor, status_bar = GtkTemplate.Child.widgets(7)
+    sidebar, search_bar, search_entry, \
+    notes_list, content_stack = GtkTemplate.Child.widgets(5)
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -45,6 +46,14 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
         titlebar = _HeaderBar(self)
         self.set_titlebar(titlebar)
+        self._create_stack_views()
+
+    def _create_stack_views(self):
+        content_editor = TextView('editor')
+        self.content_stack.add_titled(content_editor, 'editor', 'Editor')
+
+        self.content_stack.show_all()
+        self.content_stack.set_visible_child_name('editor')
 
     @GtkTemplate.Callback
     def _on_search(self, widget):

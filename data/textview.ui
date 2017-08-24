@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.20.0 -->
+<interface>
+  <requires lib="gtk+" version="3.20"/>
+  <object class="GtkScrolledWindow" id="scrollable_editor">
+    <property name="visible">True</property>
+    <property name="can_focus">True</property>
+    <property name="hexpand">True</property>
+    <property name="vexpand">True</property>
+    <child>
+      <object class="GtkTextView" id="editor">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="pixels_above_lines">6</property>
+        <property name="pixels_below_lines">6</property>
+        <property name="wrap_mode">word</property>
+        <property name="left_margin">24</property>
+        <property name="right_margin">24</property>
+        <property name="top_margin">18</property>
+        <property name="bottom_margin">18</property>
+      </object>
+    </child>
+  </object>
+  <object class="GtkStatusbar" id="status_bar">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="margin_left">10</property>
+    <property name="margin_right">10</property>
+    <property name="margin_start">10</property>
+    <property name="margin_end">10</property>
+    <property name="margin_top">6</property>
+    <property name="margin_bottom">6</property>
+    <property name="orientation">vertical</property>
+    <property name="spacing">2</property>
+  </object>
+</interface>
