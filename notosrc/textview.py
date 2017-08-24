@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
+from warnings import warn, UserWarning
 
 from gi.repository import Gtk, Gio, GLib
 from gettext import gettext as _
@@ -22,8 +23,15 @@ class TextView(Gtk.Box):
     def __repr__(self):
         return '<TextView>'
 
-    def __init__(self, view_type='editor'):
+    def __init__(self, view_type='webview'):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
+
+        try:
+            assert view_type in ('editor', 'webview')
+        except AssertionError:
+            warn("TextView can only be of 'webview' or 'editor' type",
+                 UserWarning)
+
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
         widgets = {}
