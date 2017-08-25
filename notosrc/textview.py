@@ -18,12 +18,14 @@ from warnings import warn
 
 import gi
 gi.require_version('WebKit', '3.0')
+gi.require_version('GtkSource', '3.0')
 
-from gi.repository import Gtk, GObject, Gio, GLib, WebKit
+from gi.repository import Gtk, GObject, Gio, GLib, WebKit, GtkSource
 from gettext import gettext as _
 
-# Ensure that GtkBuilder actually recognises WebView in UI file
+# Ensure that GtkBuilder actually recognises WebView and SourceView in UI file
 GObject.type_ensure(GObject.GType(WebKit.WebView))
+GObject.type_ensure(GObject.GType(GtkSource.View))
 
 class TextView(Gtk.Box):
     def __repr__(self):

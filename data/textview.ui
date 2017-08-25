@@ -8,7 +8,7 @@
     <property name="hexpand">True</property>
     <property name="vexpand">True</property>
     <child>
-      <object class="GtkTextView" id="editor">
+      <object class="GtkSourceView" id="editor">
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="pixels_above_lines">6</property>
