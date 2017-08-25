@@ -41,6 +41,7 @@ class TextView(Gtk.Box):
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
         self._set_up_widgets()
+        self.view = self.builder.get_object(self.view_type)
 
     def _set_up_widgets(self):
         widgets = {}

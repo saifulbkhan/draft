@@ -50,13 +50,28 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     def _create_stack_views(self):
         content_editor = TextView('editor')
+        self.editor = content_editor.view
         self.content_stack.add_titled(content_editor, 'editor', 'Editor')
 
         content_preview = TextView('webview')
+        self.webview = content_preview.view
         self.content_stack.add_titled(content_preview, 'preview', 'Preview')
 
         self.content_stack.show_all()
         self.content_stack.set_visible_child_name('editor')
+
+    def _preview_content(self):
+        text_buffer = self.editor.get_buffer()
+        start = text_buffer.get_start_iter()
+        end = text_buffer.get_end_iter()
+        full_text = text_buffer.get_text(start, end, False)
+        GLib.idle_add(
+            self.webview.load_string,
+            full_text,
+            'text/html',
+            'UTF-8',
+            ''
+        )
 
     @GtkTemplate.Callback
     def _on_search(self, widget):
@@ -105,5 +120,6 @@ class _HeaderBar(Gtk.Box):
     def _on_preview_toggled(self, widget):
         if self.parent.content_stack.get_visible_child_name() == 'editor':
             self.parent.content_stack.set_visible_child_name('preview')
+            self.parent._preview_content()
         else:
             self.parent.content_stack.set_visible_child_name('editor')
