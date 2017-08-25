@@ -52,13 +52,14 @@ class TextView(Gtk.Box):
                 'scrollable_editor': (True, True, 0),
                 'status_bar': (False, False, 0)
             })
-            self.builder.connect_signals(EditorHandlers())
+            handler_class = EditorHandlers
         else:
             widgets = OrderedDict({
                 'scrollable_webview': (True, True, 0)
             })
-            self.builder.connect_signals(WebviewHandlers())
+            handler_class = WebviewHandlers
 
+        self.builder.connect_signals(WebviewHandlers())
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
@@ -72,5 +73,7 @@ class EditorHandlers():
     pass
 
 class WebviewHandlers():
-    # TODO: Define signal handlers for the webview
-    pass
+    def on_navigation_request(self, *args):
+        webview, frame, request, navigation_action, policy_decision = args
+        policy_decision.ignore()
+        return True
