@@ -23,6 +23,8 @@ gi.require_version('GtkSource', '3.0')
 from gi.repository import Gtk, GObject, Gio, GLib, WebKit, GtkSource
 from gettext import gettext as _
 
+from notosrc.websettings import update_webkit_settings
+
 # Ensure that GtkBuilder actually recognises WebView and SourceView in UI file
 GObject.type_ensure(GObject.GType(WebKit.WebView))
 GObject.type_ensure(GObject.GType(GtkSource.View))
@@ -54,14 +56,12 @@ class TextView(Gtk.Box):
                 'scrollable_editor': (True, True, 0),
                 'status_bar': (False, False, 0)
             })
-            handler_class = EditorHandlers
         else:
             widgets = OrderedDict({
                 'scrollable_webview': (True, True, 0)
             })
-            handler_class = WebviewHandlers
 
-        self.builder.connect_signals(handler_class)
+        self.builder.connect_signals(ViewHandlers())
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
@@ -70,11 +70,7 @@ class TextView(Gtk.Box):
             expand, fill, padding = pack_info
             self.pack_start(widget, expand, fill, padding)
 
-class EditorHandlers():
-    # TODO: Define signal handlers for the editor textview
-    pass
-
-class WebviewHandlers():
+class ViewHandlers():
     def on_navigation_request(self, *args):
         webview, frame, request, navigation_action, policy_decision = args
         policy_decision.ignore()
