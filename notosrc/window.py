@@ -65,13 +65,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         start = text_buffer.get_start_iter()
         end = text_buffer.get_end_iter()
         full_text = text_buffer.get_text(start, end, False)
-        GLib.idle_add(
-            self.webview.load_string,
-            full_text,
-            'text/html',
-            'UTF-8',
-            ''
-        )
+        self.webview.set_editable(True)
+        GLib.idle_add(self.webview.load_html, full_text, None)
 
     @GtkTemplate.Callback
     def _on_search(self, widget):

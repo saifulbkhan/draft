@@ -11,6 +11,7 @@
       <object class="GtkSourceView" id="editor">
         <property name="visible">True</property>
         <property name="can_focus">True</property>
+        <property name="monospace">True</property>
         <property name="pixels_above_lines">6</property>
         <property name="pixels_below_lines">6</property>
         <property name="wrap_mode">word</property>
@@ -18,7 +19,10 @@
         <property name="right_margin">24</property>
         <property name="top_margin">18</property>
         <property name="bottom_margin">18</property>
-      </object>
+        <style>
+          <class name="noto-editor"/>
+        </style>
+    </object>
     </child>
   </object>
   <object class="GtkStatusbar" id="status_bar">
@@ -42,7 +46,7 @@
       <object class="WebKitWebView" id="webview">
         <property name="visible">True</property>
         <property name="can_focus">True</property>
-        <signal name="navigation-policy-decision-requested" handler="on_navigation_request" swapped="no"/>
+        <signal name="decide-policy" handler="on_decision_request" swapped="no"/>
       </object>
     </child>
   </object>

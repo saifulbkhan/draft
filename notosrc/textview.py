@@ -17,13 +17,12 @@ from collections import OrderedDict
 from warnings import warn
 
 import gi
-gi.require_version('WebKit', '3.0')
+gi.require_version('WebKit2', '4.0')
 gi.require_version('GtkSource', '3.0')
 
-from gi.repository import Gtk, GObject, Gio, GLib, WebKit, GtkSource
+from gi.repository import Gtk, GObject, Gio, GLib, GtkSource
+from gi.repository import WebKit2 as WebKit
 from gettext import gettext as _
-
-from notosrc.websettings import update_webkit_settings
 
 # Ensure that GtkBuilder actually recognises WebView and SourceView in UI file
 GObject.type_ensure(GObject.GType(WebKit.WebView))
@@ -71,7 +70,12 @@ class TextView(Gtk.Box):
             self.pack_start(widget, expand, fill, padding)
 
 class ViewHandlers():
-    def on_navigation_request(self, *args):
-        webview, frame, request, navigation_action, policy_decision = args
-        policy_decision.ignore()
+    def on_decision_request(self, *args):
+        webview, policy_decision, decision_type = args
+        # Hack to prevent webview from navigating to other pages
+        if webview.is_editable():
+            policy_decision.use()
+            webview.set_editable(False)
+        else:
+            policy_decision.ignore()
         return True
