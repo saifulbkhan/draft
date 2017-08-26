@@ -14,53 +14,35 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
-from warnings import warn
-
-import gi
-gi.require_version('WebKit2', '4.0')
-gi.require_version('GtkSource', '3.0')
-
-from gi.repository import Gtk, GObject, Gio, GLib, GtkSource
-from gi.repository import WebKit2 as WebKit
 from gettext import gettext as _
 
-# Ensure that GtkBuilder actually recognises WebView and SourceView in UI file
-GObject.type_ensure(GObject.GType(WebKit.WebView))
+import gi
+gi.require_version('GtkSource', '3.0')
+
+from gi.repository import Gtk, GObject, GtkSource
+
+# Ensure that GtkBuilder actually recognises SourceView in UI file
 GObject.type_ensure(GObject.GType(GtkSource.View))
 
 class TextView(Gtk.Box):
     def __repr__(self):
         return '<TextView>'
 
-    def __init__(self, view_type='webview'):
+    def __init__(self):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
-
-        try:
-            assert view_type in ('editor', 'webview')
-        except AssertionError:
-            warn("TextView can only be of 'webview' or 'editor' type")
-
-        self.view_type = view_type
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
         self._set_up_widgets()
-        self.view = self.builder.get_object(self.view_type)
+        self.view = self.builder.get_object('editor')
 
     def _set_up_widgets(self):
-        widgets = {}
-
         # Use OrderedDict so that packing occurs in order of declaration
-        if self.view_type == 'editor':
-            widgets = OrderedDict({
-                'scrollable_editor': (True, True, 0),
-                'status_bar': (False, False, 0)
-            })
-        else:
-            widgets = OrderedDict({
-                'scrollable_webview': (True, True, 0)
-            })
+        widgets = OrderedDict({
+            'scrollable_editor': (True, True, 0),
+            'status_bar': (False, False, 0)
+        })
 
-        self.builder.connect_signals(ViewHandlers())
+        self.builder.connect_signals(Handlers())
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
@@ -69,13 +51,6 @@ class TextView(Gtk.Box):
             expand, fill, padding = pack_info
             self.pack_start(widget, expand, fill, padding)
 
-class ViewHandlers():
-    def on_decision_request(self, *args):
-        webview, policy_decision, decision_type = args
-        # Hack to prevent webview from navigating to other pages
-        if webview.is_editable():
-            policy_decision.use()
-            webview.set_editable(False)
-        else:
-            policy_decision.ignore()
-        return True
+class Handlers():
+    # TODO: Implement signal handlers for TextView
+    pass

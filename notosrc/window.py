@@ -17,6 +17,7 @@ from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
 from notosrc.textview import TextView
+from notosrc.webview import WebView
 from notosrc.utils.gi_composites import GtkTemplate
 
 @GtkTemplate(ui='/org/gnome/Noto/window.ui')
@@ -49,11 +50,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self._create_stack_views()
 
     def _create_stack_views(self):
-        content_editor = TextView('editor')
+        content_editor = TextView()
         self.editor = content_editor.view
         self.content_stack.add_titled(content_editor, 'editor', 'Editor')
 
-        content_preview = TextView('webview')
+        content_preview = WebView()
         self.webview = content_preview.view
         self.content_stack.add_titled(content_preview, 'preview', 'Preview')
 
