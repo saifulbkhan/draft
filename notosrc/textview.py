@@ -61,7 +61,7 @@ class TextView(Gtk.Box):
             })
             handler_class = WebviewHandlers
 
-        self.builder.connect_signals(WebviewHandlers())
+        self.builder.connect_signals(handler_class)
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
