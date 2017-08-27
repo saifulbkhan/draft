@@ -18,6 +18,12 @@ install_data(
   install_dir: 'share/glib-2.0/schemas'
 )
 
+message('Installing stylesheet')
+install_data(
+  'webview.css',
+  install_dir: 'share/noto/styles'
+)
+
 # TODO: Making a desktop file
 # TODO: Preparing appdata
 # TODO: Install icons

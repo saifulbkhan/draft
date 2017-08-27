@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from os.path import join, expanduser
+from os import environ, path
 
 import gi
 gi.require_version('WebKit2', '4.0')
@@ -25,10 +25,28 @@ class WebView(Gtk.Box):
         return '<WebView>'
 
     def __init__(self):
-        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL
-        self.view = WebKit.WebView()
+        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
+        manager = self._set_up_content_manager()
+        self.view = WebKit.WebView.new_with_user_content_manager(manager)
         self.view.connect('decide_policy', self._on_decision_request)
         self._set_up_widgets()
+
+    def _set_up_content_manager(self):
+        user_content_manager = WebKit.UserContentManager()
+        home = environ.get('HOME')
+        # This would only work on UNIX filesystems. Maybe fix this?
+        css_path = path.join(home, '.local/share/noto/styles/webview.css')
+        with open(css_path) as f:
+            css_str = f.read()
+        user_stylesheet = WebKit.UserStyleSheet(
+            css_str,
+            WebKit.UserContentInjectedFrames.ALL_FRAMES,
+            WebKit.UserStyleLevel.USER,
+            None,
+            None
+        )
+        user_content_manager.add_style_sheet(user_stylesheet)
+        return user_content_manager
 
     def _set_up_widgets(self):
         scrollable_window = Gtk.ScrolledWindow()
