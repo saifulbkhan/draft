@@ -18,6 +18,7 @@ from gettext import gettext as _
 
 from notosrc.textview import TextView
 from notosrc.webview import WebView
+from notosrc.markdown import render_markdown
 from notosrc.utils.gi_composites import GtkTemplate
 
 @GtkTemplate(ui='/org/gnome/Noto/window.ui')
@@ -65,9 +66,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         text_buffer = self.editor.get_buffer()
         start = text_buffer.get_start_iter()
         end = text_buffer.get_end_iter()
-        full_text = text_buffer.get_text(start, end, False)
-        self.webview.set_editable(True)
-        GLib.idle_add(self.webview.load_html, full_text, None)
+        markdown_content = text_buffer.get_text(start, end, False)
+        render_markdown(markdown_content, self.webview)
 
     @GtkTemplate.Callback
     def _on_search(self, widget):

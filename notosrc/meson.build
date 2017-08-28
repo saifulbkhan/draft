@@ -2,6 +2,7 @@ app_sources = [
 	'__init__.py',
 	'app.py',
 	'textview.py',
+	'markdown.py',
 	'webview.py',
 	'window.py'
 ]
