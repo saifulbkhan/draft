@@ -1,7 +1,6 @@
 /*
  * This file was entirely derived from Pascal Hertleif's 'pandoc.css'. Its
- * working surprisingly well for Noto. A few modifications have been made
- * for increasing font size of math output. The original work can be found
+ * working surprisingly well for Noto. The original work can be found
  * here: https://gist.github.com/killercup/5917178
  */
 
@@ -328,17 +327,4 @@ table td {
   h2, h3 {
     page-break-after: avoid;
   }
-}
-
-math {
-    font-family: 'Latin Modern Math';
-    font-size: 150%
-}
-
-math[display="block"] {
-    display: block
-}
-
-math[display="inline"] {
-    display: inline-block
 }
