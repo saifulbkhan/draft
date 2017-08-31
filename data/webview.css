@@ -262,6 +262,12 @@ table td {
     font-size: 16px;
   }
 }
+@media only screen and (min-width: 1080px) {
+  body {
+    font-size: 18px;
+  }
+}
+
 @media print {
   * {
     background: transparent !important;
@@ -327,4 +333,8 @@ table td {
   h2, h3 {
     page-break-after: avoid;
   }
+}
+
+.MathJax {
+    color: #666;
 }
