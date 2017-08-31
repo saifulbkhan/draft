@@ -29,7 +29,8 @@ html_string = '''
           inlineMath: [ ['$','$'] ],
           processEscapes: true,
           imageFont: null
-        }
+        },
+        showMathMenu: false
       });
     </script>
     <script type="text/javascript"
