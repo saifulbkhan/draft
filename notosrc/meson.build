@@ -1,3 +1,11 @@
+configure_file(
+	input: 'defs.py.in',
+	output: 'defs.py',
+	configuration: conf,
+	install: true,
+	install_dir: notosrcdir
+)
+
 app_sources = [
 	'__init__.py',
 	'app.py',

@@ -207,6 +207,7 @@ class BlockLexer(object):
 
         if not rules:
             rules = self.default_rules
+            rules = sorted(rules)
 
         def manipulate(text):
             for key in rules:

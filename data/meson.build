@@ -15,13 +15,19 @@ message('Installing schemas')
 gnome.compile_schemas()
 install_data(
   project_id + '.gschema.xml',
-  install_dir: 'share/glib-2.0/schemas'
+  install_dir: join_paths(datadir, 'glib-2.0/schemas')
+)
+
+message('Installing mathjax')
+install_subdir(
+  'mathjax',
+  install_dir: join_paths(datadir, 'noto')
 )
 
 message('Installing stylesheet')
 install_data(
   'webview.css',
-  install_dir: 'share/noto/styles'
+  install_dir: join_paths(datadir, 'noto/styles')
 )
 
 # TODO: Making a desktop file
