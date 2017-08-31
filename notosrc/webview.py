@@ -29,6 +29,7 @@ class WebView(Gtk.Box):
         manager = self._set_up_content_manager()
         self.view = WebKit.WebView.new_with_user_content_manager(manager)
         self.view.connect('decide_policy', self._on_decision_request)
+        self._webview_settings()
         self._set_up_widgets()
 
     def _set_up_content_manager(self):
@@ -47,6 +48,10 @@ class WebView(Gtk.Box):
         )
         user_content_manager.add_style_sheet(user_stylesheet)
         return user_content_manager
+
+    def _webview_settings(self):
+        settings = self.view.get_settings()
+        # settings.set_enable_write_console_messages_to_stdout(True)
 
     def _set_up_widgets(self):
         scrollable_window = Gtk.ScrolledWindow()
