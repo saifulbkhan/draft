@@ -16,6 +16,7 @@ import re, os.path
 
 from gi.repository import GLib
 
+from notosrc.utils.mistune import escape
 from notosrc.utils.mistune import Markdown, InlineLexer, BlockLexer, Renderer
 from notosrc.defs import DATA_DIR
 
@@ -74,25 +75,53 @@ class MathInlineLexer(InlineLexer):
         return self.renderer.math(m.group(1))
 
 
-class MathRenderer(Renderer):
+class CustomRenderer(Renderer):
     def block_math(self, text):
         return '$$%s$$' % text
 
     def math(self, text):
         return '$%s$' % text
 
+    def block_code(self, text, lang):
+        inlinestyles = self.options.get('inlinestyles', False)
+        linenos = self.options.get('linenos', False)
+        code = format_code(text, lang, inlinestyles, linenos)
+        return code
 
-class MathMarkdown(Markdown):
+
+class CustomMarkdown(Markdown):
     def output_block_math(self):
         return self.renderer.block_math(self.token['text'])
 
 
+def format_code(text, lang, inlinestyles=False, linenos=False):
+    if not lang:
+        lang = "text"
+
+    try:
+        from pygments import highlight
+        from pygments.lexers import get_lexer_by_name
+        from pygments.formatters import html
+
+        lexer = get_lexer_by_name(lang, stripall=True)
+        formatter = html.HtmlFormatter(
+            noclasses=inlinestyles, linenos=linenos
+        )
+        code = highlight(text, lexer, formatter)
+        if linenos:
+            return '<div class="highlight-wrapper">%s</div>\n' % code
+        return code
+    except Exception as e:
+        # Maybe a warning message needed here
+        text = text.strip()
+        return '\n<pre><code>%s</code></pre>\n' % escape(text)
+
 def render_markdown(text, webview):
-    renderer = MathRenderer(hard_wrap=True)
+    renderer = CustomRenderer(hard_wrap=True)
     inline_renderer = MathInlineLexer(renderer)
     block_renderer = MathBlockLexer()
 
-    markdown = MathMarkdown(renderer, inline_renderer, block_renderer)
+    markdown = CustomMarkdown(renderer, inline_renderer, block_renderer)
     content = markdown(text)
     webview.set_editable(True)
     content = html_string % (NOTO_DIR, content)
