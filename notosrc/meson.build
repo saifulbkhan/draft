@@ -21,5 +21,11 @@ utils_sources = [
 	'utils/gi_composites.py'
 ]
 
+static_sources = [
+	'static/content.py',
+	'static/static.js'
+]
+
 install_data(app_sources, install_dir: notosrcdir)
 install_data(utils_sources, install_dir: notosrcdir + '/utils')
+install_data(static_sources, install_dir: notosrcdir + '/static')

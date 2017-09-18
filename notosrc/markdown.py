@@ -12,36 +12,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import re, os.path
 
 from gi.repository import GLib
 
 from notosrc.utils.mistune import escape
 from notosrc.utils.mistune import Markdown, InlineLexer, BlockLexer, Renderer
+from notosrc.static.content import html_string
 from notosrc.defs import DATA_DIR
 
 NOTO_DIR = 'file://' + os.path.join(DATA_DIR, 'noto')
-
-html_string = '''
-<head>
-    <script type="text/x-mathjax-config">
-      MathJax.Hub.Config({
-        tex2jax: {
-          inlineMath: [ ['$','$'] ],
-          processEscapes: true,
-          imageFont: null
-        },
-        showMathMenu: false
-      });
-    </script>
-    <script type="text/javascript"
-        src="%s/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-    </script>
-</head>
-<body>
-%s
-</body>
-'''
 
 class MathBlockLexer(BlockLexer):
     def __init__(self):
@@ -58,6 +39,7 @@ class MathBlockLexer(BlockLexer):
             'type': 'block_math',
             'text': m.group(1)
         })
+
 
 class MathInlineLexer(InlineLexer):
     def __init__(self, renderer):
@@ -124,5 +106,5 @@ def render_markdown(text, webview):
     markdown = CustomMarkdown(renderer, inline_renderer, block_renderer)
     content = markdown(text)
     webview.set_editable(True)
-    content = html_string % (NOTO_DIR, content)
+    content = html_string % content
     GLib.idle_add(webview.load_html, content, NOTO_DIR)

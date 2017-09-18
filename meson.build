@@ -32,6 +32,7 @@ conf.set('LOCALEDIR', localedir)
 conf.set('PYTHONDIR', pythondir)
 conf.set('PKGDATADIR', pkgdatadir)
 conf.set('UTILSDIR', join_paths(notosrcdir, 'utils'))
+conf.set('STATICDIR', join_paths(notosrcdir, 'static'))
 conf.set('VERSION', meson.project_version())
 
 configure_file(
