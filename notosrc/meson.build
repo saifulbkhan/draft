@@ -23,7 +23,6 @@ utils_sources = [
 
 static_sources = [
 	'static/content.py',
-	'static/static.js'
 ]
 
 install_data(app_sources, install_dir: notosrcdir)
