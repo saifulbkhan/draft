@@ -62,7 +62,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.content_stack.show_all()
         self.content_stack.set_visible_child_name('editor')
 
-    def _preview_content(self):
+    def preview_content(self):
         render_markdown(self.editor, self.webview)
 
     @GtkTemplate.Callback
@@ -112,6 +112,6 @@ class _HeaderBar(Gtk.Box):
     def _on_preview_toggled(self, widget):
         if self.parent.content_stack.get_visible_child_name() == 'editor':
             self.parent.content_stack.set_visible_child_name('preview')
-            self.parent._preview_content()
+            self.parent.preview_content()
         else:
             self.parent.content_stack.set_visible_child_name('editor')
