@@ -63,11 +63,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.content_stack.set_visible_child_name('editor')
 
     def _preview_content(self):
-        text_buffer = self.editor.get_buffer()
-        start = text_buffer.get_start_iter()
-        end = text_buffer.get_end_iter()
-        markdown_content = text_buffer.get_text(start, end, False)
-        render_markdown(markdown_content, self.webview)
+        render_markdown(self.editor, self.webview)
 
     @GtkTemplate.Callback
     def _on_search(self, widget):
