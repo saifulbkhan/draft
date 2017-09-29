@@ -17,8 +17,9 @@ from os import environ, path
 
 import gi
 gi.require_version('WebKit2', '4.0')
+gi.require_version('WkJsCore', '0.1')
 
-from gi.repository import Gtk, WebKit2 as WebKit
+from gi.repository import Gtk, WebKit2 as WebKit, WkJsCore
 
 class WebView(Gtk.Box):
     def __repr__(self):
@@ -29,6 +30,9 @@ class WebView(Gtk.Box):
         manager = self._set_up_content_manager()
         self.view = WebKit.WebView.new_with_user_content_manager(manager)
         self.view.connect('decide_policy', self._on_decision_request)
+        self.view.connect('load_changed', self._on_load_changed)
+        self.view.connect('unmap', self._on_unmapped)
+        self.scrollOffset = 0;
         self._webview_settings()
         self._set_up_widgets()
 
@@ -70,3 +74,25 @@ class WebView(Gtk.Box):
         else:
             policy_decision.ignore()
         return True
+
+    def _on_load_changed(self, *args):
+        webview, load_event = args
+        if load_event == WebKit.LoadEvent.FINISHED:
+            js_string = 'window.scrollTo(0, %s);' % self.scrollOffset
+            webview.run_javascript(js_string, None, None, None)
+
+    def _on_unmapped(self, *args):
+        webview = args[0]
+
+        def javascript_finished_cb(source_object, res, user_data):
+            js_result = source_object.run_javascript_finish(res)
+            result_processor = WkJsCore.Result.new(js_result)
+            assert result_processor.get_result_type() == WkJsCore.Type.NUMBER
+            self.scrollOffset = result_processor.process_result_as_number()
+
+        webview.run_javascript(
+            'window.scrollY',
+            None,
+            javascript_finished_cb,
+            None
+        )
