@@ -55,7 +55,7 @@ class WebView(Gtk.Box):
 
     def _webview_settings(self):
         settings = self.view.get_settings()
-        settings.set_enable_write_console_messages_to_stdout(True)
+        # settings.set_enable_write_console_messages_to_stdout(True)
 
     def _set_up_widgets(self):
         scrollable_window = Gtk.ScrolledWindow()
