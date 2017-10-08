@@ -90,6 +90,7 @@
         </child>
         <child>
           <object class="GtkRevealer" id="slider">
+            <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="transition_type">slide-left</property>
             <child>
