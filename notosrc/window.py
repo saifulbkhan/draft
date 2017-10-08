@@ -25,7 +25,8 @@ from notosrc.utils.gi_composites import GtkTemplate
 class ApplicationWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'ApplicationWindow'
     sidebar, search_bar, search_entry, \
-    notes_list, content_stack = GtkTemplate.Child.widgets(5)
+    notes_list, content_stack, content, \
+    slider, action = GtkTemplate.Child.widgets(8)
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -72,6 +73,17 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     @GtkTemplate.Callback
     def _on_select_row(self, widget):
         pass
+
+    @GtkTemplate.Callback
+    def _on_action(self, widget):
+        if self.slider.get_reveal_child():
+            self.content.set_reveal_child(False)
+            self.slider.set_reveal_child(False)
+            GLib.timeout_add(225, self.slider.set_visible, False)
+        else:
+            self.slider.set_visible(True)
+            self.slider.set_reveal_child(True)
+            GLib.timeout_add(225, self.content.set_reveal_child, True)
 
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
