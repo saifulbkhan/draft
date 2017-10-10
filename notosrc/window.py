@@ -60,7 +60,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.webview = content_preview.view
         self.content_stack.add_titled(content_preview, 'preview', 'Preview')
 
-        # self.content_stack.show_all()
+        self.content_stack.show_all()
         self.content_stack.set_visible_child_name('editor')
 
     def preview_content(self):
@@ -79,9 +79,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         if self.slider.get_reveal_child():
             self.content.set_reveal_child(False)
             GLib.timeout_add(250, self.slider.set_reveal_child, False)
-            GLib.timeout_add(500, self.content_stack.hide)
         else:
-            self.content_stack.show_all()
             self.slider.set_reveal_child(True)
             GLib.timeout_add(250, self.content.set_reveal_child, True)
 

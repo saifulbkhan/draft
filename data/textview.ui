@@ -5,7 +5,7 @@
   <object class="GtkScrolledWindow" id="scrollable_editor">
     <property name="visible">True</property>
     <property name="can_focus">True</property>
-    <property name="hexpand">True</property>
+    <property name="hexpand">False</property>
     <property name="vexpand">True</property>
     <child>
       <object class="GtkSourceView" id="editor">
