@@ -43,6 +43,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.set_icon_name("noto")
         self.hsize_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         self._add_widgets()
+        self.width = 0
+        self.content_width_style = 'noto-content-540'
 
     def _add_widgets(self):
         self.hsize_group.add_widget(self.sidebar)
@@ -66,6 +68,23 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def preview_content(self):
         render_markdown(self.editor, self.webview)
 
+    def _set_desired_width_style(self):
+        context = self.content_stack.get_style_context()
+        context.remove_class(self.content_width_style)
+        if self.width <= 1050:
+            self.content_width_style = 'noto-content-540'
+        elif self.width > 1050 and self.width <= 1250:
+            self.content_width_style = 'noto-content-740'
+        elif self.width > 1250 and self.width <= 1450:
+            self.content_width_style = 'noto-content-940'
+        elif self.width > 1450 and self.width <= 1650:
+            self.content_width_style = 'noto-content-1140'
+        elif self.width > 1650 and self.width <= 1850:
+            self.content_width_style = 'noto-content-1340'
+        elif self.width > 1850:
+            self.content_width_style = 'noto-content-1540'
+        context.add_class(self.content_width_style)
+
     @GtkTemplate.Callback
     def _on_search(self, widget):
         pass
@@ -75,13 +94,21 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         pass
 
     @GtkTemplate.Callback
+    def _on_top_resized(self, widget, allocation):
+        self.width = self.get_allocation().width
+        self._set_desired_width_style()
+
+    @GtkTemplate.Callback
     def _on_action(self, widget):
+        duration = self.content.get_transition_duration()
         if self.slider.get_reveal_child():
             self.content.set_reveal_child(False)
-            GLib.timeout_add(250, self.slider.set_reveal_child, False)
+            GLib.timeout_add(duration, self.slider.set_reveal_child, False)
+            GLib.timeout_add(duration, self.slider.set_hexpand, False)
         else:
+            self.slider.set_hexpand(True)
             self.slider.set_reveal_child(True)
-            GLib.timeout_add(250, self.content.set_reveal_child, True)
+            GLib.timeout_add(duration, self.content.set_reveal_child, True)
 
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')

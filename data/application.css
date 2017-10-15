@@ -13,3 +13,31 @@
 .titlebar > headerbar:first-child:dir(ltr) { margin-right: 1px; }
 .titlebar > separator:dir(rtl) { margin-right: -1px; }
 .titlebar > headerbar:first-child:dir(rtl) { margin-left: 1px; }
+
+.noto-content {
+    transition: min-width 0.25s;
+}
+
+.noto-content-540 {
+    min-width: 540px;
+}
+
+.noto-content-740 {
+    min-width: 740px;
+}
+
+.noto-content-940 {
+    min-width: 940px;
+}
+
+.noto-content-1140 {
+    min-width: 1140px;
+}
+
+.noto-content-1340 {
+    min-width: 1340px;
+}
+
+.noto-content-1540 {
+    min-width: 1540px;
+}

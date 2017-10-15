@@ -7,6 +7,7 @@
     <property name="default_width">800</property>
     <property name="default_height">600</property>
     <property name="show_menubar">False</property>
+    <signal name="size-allocate" handler="_on_top_resized" swapped="no"/>
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
@@ -113,6 +114,9 @@
                         <child>
                           <placeholder/>
                         </child>
+                        <style>
+                          <class name="noto-content"/>
+                        </style>
                       </object>
                       <packing>
                         <property name="expand">True</property>
@@ -124,9 +128,6 @@
                 </child>
               </object>
             </child>
-            <style>
-              <class name="noto-content"/>
-            </style>
           </object>
           <packing>
             <property name="expand">False</property>
