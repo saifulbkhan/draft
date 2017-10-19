@@ -14,7 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os.path
-from datetime import datetime
+from datetime import datetime, timedelta
+from gettext import gettext as _
 
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy import Column, Integer, String, Table, ForeignKey
@@ -36,7 +37,6 @@ class Base(object):
 
 
 class TimestampMixin(object):
-    # date and time in SQLite are represented in string format
     created = Column(String)
     last_modified = Column(String)
 
@@ -46,6 +46,47 @@ class TimestampMixin(object):
 
     def update_last_modified(self):
         self.last_modified = datetime.now().isoformat(timespec='milliseconds')
+
+    def get_last_modified_relative_time(self):
+        return self._relative_time_string(self.last_modified)
+
+    def get_created_relative_time(self):
+        return self._relative_time_string(self.created)
+
+    def get_last_modified_datetime(self):
+        return self._datetime_string(self.last_modified)
+
+    def get_created_datetime(self):
+        return self._datetime_string(self.created)
+
+    def _relative_time_string(self, time):
+        just_now = timedelta(seconds=59).total_seconds()
+        min_ago = timedelta(minutes=1, seconds=59).total_seconds()
+        few_min_ago = timedelta(minutes=59, seconds=59).total_seconds()
+        hour_ago = timedelta(hours=1, minutes=59, seconds=59).total_seconds()
+        today = timedelta(hours=23, minutes=59, seconds=59).total_seconds()
+        yesterday = timedelta(days=1, hours=23, minutes=59).total_seconds()
+
+        diff =  time - datetime.now()
+        if diff > just_now:
+            return (_("just now"))
+        elif diff > min_ago:
+            return (_("a minute ago"))
+        elif diff > few_min_ago:
+            return (_("a few minutes ago"))
+        elif diff > hour_ago:
+            return (_("an hour ago"))
+        elif diff > today:
+            return (_("today at %s" % time.stftime('%I:%M %p')))
+        elif diff > yesterday:
+            return (_("yesterday at %s" % time.strftime('%I:%M %p')))
+
+        return time.strftime('%d %b %Y')
+
+    def _datetime_string(self, time):
+        date = time.strftime('%d %b %Y')
+        time = time.strftime('%I:%M %p')
+        return (date, time)
 
 
 Base = declarative_base(cls=Base)
