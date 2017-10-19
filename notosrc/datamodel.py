@@ -140,7 +140,7 @@ class Tag(Base):
 
 class Notebook(TimestampMixin, Base):
     name = Column(String)
-    parent_id = Column(Integer, ForeignKey('notebook.id'))
+    parent_id = Column(Integer, ForeignKey('notebook.id'), nullable=True)
 
     notes = relationship('Note',
                          back_populates='notebook',
