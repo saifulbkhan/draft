@@ -15,6 +15,7 @@
 
 import os.path
 from datetime import datetime, timedelta
+from hashlib import sha256
 from gettext import gettext as _
 
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
@@ -116,6 +117,7 @@ class Note(TimestampMixin, Base):
         TimestampMixin.__init__(self)
         self.title = title
         self.move_to_notebook(notebook)
+        self.hash_id = sha256(('note%s' % self.id).encode()).hexdigest()
 
     def move_to_notebook(self, notebook):
         if notebook:
@@ -164,6 +166,7 @@ class Notebook(TimestampMixin, Base):
         TimestampMixin.__init__(self)
         self.name = name
         self.move_to_notebook(parent)
+        self.hash_id = sha256(('notebook%s' % self.id).encode()).hexdigest()
 
     def move_to_notebook(self, parent_notebook):
         if parent_notebook:
