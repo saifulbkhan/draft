@@ -74,15 +74,16 @@ class Note(TimestampMixin, Base):
     def __init__(self, title, notebook=None):
         TimestampMixin.__init__(self)
         self.title = title
-        if notebook:
-            self.move_to_notebook(notebook)
-        else:
-            self.notebook = None
+        self.move_to_notebook(notebook)
 
     def move_to_notebook(self, notebook):
-        assert isinstance(notebook, Notebook)
-        self.notebook = notebook
-        self.notebook_id = notebook.id
+        if notebook:
+            assert isinstance(notebook, Notebook)
+            self.notebook = notebook
+            self.notebook_id = notebook.id
+        else:
+            self.notebook = None
+            self.notebook_id = None
 
 
 class Tag(Base):
@@ -102,12 +103,12 @@ class Notebook(TimestampMixin, Base):
 
     notes = relationship('Note',
                          back_populates='notebook',
-                         cascade='all, delete-orphan'
+                         cascade='all, delete-orphan',
                          lazy='dynamic')
     notebooks = relationship('Notebook',
                              primaryjoin='Notebook.id==remote(Notebook.parent_id)',
                              backref=backref('parent', remote_side=[Base.id]),
-                             cascade='all delete-orphan'
+                             cascade='all, delete-orphan',
                              lazy='joined',
                              join_depth=2)
 
@@ -121,11 +122,13 @@ class Notebook(TimestampMixin, Base):
     def __init__(self, name, parent=None):
         TimestampMixin.__init__(self)
         self.name = name
-        if parent:
-            self.move_to_notebook(parent)
-        else:
-            self.parent = None
+        self.move_to_notebook(parent)
 
     def move_to_notebook(self, parent_notebook):
-        self.parent = parent_notebook
-        self.parent_id = parent_notebook.id
+        if parent_notebook:
+            assert isinstance(parent_notebook, Notebook)
+            self.parent = parent_notebook
+            self.parent_id = parent_notebook.id
+        else:
+            self.parent = None
+            self.parent_id = None
