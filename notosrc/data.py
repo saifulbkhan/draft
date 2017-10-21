@@ -51,7 +51,7 @@ def create_notebook(name):
         return notebook
 
 
-def create_note(title, notebook='Misc'):
+def create_note(title, notebook=None):
     with session_scope() as session:
         note = Note(title, notebook)
         session.add(note)
