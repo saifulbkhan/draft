@@ -60,33 +60,21 @@ class TimestampMixin(object):
     def get_created_datetime(self):
         return self._datetime_string(self.created)
 
-    def _relative_time_string(self, time):
-        just_now = timedelta(seconds=59).total_seconds()
-        min_ago = timedelta(minutes=1, seconds=59).total_seconds()
-        few_min_ago = timedelta(minutes=59, seconds=59).total_seconds()
-        hour_ago = timedelta(hours=1, minutes=59, seconds=59).total_seconds()
-        today = timedelta(hours=23, minutes=59, seconds=59).total_seconds()
-        yesterday = timedelta(days=1, hours=23, minutes=59).total_seconds()
+    def _relative_time_string(self, dt_str):
+        date_time =  datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f')
+        one_day = timedelta(days=1)
+        if date_time.date() == datetime.now().date():
+            return (_("Today at %s" % date_time.strftime('%I:%M %p')))
+        elif date_time.date() == (datetime.now() - one_day).date():
+            return (_("Yesterday at %s" % date_time.strftime('%I:%M %p')))
 
-        diff =  time - datetime.now()
-        if diff > just_now:
-            return (_("just now"))
-        elif diff > min_ago:
-            return (_("a minute ago"))
-        elif diff > few_min_ago:
-            return (_("a few minutes ago"))
-        elif diff > hour_ago:
-            return (_("an hour ago"))
-        elif diff > today:
-            return (_("today at %s" % time.stftime('%I:%M %p')))
-        elif diff > yesterday:
-            return (_("yesterday at %s" % time.strftime('%I:%M %p')))
+        return date_time.strftime('%d %b %Y')
 
-        return time.strftime('%d %b %Y')
-
-    def _datetime_string(self, time):
-        date = time.strftime('%d %b %Y')
-        time = time.strftime('%I:%M %p')
+    def _datetime_string(self, dt_str):
+        date = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f').\
+                        strftime('%d %b %Y')
+        time = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f').\
+                        strftime('%I:%M %p')
         return (date, time)
 
 
