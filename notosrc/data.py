@@ -68,7 +68,7 @@ def update(entity, prop, value):
     assert prop not in ['last_modified', 'created']
     with session_scope() as session:
         #TODO: Warn if no prop attr existed before update
-        getattr(entity, prop) = value
+        setattr(entity, prop, value)
 
 
 def update_multi(entity, prop_list, val_list):
@@ -77,7 +77,7 @@ def update_multi(entity, prop_list, val_list):
     assert 'created' not in prop_list
     with session_scope() as session:
         for i, prop in prop_list:
-            getattr(entity, prop) = val_list[i]
+            setattr(entity, prop, val_list[i])
 
 
 def fetch_tag(name):
@@ -122,10 +122,10 @@ def fetch_all_notes():
 
 def fetch_notes_not_in_notebooks():
     with session_scope() as session:
-        notes = session.query(Notes).\
+        notes = session.query(Note).\
                 filter(Note.notebook==None).\
                 all()
-        return notebooks
+        return notes
 
 
 def fetch_notes_in_notebook(notebook):
