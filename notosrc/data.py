@@ -44,60 +44,34 @@ def init_db():
     Base.metadata.create_all(engine)
 
 
-def create_notebook(name):
-    with session_scope() as session:
-        notebook = Notebook(name)
-        session.add(notebook)
-        return notebook
+def create_notebook(name, session):
+    notebook = Notebook(name)
+    session.add(notebook)
+    return notebook
 
 
-def create_note(title, notebook=None):
-    with session_scope() as session:
-        note = Note(title, notebook)
-        session.add(note)
-        return note
+def create_note(title, session, notebook=None):
+    note = Note(title, notebook)
+    session.add(note)
+    return note
 
 
-def delete(entity):
-    with session_scope() as session:
-        session.delete(entity)
-    delete_orphan_tags()
-
-
-def update(entity, prop, value):
-    assert prop not in ['last_modified', 'created']
-    with session_scope() as session:
-        #TODO: Warn if no prop attr existed before update
-        setattr(entity, prop, value)
-
-
-def update_multi(entity, prop_list, val_list):
-    assert len(prop_list) == len(val_list)
-    assert 'last_modified' not in prop_list
-    assert 'created' not in prop_list
-    with session_scope() as session:
-        for i, prop in prop_list:
-            setattr(entity, prop, val_list[i])
-
-
-def fetch_tag(name):
-    with session_scope() as session:
-        tag = session.query(Tag).\
-                filter_by(keyword=name.lower()).\
-                one()
-        if tag:
-            return tag
+def fetch_tag(name, session):
+    tag = session.query(Tag).\
+            filter_by(keyword=name.lower()).\
+            one()
+    if tag:
+        return tag
     return create_tag(name)
 
 
-def create_tag(name):
-    with session_scope() as session:
-        tag = Tag(name.lower())
-        session.add(Tag)
-        return tag
+def create_tag(name, session):
+    tag = Tag(name.lower())
+    session.add(Tag)
+    return tag
 
 
-def delete_orphan_tags():
+def delete_orphan_tags(session):
     with engine.connect() as connection:
         orphan_tags_query = text("""
             SELECT keyword
@@ -108,51 +82,44 @@ def delete_orphan_tags():
         res = connection.execute(orphan_tag_query).fetchall()
         if not res:
             return
-        with session_scope() as ssn:
-            for i in range(len(res)):
-                tag = ssn.query(Tag).filter_by(keyword=res[i][0]).one_or_none()
-                ssn.delete(tag)
+        for i in range(len(res)):
+            tag = session.query(Tag).filter_by(keyword=res[i][0]).one_or_none()
+            ssesion.delete(tag)
 
 
-def fetch_all_notes():
-    with session_scope() as session:
-        notes = session.query(Note).all()
-        return notes
+def fetch_all_notes(session):
+    notes = session.query(Note).all()
+    return notes
 
 
-def fetch_notes_not_in_notebooks():
-    with session_scope() as session:
-        notes = session.query(Note).\
-                filter(Note.notebook==None).\
+def fetch_notes_not_in_notebooks(session):
+    notes = session.query(Note).\
+            filter(Note.notebook==None).\
+            all()
+    return notes
+
+
+def fetch_notes_in_notebook(notebook, session):
+    notes = session.query(Note).\
+            filter(Note.notebook==notebook).\
+            all()
+    return notes
+
+
+def fetch_all_notebooks(session):
+    notebooks = session.query(Notebook).all()
+    return notebooks
+
+
+def fetch_notebooks_not_in_notebook(session):
+    notebooks = session.query(Notebook).\
+                filter(Notebook.parent==None).\
                 all()
-        return notes
+    return notebooks
 
 
-def fetch_notes_in_notebook(notebook):
-    with session_scope() as session:
-        notes = session.query(Note).\
-                filter(Note.notebook==notebook).\
+def fetch_notebook_in_notebook(notebooks, session):
+    notebooks = session.query(Notebook).\
+                filter(Notebook.parent==notebook).\
                 all()
-        return notes
-
-
-def fetch_all_notebooks():
-    with session_scope() as session:
-        notebooks = session.query(Notebook).all()
-        return notebooks
-
-
-def fetch_notebooks_not_in_notebook():
-    with session_scope() as session:
-        notebooks = session.query(Notebook).\
-                    filter(Notebook.parent==None).\
-                    all()
-        return notebooks
-
-
-def fetch_notebook_in_notebook(notebooks):
-    with session_scope() as session:
-        notebooks = session.query(Notebook).\
-                    filter(Notebook.parent==notebook).\
-                    all()
-        return notebooks
+    return notebooks
