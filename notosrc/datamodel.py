@@ -20,7 +20,7 @@ from gettext import gettext as _
 
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy import Column, Integer, String, Table, ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, reconstructor
 
 from gi.repository import GLib
 
@@ -107,13 +107,15 @@ class Note(TimestampMixin, Base):
         self.move_to_notebook(notebook)
         self.hash_id = sha256(('note%s' % self.id).encode()).hexdigest()
 
+    @reconstructor
+    def init_on_load(self):
+        self.hash_id = sha256(('note%s' % self.id).encode()).hexdigest()
+
     def move_to_notebook(self, notebook):
         if notebook:
             assert isinstance(notebook, Notebook)
-            self.notebook = notebook
             self.notebook_id = notebook.id
         else:
-            self.notebook = None
             self.notebook_id = None
 
 
@@ -156,11 +158,13 @@ class Notebook(TimestampMixin, Base):
         self.move_to_notebook(parent)
         self.hash_id = sha256(('notebook%s' % self.id).encode()).hexdigest()
 
+    @reconstructor
+    def init_on_load(self):
+        self.hash_id = sha256(('notebook%s' % self.id).encode()).hexdigest()
+
     def move_to_notebook(self, parent_notebook):
         if parent_notebook:
             assert isinstance(parent_notebook, Notebook)
-            self.parent = parent_notebook
             self.parent_id = parent_notebook.id
         else:
-            self.parent = None
             self.parent_id = None

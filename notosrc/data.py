@@ -94,14 +94,14 @@ def fetch_all_notes(session):
 
 def fetch_notes_not_in_notebooks(session):
     notes = session.query(Note).\
-            filter(Note.notebook==None).\
+            filter(Note.notebook_id==None).\
             all()
     return notes
 
 
 def fetch_notes_in_notebook(notebook, session):
     notes = session.query(Note).\
-            filter(Note.notebook==notebook).\
+            filter(Note.notebook_id==notebook.id).\
             all()
     return notes
 
@@ -113,13 +113,13 @@ def fetch_all_notebooks(session):
 
 def fetch_notebooks_not_in_notebook(session):
     notebooks = session.query(Notebook).\
-                filter(Notebook.parent==None).\
+                filter(Notebook.parent_id==None).\
                 all()
     return notebooks
 
 
 def fetch_notebook_in_notebook(notebooks, session):
     notebooks = session.query(Notebook).\
-                filter(Notebook.parent==notebook).\
+                filter(Notebook.parent_id==notebook.id).\
                 all()
     return notebooks
