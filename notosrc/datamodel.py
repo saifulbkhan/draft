@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
 from datetime import datetime, timedelta
 from hashlib import sha256
 from gettext import gettext as _
@@ -21,11 +20,6 @@ from gettext import gettext as _
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy import Column, Integer, String, Table, ForeignKey
 from sqlalchemy.orm import relationship, backref, reconstructor
-
-from gi.repository import GLib
-
-USER_DATA_DIR = os.path.join(GLib.get_user_data_dir(), 'noto')
-DB_URL = 'sqlite:///' + os.path.join(USER_DATA_DIR, 'noto.db')
 
 
 class Base(object):

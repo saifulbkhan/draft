@@ -13,14 +13,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os.path
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
+from gi.repository import GLib
+
 from notosrc.datamodel import Base, Notebook, Note, Tag
-from notosrc.datamodel import USER_DATA_DIR, DB_URL
+
+USER_DATA_DIR = os.path.join(GLib.get_user_data_dir(), 'noto')
+DB_URL = 'sqlite:///' + os.path.join(USER_DATA_DIR, 'noto.db')
 
 # TODO: Pass 'echo=True' when debugging
 engine = create_engine(DB_URL)
