@@ -20,7 +20,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
-from gi.repository import GLib
+from gi.repository import GLib, Gio
 
 from notosrc.datamodel import Base, Notebook, Note, Tag
 
@@ -47,6 +47,14 @@ def session_scope():
 
 def init_db():
     Base.metadata.create_all(engine)
+    try:
+        note_dir = os.path.join(USER_DATA_DIR, 'noto')
+        note_local_dir = os.path.join(note_dir, 'local')
+        Gio.file_new_for_path(note_dir).make_directory()
+        Gio.file_new_for_path(note_local_dir).make_directory()
+    except Exception as e:
+        # TODO: Warn folder already exists or creation failed
+        return
 
 
 def create_notebook(name, session):
