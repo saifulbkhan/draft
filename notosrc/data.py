@@ -50,7 +50,9 @@ def init_db():
     try:
         note_dir = os.path.join(USER_DATA_DIR, 'noto')
         note_local_dir = os.path.join(note_dir, 'local')
+        note_trash_dir = os.path.join(note_dir, '.trash')
         Gio.file_new_for_path(note_dir).make_directory()
+        Gio.file_new_for_path(note_local_dir).make_directory()
         Gio.file_new_for_path(note_local_dir).make_directory()
     except Exception as e:
         # TODO: Warn folder already exists or creation failed
