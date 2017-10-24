@@ -16,18 +16,15 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
-from notosrc.listview import ListView
-from notosrc.textview import TextView
-from notosrc.webview import WebView
-from notosrc.markdown import render_markdown
+from notosrc.notesview import NotesView
+from notosrc.contentview import ContentView
 from notosrc.utils.gi_composites import GtkTemplate
+
 
 @GtkTemplate(ui='/org/gnome/Noto/window.ui')
 class ApplicationWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'ApplicationWindow'
-    sidebar, search_bar, search_entry, \
-    content_stack, content, slider, \
-    listview = GtkTemplate.Child.widgets(7)
+    topbox = GtkTemplate.Child.widgets(1)[0]
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -44,82 +41,34 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.set_icon_name("noto")
         self.hsize_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         self._add_widgets()
-        self.width = 0
-        self.content_width_style = 'noto-content-540'
         self.show_all()
 
     def _add_widgets(self):
-        self.hsize_group.add_widget(self.sidebar)
-
         titlebar = _HeaderBar(self)
         self.set_titlebar(titlebar)
         self._create_list_views()
         self._create_stack_views()
 
     def _create_list_views(self):
-        self.notelist = ListView(self)
-        self.listview.add(self.notelist)
+        self.notesview = NotesView(self)
+        self.topbox.pack_start(self.notesview, False, True, 0)
 
     def _create_stack_views(self):
-        content_editor = TextView()
-        self.editor = content_editor.view
-        self.content_stack.add_titled(content_editor, 'editor', 'Editor')
-
-        content_preview = WebView()
-        self.webview = content_preview.view
-        self.content_stack.add_titled(content_preview, 'preview', 'Preview')
-
-        self.content_stack.set_visible_child_name('editor')
-
-    def preview_content(self):
-        render_markdown(self.editor, self.webview)
-
-    def _set_desired_width_style(self):
-        context = self.content_stack.get_style_context()
-        context.remove_class(self.content_width_style)
-        if self.width <= 1050:
-            self.content_width_style = 'noto-content-540'
-        elif self.width > 1050 and self.width <= 1250:
-            self.content_width_style = 'noto-content-740'
-        elif self.width > 1250 and self.width <= 1450:
-            self.content_width_style = 'noto-content-940'
-        elif self.width > 1450 and self.width <= 1650:
-            self.content_width_style = 'noto-content-1140'
-        elif self.width > 1650 and self.width <= 1850:
-            self.content_width_style = 'noto-content-1340'
-        elif self.width > 1850:
-            self.content_width_style = 'noto-content-1540'
-        context.add_class(self.content_width_style)
+        self.contentview = ContentView(self)
+        self.topbox.pack_start(self.contentview, False, True, 0)
 
     def toggle_content(self):
         if self.is_showing_content():
-            self._hide_content_stack()
+            self.contentview._hide_content_stack()
         else:
-            self._show_content_stack()
+            self.contentview._show_content_stack()
 
     def is_showing_content(self):
-        return self.slider.get_reveal_child()
-
-    def _show_content_stack(self):
-        duration = self.content.get_transition_duration()
-        self.slider.set_hexpand(True)
-        self.slider.set_reveal_child(True)
-        GLib.timeout_add(duration, self.content.set_reveal_child, True)
-
-    def _hide_content_stack(self):
-        duration = self.content.get_transition_duration()
-        self.content.set_reveal_child(False)
-        GLib.timeout_add(duration, self.slider.set_reveal_child, False)
-        GLib.timeout_add(duration, self.slider.set_hexpand, False)
+        return self.contentview.slider.get_child_revealed()
 
     @GtkTemplate.Callback
     def _on_search(self, widget):
         pass
-
-    @GtkTemplate.Callback
-    def _on_top_resized(self, widget, allocation):
-        self.width = self.get_allocation().width
-        self._set_desired_width_style()
 
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
