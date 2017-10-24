@@ -117,10 +117,6 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         pass
 
     @GtkTemplate.Callback
-    def _on_select_row(self, widget):
-        pass
-
-    @GtkTemplate.Callback
     def _on_top_resized(self, widget, allocation):
         self.width = self.get_allocation().width
         self._set_desired_width_style()
