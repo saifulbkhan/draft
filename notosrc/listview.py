@@ -49,7 +49,7 @@ class TreeStore(Gtk.TreeStore):
         with data.session_scope() as session:
             note = data.create_note(_("Unititled"), session)
             note_row = self.row_for_note(note)
-            self.append(None, note_row)
+            return self.append(None, note_row)
 
     def new_notebook_request(self):
         with data.session_scope() as session:
@@ -118,4 +118,5 @@ class ListView(Gtk.TreeView):
             self.main_window.toggle_content()
 
     def new_note_request(self):
-        self.model.new_note_request()
+        treeiter = self.model.new_note_request()
+        self.selection.select_iter(treeiter)
