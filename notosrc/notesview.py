@@ -34,6 +34,3 @@ class NotesView(Gtk.Bin):
         self.add(noteslist)
         self.listview = ListView(self.parent_window)
         self.view.add(self.listview)
-
-    def do_size_allocate(self, allocation):
-        Gtk.Bin.do_size_allocate(self, allocation)

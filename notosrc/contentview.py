@@ -69,8 +69,8 @@ class ContentView(Gtk.Bin):
         if self.parent_window.is_showing_content():
             allocation.x = parent_allocation.x + sidebar_width
             allocation.width = parent_allocation.width - sidebar_width
-
-            parent_allocation.width = parent_allocation.width - allocation.width
-            self.parent_window.notesview.set_allocation(parent_allocation)
+            self.set_size_request(-1, -1)
+        else:
+            self.set_size_request(allocation.width, -1)
 
         Gtk.Bin.do_size_allocate(self, allocation)
