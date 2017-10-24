@@ -81,6 +81,7 @@ note_tags = Table('note_tags', Base.metadata,
 class Note(TimestampMixin, Base):
     title = Column(String)
     notebook_id = Column(Integer, ForeignKey('notebook.id'), nullable=True)
+    in_trash = Column(Integer)
 
     tags = relationship('Tag',
                         secondary=note_tags,
@@ -98,6 +99,7 @@ class Note(TimestampMixin, Base):
     def __init__(self, title, notebook=None):
         TimestampMixin.__init__(self)
         self.title = title
+        self.in_trash = 0
         self.move_to_notebook(notebook)
         self.hash_id = sha256(('note%s' % self.id).encode()).hexdigest()
 
@@ -127,6 +129,7 @@ class Tag(Base):
 class Notebook(TimestampMixin, Base):
     name = Column(String)
     parent_id = Column(Integer, ForeignKey('notebook.id'), nullable=True)
+    in_trash = Column(Integer)
 
     notes = relationship('Note',
                          back_populates='notebook',
@@ -149,6 +152,7 @@ class Notebook(TimestampMixin, Base):
     def __init__(self, name, parent=None):
         TimestampMixin.__init__(self)
         self.name = name
+        self.in_trash = 0
         self.move_to_notebook(parent)
         self.hash_id = sha256(('notebook%s' % self.id).encode()).hexdigest()
 
