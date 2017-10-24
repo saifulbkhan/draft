@@ -16,6 +16,7 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
+from notosrc.listview import ListView
 from notosrc.textview import TextView
 from notosrc.webview import WebView
 from notosrc.markdown import render_markdown
@@ -25,8 +26,8 @@ from notosrc.utils.gi_composites import GtkTemplate
 class ApplicationWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'ApplicationWindow'
     sidebar, search_bar, search_entry, \
-    notes_list, content_stack, content, \
-    slider, action = GtkTemplate.Child.widgets(8)
+    content_stack, content, slider, \
+    listview = GtkTemplate.Child.widgets(7)
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -45,13 +46,19 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self._add_widgets()
         self.width = 0
         self.content_width_style = 'noto-content-540'
+        self.show_all()
 
     def _add_widgets(self):
         self.hsize_group.add_widget(self.sidebar)
 
         titlebar = _HeaderBar(self)
         self.set_titlebar(titlebar)
+        self._create_list_views()
         self._create_stack_views()
+
+    def _create_list_views(self):
+        self.notelist = ListView(self)
+        self.listview.add(self.notelist)
 
     def _create_stack_views(self):
         content_editor = TextView()
@@ -62,7 +69,6 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.webview = content_preview.view
         self.content_stack.add_titled(content_preview, 'preview', 'Preview')
 
-        self.content_stack.show_all()
         self.content_stack.set_visible_child_name('editor')
 
     def preview_content(self):
@@ -85,6 +91,27 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.content_width_style = 'noto-content-1540'
         context.add_class(self.content_width_style)
 
+    def toggle_content(self):
+        if self.is_showing_content():
+            self._hide_content_stack()
+        else:
+            self._show_content_stack()
+
+    def is_showing_content(self):
+        return self.slider.get_reveal_child()
+
+    def _show_content_stack(self):
+        duration = self.content.get_transition_duration()
+        self.slider.set_hexpand(True)
+        self.slider.set_reveal_child(True)
+        GLib.timeout_add(duration, self.content.set_reveal_child, True)
+
+    def _hide_content_stack(self):
+        duration = self.content.get_transition_duration()
+        self.content.set_reveal_child(False)
+        GLib.timeout_add(duration, self.slider.set_reveal_child, False)
+        GLib.timeout_add(duration, self.slider.set_hexpand, False)
+
     @GtkTemplate.Callback
     def _on_search(self, widget):
         pass
@@ -98,24 +125,12 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.width = self.get_allocation().width
         self._set_desired_width_style()
 
-    @GtkTemplate.Callback
-    def _on_action(self, widget):
-        duration = self.content.get_transition_duration()
-        if self.slider.get_reveal_child():
-            self.content.set_reveal_child(False)
-            GLib.timeout_add(duration, self.slider.set_reveal_child, False)
-            GLib.timeout_add(duration, self.slider.set_hexpand, False)
-        else:
-            self.slider.set_hexpand(True)
-            self.slider.set_reveal_child(True)
-            GLib.timeout_add(duration, self.content.set_reveal_child, True)
-
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
 class _HeaderBar(Gtk.Box):
     __gtype_name__ = 'HeaderBar'
     left_header, right_header, content_title, \
-    search_button, preview_button = GtkTemplate.Child.widgets(5)
+    search_button, preview_button, new_button = GtkTemplate.Child.widgets(6)
 
     def __repr__(self):
         return '<HeaderBar>'
@@ -152,3 +167,7 @@ class _HeaderBar(Gtk.Box):
             self.parent.preview_content()
         else:
             self.parent.content_stack.set_visible_child_name('editor')
+
+    @GtkTemplate.Callback
+    def _on_new_request(self, widget):
+        self.parent.notelist.new_note_request()

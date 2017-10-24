@@ -9,6 +9,9 @@ configure_file(
 app_sources = [
 	'__init__.py',
 	'app.py',
+	'datamodel.py',
+	'data.py',
+	'listview.py',
 	'textview.py',
 	'markdown.py',
 	'webview.py',
