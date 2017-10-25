@@ -88,35 +88,3 @@ class TreeStore(Gtk.TreeStore):
             row = self.row_for_notebook(notebook)
             rows.append(row)
         return rows
-
-
-class ListView(Gtk.TreeView):
-
-    def __repr__(self):
-        return '<ListView>'
-
-    def __init__(self, window):
-        Gtk.TreeView.__init__(self, TreeStore())
-        self.model = self.get_model()
-        self.main_window = window
-
-        self.selection = self.get_selection()
-        self.selection.connect('changed', self._on_selection_changed)
-
-        self._populate()
-        self.set_headers_visible(False)
-
-    def _populate(self):
-        for i, title in enumerate([_("Title"), "", _("Last Edited")]):
-            renderer = Gtk.CellRendererText()
-            column = Gtk.TreeViewColumn(title, renderer, text=i)
-            self.append_column(column)
-
-    def _on_selection_changed(self, selection):
-        model, treeiter = selection.get_selected()
-        if not self.main_window.is_showing_content():
-            self.main_window.toggle_content()
-
-    def new_note_request(self):
-        treeiter = self.model.new_note_request()
-        self.selection.select_iter(treeiter)

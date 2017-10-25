@@ -13,8 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from gettext import gettext as _
+
 from gi.repository import Gtk, GLib
-from notosrc.listview import ListView
+from notosrc.treestore import TreeStore
 
 class NotesView(Gtk.Bin):
     sidebar_width = 300
@@ -26,11 +28,43 @@ class NotesView(Gtk.Bin):
         self.parent_window = parent
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/notesview.ui')
-        self.view = self.builder.get_object('listview')
         self._set_up_widgets()
 
     def _set_up_widgets(self):
         noteslist = self.builder.get_object('noteslist')
+        listview = self.builder.get_object('listview')
         self.add(noteslist)
-        self.listview = ListView(self.parent_window)
-        self.view.add(self.listview)
+        self.view = ListView(self.parent_window)
+        listview.add(self.view)
+
+
+class ListView(Gtk.TreeView):
+
+    def __repr__(self):
+        return '<ListView>'
+
+    def __init__(self, window):
+        Gtk.TreeView.__init__(self, TreeStore())
+        self.model = self.get_model()
+        self.main_window = window
+
+        self.selection = self.get_selection()
+        self.selection.connect('changed', self._on_selection_changed)
+
+        self._populate()
+        self.set_headers_visible(False)
+
+    def _populate(self):
+        for i, title in enumerate([_("Title"), "", _("Last Edited")]):
+            renderer = Gtk.CellRendererText()
+            column = Gtk.TreeViewColumn(title, renderer, text=i)
+            self.append_column(column)
+
+    def _on_selection_changed(self, selection):
+        model, treeiter = selection.get_selected()
+        if not self.main_window.is_showing_content():
+            self.main_window.toggle_content()
+
+    def new_note_request(self):
+        treeiter = self.model.new_note_request()
+        self.selection.select_iter(treeiter)
