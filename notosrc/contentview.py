@@ -50,6 +50,13 @@ class ContentView(Gtk.Bin):
     def preview_content(self):
         render_markdown(self.editor, self.webview)
 
+    def preview_toggled(self):
+        if self.content_stack.get_visible_child_name() == 'editor':
+            self.content_stack.set_visible_child_name('preview')
+            self.preview_content()
+        else:
+            self.content_stack.set_visible_child_name('editor')
+
     def _show_content_stack(self):
         duration = self.content.get_transition_duration()
         self.slider.set_hexpand(True)

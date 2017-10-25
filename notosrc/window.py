@@ -66,10 +66,6 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def is_showing_content(self):
         return self.contentview.slider.get_child_revealed()
 
-    @GtkTemplate.Callback
-    def _on_search(self, widget):
-        pass
-
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
 class _HeaderBar(Gtk.Box):
@@ -98,21 +94,12 @@ class _HeaderBar(Gtk.Box):
 
     @GtkTemplate.Callback
     def _on_search_toggled(self, widget):
-        if self.parent.search_bar.get_search_mode():
-            self.parent.search_bar.set_search_mode(False)
-            self.parent.search_entry.set_text("")
-        else:
-            self.parent.search_bar.set_search_mode(True)
-            self.parent.search_entry.grab_focus()
+        self.parent.notesview.search_toggled()
 
     @GtkTemplate.Callback
     def _on_preview_toggled(self, widget):
-        if self.parent.content_stack.get_visible_child_name() == 'editor':
-            self.parent.content_stack.set_visible_child_name('preview')
-            self.parent.preview_content()
-        else:
-            self.parent.content_stack.set_visible_child_name('editor')
+        self.parent.contentview.preview_toggled()
 
     @GtkTemplate.Callback
     def _on_new_request(self, widget):
-        self.parent.notelist.new_note_request()
+        self.parent.notesview.view.new_note_request()

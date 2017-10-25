@@ -33,9 +33,21 @@ class NotesView(Gtk.Bin):
     def _set_up_widgets(self):
         noteslist = self.builder.get_object('noteslist')
         listview = self.builder.get_object('listview')
+
         self.add(noteslist)
         self.view = ListView(self.parent_window)
         listview.add(self.view)
+
+        self.search_bar = self.builder.get_object('search_bar')
+        self.search_entry = self.builder.get_object('search_entry')
+
+    def search_toggled(self):
+        if self.search_bar.get_search_mode():
+            self.search_bar.set_search_mode(False)
+            self.search_entry.set_text("")
+        else:
+            self.search_bar.set_search_mode(True)
+            self.search_entry.grab_focus()
 
 
 class ListView(Gtk.TreeView):
