@@ -49,6 +49,12 @@ class NotesView(Gtk.Bin):
             self.search_bar.set_search_mode(True)
             self.search_entry.grab_focus()
 
+    def do_size_allocate(self, allocation):
+        if self.parent_window.content_shown():
+            allocation.width = self.sidebar_width
+
+        Gtk.Bin.do_size_allocate(self, allocation)
+
 
 class ListView(Gtk.TreeView):
 

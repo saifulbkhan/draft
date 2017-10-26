@@ -66,6 +66,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def is_showing_content(self):
         return self.contentview.slider.get_child_revealed()
 
+    def content_shown(self):
+        cond1 = self.contentview.slider.get_reveal_child()
+        cond2 = self.contentview.slider.get_child_revealed()
+        return cond1 and cond2
+
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
 class _HeaderBar(Gtk.Box):
