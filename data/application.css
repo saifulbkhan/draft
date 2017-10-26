@@ -17,3 +17,9 @@
 .noto-listview {
     border-style: none;
 }
+
+.noto-content {
+    border-style: solid;
+    border-left-width: 1px;
+    border-left-color: @borders
+}
