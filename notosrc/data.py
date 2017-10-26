@@ -102,6 +102,12 @@ def delete_orphan_tags(session):
             ssesion.delete(tag)
 
 
+def fetch_notebook_by_id(notebook_id, session):
+    notebook = session.query(Notebook).\
+               filter(Notebook.id==notebook_id).\
+               one_or_none()
+
+
 def fetch_all_notes(session):
     notes = session.query(Note).all()
     return notes
