@@ -31,7 +31,8 @@ class TreeStore(Gtk.TreeStore):
             GObject.TYPE_STRING,        # tags or number of items
             GObject.TYPE_STRING,        # last modified
             GObject.TYPE_STRING,        # hash-id for file or folder name
-            GObject.TYPE_BOOLEAN        # whether in trash or not
+            GObject.TYPE_BOOLEAN,       # whether in trash or not
+            GObject.TYPE_PYOBJECT       # list of parent hashes
         )
         self._load_data()
 
@@ -59,11 +60,13 @@ class TreeStore(Gtk.TreeStore):
 
     def row_for_note(self, note):
         tag_str = ' '.join(map(lambda x: x.keyword, note.tags))
+        hash_list = self.get_parent_hash_list(note)
         row = [note.title,
                tag_str,
                note.get_last_modified_relative_time(),
                note.hash_id,
-               bool(note.in_trash)]
+               bool(note.in_trash),
+               hash_list]
         return row
 
     def rows_for_notes(self, notes):
@@ -88,3 +91,12 @@ class TreeStore(Gtk.TreeStore):
             row = self.row_for_notebook(notebook)
             rows.append(row)
         return rows
+
+    def get_parent_hash_list(self, entity, parent_id='notebook_id'):
+        hashes = []
+        while getattr(entity, parent_id):
+            notebook_id = getattr(entity, parent_id)
+            entity = fetch_notebook_by_id(notebook_id)
+            hashes.append(entity.hash_id)
+        hashes.reverse()
+        return hashes
