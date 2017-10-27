@@ -11,6 +11,7 @@ app_sources = [
 	'app.py',
 	'datamodel.py',
 	'data.py',
+	'file.py',
 	'treestore.py',
 	'contentview.py',
 	'notesview.py',

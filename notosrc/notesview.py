@@ -49,6 +49,9 @@ class NotesView(Gtk.Bin):
             self.search_bar.set_search_mode(True)
             self.search_entry.grab_focus()
 
+    def set_editor(self, editor):
+        self.view.editor = editor
+
     def do_size_allocate(self, allocation):
         if self.parent_window.content_shown():
             allocation.width = self.sidebar_width
@@ -65,6 +68,7 @@ class ListView(Gtk.TreeView):
         Gtk.TreeView.__init__(self, TreeStore())
         self.model = self.get_model()
         self.main_window = window
+        self.editor = None
 
         self.selection = self.get_selection()
         self.selection.connect('changed', self._on_selection_changed)
@@ -82,6 +86,9 @@ class ListView(Gtk.TreeView):
         model, treeiter = selection.get_selected()
         if not self.main_window.is_showing_content():
             self.main_window.toggle_content()
+
+        res = self.model.prepare_for_edit(treeiter)
+        self.editor.load_file(res)
 
     def new_note_request(self):
         treeiter = self.model.new_note_request()

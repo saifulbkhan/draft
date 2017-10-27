@@ -56,6 +56,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def _create_stack_views(self):
         self.contentview = ContentView(self)
         self.topbox.pack_start(self.contentview, False, True, 0)
+        self.notesview.set_editor(self.contentview.content_editor)
 
     def toggle_content(self):
         if self.is_showing_content():

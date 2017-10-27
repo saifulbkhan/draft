@@ -16,7 +16,7 @@
 from gettext import gettext as _
 from gi.repository import GLib, GObject, Gtk
 
-from notosrc import data
+from notosrc import data, file
 
 
 class TreeStore(Gtk.TreeStore):
@@ -100,3 +100,9 @@ class TreeStore(Gtk.TreeStore):
             hashes.append(entity.hash_id)
         hashes.reverse()
         return hashes
+
+    def prepare_for_edit(self, treeiter):
+        hash_id = self[treeiter][3]
+        parent_hashes = list(self[treeiter][5])
+        res = file.read_file_contents(hash_id, parent_hashes)
+        return res

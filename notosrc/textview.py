@@ -19,7 +19,9 @@ from gettext import gettext as _
 import gi
 gi.require_version('GtkSource', '3.0')
 
-from gi.repository import Gtk, GObject, GtkSource
+from gi.repository import Gtk, GObject, GtkSource, Gdk
+
+from notosrc import file
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
 GObject.type_ensure(GObject.GType(GtkSource.View))
@@ -28,12 +30,15 @@ class TextView(Gtk.Box):
     def __repr__(self):
         return '<TextView>'
 
-    def __init__(self):
+    def __init__(self, parent):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
+        self.main_window = parent
         self._set_up_widgets()
         self.view = self.builder.get_object('editor')
+        self.current_file = None
+        self.current_file_etag = None
 
     def _set_up_widgets(self):
         # Use OrderedDict so that packing occurs in order of declaration
@@ -41,8 +46,7 @@ class TextView(Gtk.Box):
             'scrollable_editor': (True, True, 0),
             'status_bar': (False, False, 0)
         })
-
-        self.builder.connect_signals(Handlers())
+        self.connect('key-press-event', self._on_key_press)
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
@@ -51,6 +55,34 @@ class TextView(Gtk.Box):
             expand, fill, padding = pack_info
             self.pack_start(widget, expand, fill, padding)
 
-class Handlers():
-    # TODO: Implement signal handlers for TextView
-    pass
+    def _on_key_press(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if event_and_modifiers:
+            # Save file with (Ctrl + S)
+            if (event.keyval == Gdk.KEY_s
+                    and event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
+                if self.main_window.content_shown():
+                    self.write_current_buffer()
+
+    def load_file(self, res):
+        self.current_file_etag = None
+        if res:
+            self.current_file, contents, self.current_file_etag = res
+            self.render_content(contents)
+
+    def render_content(self, contents):
+        buffer = self.view.get_buffer()
+        buffer.set_text(contents)
+
+    def write_current_buffer(self):
+        buffer = self.view.get_buffer()
+        start = buffer.get_start_iter()
+        end = buffer.get_end_iter()
+        text_content = buffer.get_text(start, end, False)
+        etag = file.write_to_file(self.current_file,
+                                  text_content,
+                                  self.current_file_etag)
+        if etag:
+            self.current_file_etag = etag

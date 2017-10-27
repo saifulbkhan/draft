@@ -36,18 +36,16 @@ class ContentView(Gtk.Bin):
         self._set_up_widgets()
 
     def _set_up_widgets(self):
-        content_editor = TextView()
-        self.editor = content_editor.view
-        self.content_stack.add_titled(content_editor, 'editor', 'Editor')
+        self.content_editor = TextView(self.parent_window)
+        self.content_stack.add_titled(self.content_editor, 'editor', 'Editor')
 
-        content_preview = WebView()
-        self.webview = content_preview.view
-        self.content_stack.add_titled(content_preview, 'preview', 'Preview')
+        self.content_preview = WebView()
+        self.content_stack.add_titled(self.content_preview, 'preview', 'Preview')
 
         self.content_stack.set_visible_child_name('editor')
 
     def preview_content(self):
-        render_markdown(self.editor, self.webview)
+        render_markdown(self.content_editor.view, self.content_preview.view)
 
     def preview_toggled(self):
         if self.content_stack.get_visible_child_name() == 'editor':
