@@ -48,7 +48,7 @@ def session_scope():
 def init_db():
     Base.metadata.create_all(engine)
     try:
-        note_dir = os.path.join(USER_DATA_DIR, 'noto')
+        note_dir = os.path.join(USER_DATA_DIR, 'notes')
         note_local_dir = os.path.join(note_dir, 'local')
         note_trash_dir = os.path.join(note_dir, '.trash')
         Gio.file_new_for_path(note_dir).make_directory()
