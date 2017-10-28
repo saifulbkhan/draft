@@ -24,15 +24,12 @@ TRASH_DIR = join(USER_DATA_DIR, '.trash')
 default_encoding = 'utf-8'
 
 
-def read_file_contents(filename, parent_names):
+def read_file_contents(filename, parent_names, callback):
     parent_dir = sep.join(parent_names)
     fpath = join(BASE_NOTE_DIR, parent_dir, filename)
     try:
         f = Gio.File.new_for_path(fpath)
-        success, contents, etag = f.load_contents(None)
-        if success:
-            contents = contents.decode(default_encoding)
-            return (f, contents, etag)
+        f.load_contents_async(None, callback, None)
     except Exception as e:
         # TODO: Warn file IO error so overwriting path with blank file...
         f = Gio.File.new_for_path(fpath)
@@ -60,15 +57,17 @@ def write_to_file(f, contents, etag):
 
 
 def write_to_file_async(f, contents, callback, etag=None):
+    if not contents:
+        write_to_file(f, contents, etag)
     contents = bytes(contents, default_encoding)
     try:
-        f.replace_contents_async(contents,
-                                 etag,
-                                 False,
-                                 Gio.FileCreateFlags.PRIVATE,
-                                 None,
-                                 callback,
-                                 None)
+        f.replace_contents_bytes_async(GLib.Bytes(contents),
+                                       etag,
+                                       False,
+                                       Gio.FileCreateFlags.PRIVATE,
+                                       None,
+                                       callback,
+                                       None)
     except Exception as e:
         # TODO: Warn write async failure
         pass

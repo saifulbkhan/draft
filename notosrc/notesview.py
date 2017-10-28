@@ -87,8 +87,7 @@ class ListView(Gtk.TreeView):
         if not self.main_window.is_showing_content():
             self.main_window.toggle_content()
 
-        res = self.model.prepare_for_edit(treeiter)
-        self.editor.load_file(res)
+        res = self.model.prepare_for_edit(treeiter, self.editor.load_file)
 
     def new_note_request(self):
         treeiter = self.model.new_note_request()
