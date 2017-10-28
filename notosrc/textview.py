@@ -72,11 +72,7 @@ class TextView(Gtk.Box):
 
     def _on_buffer_changed(self, buffer):
         count = buffer.get_char_count()
-        # Automatic write occurs if number of characters is between 5 and 10,
-        # (which is likely when user is setting the heading) or upon insertion
-        # of every five characters.
-        if (count > 5 and count < 10) or (count % 5) == 0:
-            self.write_current_buffer()
+        self.write_current_buffer()
 
     def load_file(self, res):
         self.current_file_etag = None
@@ -93,12 +89,15 @@ class TextView(Gtk.Box):
         start = buffer.get_start_iter()
         end = buffer.get_end_iter()
 
+        def _write_buffer_cb(f, res, user_data):
+            success, etag = f.replace_contents_finish(res)
+            if success:
+                self.current_file_etag = etag
+
         text_content = buffer.get_text(start, end, False)
-        etag = file.write_to_file(self.current_file,
-                                  text_content,
-                                  self.current_file_etag)
-        if etag:
-            self.current_file_etag = etag
+        etag = file.write_to_file_async(self.current_file,
+                                        text_content,
+                                        _write_buffer_cb)
 
         title = self._get_title_for_text(text_content)
         self.main_window.notesview.view.set_title_for_current_selection(title)

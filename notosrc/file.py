@@ -59,6 +59,21 @@ def write_to_file(f, contents, etag):
     return None
 
 
+def write_to_file_async(f, contents, callback, etag=None):
+    contents = bytes(contents, default_encoding)
+    try:
+        f.replace_contents_async(contents,
+                                 etag,
+                                 False,
+                                 Gio.FileCreateFlags.PRIVATE,
+                                 None,
+                                 callback,
+                                 None)
+    except Exception as e:
+        # TODO: Warn write async failure
+        pass
+
+
 def create_dir(dirname, parent_names):
     parent_dir = sep.join(parent_names)
     f_path = join(BASE_NOTE_DIR, parent_dir, filename)
