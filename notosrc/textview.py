@@ -49,8 +49,8 @@ class TextView(Gtk.Box):
         self.connect('key-press-event', self._on_key_press)
 
         buffer = self.view.get_buffer()
-        buffer.connect('changed', self._on_buffer_changed)
-
+        self._on_buffer_changed_id = buffer.connect('changed',
+                                                    self._on_buffer_changed)
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
@@ -82,7 +82,8 @@ class TextView(Gtk.Box):
 
     def render_content(self, contents):
         buffer = self.view.get_buffer()
-        buffer.set_text(contents)
+        with buffer.handler_block((self._on_buffer_changed_id)):
+            buffer.set_text(contents)
 
     def write_current_buffer(self):
         buffer = self.view.get_buffer()
@@ -93,9 +94,14 @@ class TextView(Gtk.Box):
             self.current_file_etag = etag
 
         text_content = buffer.get_text(start, end, False)
-        etag = file.write_to_file_async(self.current_file,
-                                        text_content,
-                                        on_file_write)
+        if not text_content:
+            self.current_file_etag = file.write_to_file(self.current_file,
+                                                        text_content,
+                                                        self.current_file_etag)
+        else:
+            file.write_to_file_async(self.current_file,
+                                     text_content,
+                                     on_file_write)
 
         title = self._get_title_for_text(text_content)
         self.main_window.notesview.view.set_title_for_current_selection(title)
