@@ -30,6 +30,7 @@ class TreeStore(Gtk.TreeStore):
             GObject.TYPE_STRING,        # title or name
             GObject.TYPE_STRING,        # tags or number of items
             GObject.TYPE_STRING,        # last modified
+            GObject.TYPE_INT,           # id for the entity
             GObject.TYPE_STRING,        # hash-id for file or folder name
             GObject.TYPE_BOOLEAN,       # whether in trash or not
             GObject.TYPE_PYOBJECT       # list of parent hashes
@@ -42,7 +43,7 @@ class TreeStore(Gtk.TreeStore):
             notebooks = data.fetch_notebooks_not_in_notebook(session)
             rows = self.rows_for_notes(notes)
             for row in rows:
-                if not row[4]:
+                if not row[5]:
                     self.append(None, row)
             # TODO: Insert notebooks and their notes
 
@@ -64,6 +65,7 @@ class TreeStore(Gtk.TreeStore):
         row = [note.title,
                tag_str,
                note.get_last_modified_relative_time(),
+               note.id,
                note.hash_id,
                bool(note.in_trash),
                hash_list]
@@ -81,6 +83,7 @@ class TreeStore(Gtk.TreeStore):
         row = [notebook.name,
                str(items),
                notebook.get_last_modified_relative_time(),
+               notebook.id,
                notebook.hash_id,
                bool(notebook.in_trash)]
         return row
@@ -102,7 +105,14 @@ class TreeStore(Gtk.TreeStore):
         return hashes
 
     def prepare_for_edit(self, treeiter):
-        hash_id = self[treeiter][3]
-        parent_hashes = list(self[treeiter][5])
+        hash_id = self[treeiter][4]
+        parent_hashes = list(self[treeiter][6])
         res = file.read_file_contents(hash_id, parent_hashes)
         return res
+
+    def set_title_for_iter(self, treeiter, title):
+        id = self[treeiter][3]
+        self[treeiter][0] = title
+        with data.session_scope() as session:
+            note = data.fetch_note_by_id(id, session)
+            note.title = title

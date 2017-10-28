@@ -35,8 +35,8 @@ class TextView(Gtk.Box):
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
         self.main_window = parent
-        self._set_up_widgets()
         self.view = self.builder.get_object('editor')
+        self._set_up_widgets()
         self.current_file = None
         self.current_file_etag = None
 
@@ -47,6 +47,10 @@ class TextView(Gtk.Box):
             'status_bar': (False, False, 0)
         })
         self.connect('key-press-event', self._on_key_press)
+
+        buffer = self.view.get_buffer()
+        buffer.connect('changed', self._on_buffer_changed)
+
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
@@ -66,6 +70,14 @@ class TextView(Gtk.Box):
                 if self.main_window.content_shown():
                     self.write_current_buffer()
 
+    def _on_buffer_changed(self, buffer):
+        count = buffer.get_char_count()
+        # Automatic write occurs if number of characters is between 5 and 10,
+        # (which is likely when user is setting the heading) or upon insertion
+        # of every five characters.
+        if (count > 5 and count < 10) or (count % 5) == 0:
+            self.write_current_buffer()
+
     def load_file(self, res):
         self.current_file_etag = None
         if res:
@@ -80,9 +92,27 @@ class TextView(Gtk.Box):
         buffer = self.view.get_buffer()
         start = buffer.get_start_iter()
         end = buffer.get_end_iter()
+
         text_content = buffer.get_text(start, end, False)
         etag = file.write_to_file(self.current_file,
                                   text_content,
                                   self.current_file_etag)
         if etag:
             self.current_file_etag = etag
+
+        title = self._get_title_for_text(text_content)
+        self.main_window.notesview.view.set_title_for_current_selection(title)
+
+    def _get_title_for_text(self, text):
+        stripped = text.lstrip()
+        split = stripped.split('\n', maxsplit=1)
+        title = split[0]
+
+        if not title:
+            return _("Untitled")
+
+        # Strip any leading '#'s from the title
+        while title[0] == '#':
+            title = title[1:]
+
+        return title

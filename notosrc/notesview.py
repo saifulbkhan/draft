@@ -93,3 +93,7 @@ class ListView(Gtk.TreeView):
     def new_note_request(self):
         treeiter = self.model.new_note_request()
         self.selection.select_iter(treeiter)
+
+    def set_title_for_current_selection(self, title):
+        model, treeiter = self.selection.get_selected()
+        self.model.set_title_for_iter(treeiter, title)
