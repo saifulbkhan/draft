@@ -89,15 +89,13 @@ class TextView(Gtk.Box):
         start = buffer.get_start_iter()
         end = buffer.get_end_iter()
 
-        def _write_buffer_cb(f, res, user_data):
-            success, etag = f.replace_contents_finish(res)
-            if success:
-                self.current_file_etag = etag
+        def on_file_write(f, etag):
+            self.current_file_etag = etag
 
         text_content = buffer.get_text(start, end, False)
         etag = file.write_to_file_async(self.current_file,
                                         text_content,
-                                        _write_buffer_cb)
+                                        on_file_write)
 
         title = self._get_title_for_text(text_content)
         self.main_window.notesview.view.set_title_for_current_selection(title)

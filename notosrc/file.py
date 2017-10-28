@@ -24,18 +24,26 @@ TRASH_DIR = join(USER_DATA_DIR, '.trash')
 default_encoding = 'utf-8'
 
 
-def read_file_contents(filename, parent_names, callback):
+def read_file_contents(filename, parent_names, load_cb):
     parent_dir = sep.join(parent_names)
     fpath = join(BASE_NOTE_DIR, parent_dir, filename)
-    try:
-        f = Gio.File.new_for_path(fpath)
-        f.load_contents_async(None, callback, None)
-    except Exception as e:
-        # TODO: Warn file IO error so overwriting path with blank file...
-        f = Gio.File.new_for_path(fpath)
-        etag = write_to_file(f, "", None)
-        return (f, "", etag)
 
+    def read_file_cb(f, res, user_data):
+        try:
+            success, contents, etag = f.load_contents_finish(res)
+            if success:
+                contents = contents.decode('utf-8')
+                load_cb((f, contents, etag))
+            else:
+                raise IOError
+        except Exception as e:
+            # TODO: Warn file read error so overwriting path with blank file...
+            f = Gio.File.new_for_path(fpath)
+            etag = write_to_file(f, "", None)
+            load_cb((f, "", etag))
+
+    f = Gio.File.new_for_path(fpath)
+    f.load_contents_async(None, read_file_cb, None)
     return None
 
 
@@ -56,21 +64,29 @@ def write_to_file(f, contents, etag):
     return None
 
 
-def write_to_file_async(f, contents, callback, etag=None):
+def write_to_file_async(f, contents, write_cb, etag=None):
     if not contents:
         write_to_file(f, contents, etag)
     contents = bytes(contents, default_encoding)
-    try:
-        f.replace_contents_bytes_async(GLib.Bytes(contents),
-                                       etag,
-                                       False,
-                                       Gio.FileCreateFlags.PRIVATE,
-                                       None,
-                                       callback,
-                                       None)
-    except Exception as e:
-        # TODO: Warn write async failure
-        pass
+
+    def write_buffer_cb(f, res, user_data):
+        try:
+            success, etag = f.replace_contents_finish(res)
+            if success:
+                write_cb(f, etag)
+            else:
+                raise IOError
+        except Exception as e:
+            # TODO: Warn write async failure
+            pass
+
+    f.replace_contents_bytes_async(GLib.Bytes(contents),
+                                   etag,
+                                   False,
+                                   Gio.FileCreateFlags.PRIVATE,
+                                   None,
+                                   write_buffer_cb,
+                                   None)
 
 
 def create_dir(dirname, parent_names):
