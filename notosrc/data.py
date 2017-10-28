@@ -106,6 +106,14 @@ def fetch_notebook_by_id(notebook_id, session):
     notebook = session.query(Notebook).\
                filter(Notebook.id==notebook_id).\
                one_or_none()
+    return note
+
+
+def fetch_note_by_id(note_id, session):
+    note = session.query(Note).\
+           filter(Note.id==note_id).\
+           one_or_none()
+    return note
 
 
 def fetch_all_notes(session):
