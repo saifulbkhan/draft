@@ -107,8 +107,7 @@ class TreeStore(Gtk.TreeStore):
     def prepare_for_edit(self, treeiter, load_cb):
         hash_id = self[treeiter][4]
         parent_hashes = list(self[treeiter][6])
-        res = file.read_file_contents(hash_id, parent_hashes, load_cb)
-        return res
+        file.read_file_contents(hash_id, parent_hashes, load_cb)
 
     def set_title_for_iter(self, treeiter, title):
         id = self[treeiter][3]
