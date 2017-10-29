@@ -113,9 +113,9 @@ class TextView(Gtk.Box):
 
         if not title:
             return _("Untitled")
-
         # Strip any leading '#'s from the title
-        while title[0] == '#':
+        elif title[0] == '#':
             title = title[1:]
+            return self._get_title_for_text(title)
 
         return title
