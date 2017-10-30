@@ -51,6 +51,10 @@ class TextView(Gtk.Box):
         buffer = self.view.get_buffer()
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
+        language_manager = GtkSource.LanguageManager.get_default()
+        language = language_manager.get_language('markdown')
+        buffer.set_language(language)
+
         self._generate_text_view(widgets)
 
     def _generate_text_view(self, widgets):
