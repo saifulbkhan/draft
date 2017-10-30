@@ -15,11 +15,11 @@
 
 from gettext import gettext as _
 
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Pango
 from notosrc.treestore import TreeStore
 
 class NotesView(Gtk.Bin):
-    sidebar_width = 300
+    sidebar_width = 250
     def __repr__(self):
         return '<NotesView>'
 
@@ -77,15 +77,22 @@ class ListView(Gtk.TreeView):
         self.set_headers_visible(False)
 
     def _populate(self):
-        for i, title in enumerate([_("Title"), "", _("Last Edited")]):
-            renderer = Gtk.CellRendererText()
+        for i, title in enumerate(["title", "details", "last_edited"]):
+            renderer = Gtk.CellRendererText(size_points=12,
+                                            ellipsize=Pango.EllipsizeMode.END)
+            renderer.set_fixed_size(-1, 36)
             column = Gtk.TreeViewColumn(title, renderer, text=i)
+            column.set_min_width(250)
+            setattr(self, title, column)
             self.append_column(column)
+        self.title.set_expand(True)
 
     def _on_selection_changed(self, selection):
         model, treeiter = selection.get_selected()
         if not self.main_window.is_showing_content():
             self.main_window.toggle_content()
+            self.details.set_visible(False)
+            self.last_edited.set_visible(False)
 
         self.model.prepare_for_edit(treeiter, self.editor.load_file)
 
