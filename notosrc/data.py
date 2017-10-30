@@ -49,14 +49,22 @@ def init_db():
     Base.metadata.create_all(engine)
     try:
         note_dir = os.path.join(USER_DATA_DIR, 'notes')
-        note_local_dir = os.path.join(note_dir, 'local')
-        note_trash_dir = os.path.join(note_dir, '.trash')
         Gio.file_new_for_path(note_dir).make_directory()
+    except Exception:
+        # TODO: Critial error: failed to make storage directory for notes
+        pass
+    try:
+        note_local_dir = os.path.join(note_dir, 'local')
         Gio.file_new_for_path(note_local_dir).make_directory()
-        Gio.file_new_for_path(note_local_dir).make_directory()
+    except Exception:
+        # TODO: Critial error: failed to make storage for local notes
+        pass
+    try:
+        note_trash_dir = os.path.join(note_dir, '.trash')
+        Gio.file_new_for_path(note_trash_dir).make_directory()
     except Exception as e:
-        # TODO: Warn folder already exists or creation failed
-        return
+        # TODO: Critial error: failed to make directory for trashed notes
+        pass
 
 
 def create_notebook(name, session):
