@@ -87,7 +87,9 @@ class TextView(Gtk.Box):
     def render_content(self, contents):
         buffer = self.view.get_buffer()
         with buffer.handler_block((self._on_buffer_changed_id)):
+            buffer.begin_not_undoable_action()
             buffer.set_text(contents)
+            buffer.end_not_undoable_action()
 
     def write_current_buffer(self):
         buffer = self.view.get_buffer()
