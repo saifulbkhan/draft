@@ -115,3 +115,10 @@ class TreeStore(Gtk.TreeStore):
         with data.session_scope() as session:
             note = data.fetch_note_by_id(id, session)
             note.title = title
+
+    def delete_row_for_iter(self, treeiter):
+        id = self[treeiter][3]
+        self.remove(treeiter)
+        with data.session_scope() as session:
+            note = data.fetch_note_by_id(id, session)
+            session.delete(note)

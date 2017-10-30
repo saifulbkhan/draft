@@ -15,7 +15,7 @@
 
 from gettext import gettext as _
 
-from gi.repository import Gtk, GLib, Pango
+from gi.repository import Gtk, GLib, Pango, Gdk
 from notosrc.treestore import TreeStore
 
 class NotesView(Gtk.Bin):
@@ -75,6 +75,16 @@ class ListView(Gtk.TreeView):
 
         self._populate()
         self.set_headers_visible(False)
+        self.connect('key-press-event', self._on_key_press)
+
+    def _on_key_press(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            # Delete row and file with (Del)
+            if event.keyval == Gdk.KEY_Delete:
+                self.delete_selected_row()
 
     def _populate(self):
         for i, title in enumerate(["title", "details", "last_edited"]):
@@ -103,3 +113,7 @@ class ListView(Gtk.TreeView):
     def set_title_for_current_selection(self, title):
         model, treeiter = self.selection.get_selected()
         self.model.set_title_for_iter(treeiter, title)
+
+    def delete_selected_row(self):
+        model, treeiter = self.selection.get_selected()
+        self.model.delete_row_for_iter(treeiter)
