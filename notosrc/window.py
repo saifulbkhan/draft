@@ -40,8 +40,20 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         
         self.set_icon_name("noto")
         self.hsize_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
+        self._set_up_actions()
         self._add_widgets()
         self.show_all()
+
+    def _set_up_actions(self):
+        action_entries = [
+            ('new_note', self._new_note_request),
+            ('new_notebook', self._new_notebook_request)
+        ]
+
+        for action, cb in action_entries:
+            simple_action = Gio.SimpleAction.new(action, None)
+            simple_action.connect('activate', cb)
+            self.add_action(simple_action)
 
     def _add_widgets(self):
         titlebar = _HeaderBar(self)
@@ -72,12 +84,18 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         cond2 = self.contentview.slider.get_child_revealed()
         return cond1 and cond2
 
+    def _new_note_request(self, action, param):
+        self.notesview.view.new_note_request()
+
+    def _new_notebook_request(self, action, param):
+        pass
+
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
 class _HeaderBar(Gtk.Box):
     __gtype_name__ = 'HeaderBar'
     left_header, right_header, content_title, \
-    search_button, preview_button, new_button = GtkTemplate.Child.widgets(6)
+    search_button, preview_button = GtkTemplate.Child.widgets(5)
 
     def __repr__(self):
         return '<HeaderBar>'
@@ -105,7 +123,3 @@ class _HeaderBar(Gtk.Box):
     @GtkTemplate.Callback
     def _on_preview_toggled(self, widget):
         self.parent.contentview.preview_toggled()
-
-    @GtkTemplate.Callback
-    def _on_new_request(self, widget):
-        self.parent.notesview.view.new_note_request()
