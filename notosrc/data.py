@@ -67,18 +67,6 @@ def init_db():
         pass
 
 
-def create_notebook(name, session):
-    notebook = Notebook(name)
-    session.add(notebook)
-    return notebook
-
-
-def create_note(title, session, notebook=None):
-    note = Note(title, notebook)
-    session.add(note)
-    return note
-
-
 def fetch_tag(name, session):
     tag = session.query(Tag).\
             filter_by(keyword=name.lower()).\

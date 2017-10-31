@@ -17,6 +17,7 @@ from gettext import gettext as _
 from gi.repository import GLib, GObject, Gtk
 
 from notosrc import data, file
+from notosrc.datamodel import Note, Notebook
 
 
 class TreeStore(Gtk.TreeStore):
@@ -48,14 +49,28 @@ class TreeStore(Gtk.TreeStore):
             # TODO: Insert notebooks and their notes
 
     def new_note_request(self):
+        id = None
         with data.session_scope() as session:
-            note = data.create_note(_("Unititled"), session)
+            note = Note(title=_("Unititled"))
+            session.add(note)
+            # premature commit to ensure we get proper id
+            session.commit()
+            id = note.id
+        with data.session_scope() as session:
+            note = data.fetch_note_by_id(id, session)
             note_row = self.row_for_note(note)
             return self.append(None, note_row)
 
     def new_notebook_request(self):
+        id = None
         with data.session_scope() as session:
-            notebook = data.create_notebook(_("Untitled"), session)
+            notebook = Notebook(name=_("Untitled"))
+            session.add(notebook)
+            # premature commit
+            session.commit()
+            id = notebook.id
+        with data.session_scope() as session:
+            notebook = data.fetch_notebook_by_id(id, session)
             notebook_row = self.row_for_notebook(notebook)
             self.append(None, notebook_row)
 
@@ -118,7 +133,10 @@ class TreeStore(Gtk.TreeStore):
 
     def delete_row_for_iter(self, treeiter):
         id = self[treeiter][3]
+        hash_id = self[treeiter][4]
+        parent_hashes = self[treeiter][6]
         self.remove(treeiter)
+        file.trash_file(hash_id, parent_hashes)
         with data.session_scope() as session:
             note = data.fetch_note_by_id(id, session)
-            session.delete(note)
+            note.in_trash = True
