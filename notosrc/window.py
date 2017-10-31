@@ -39,7 +39,6 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.maximize()
         
         self.set_icon_name("noto")
-        self.hsize_group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.HORIZONTAL)
         self._set_up_actions()
         self._add_widgets()
         self.show_all()
@@ -92,29 +91,17 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
 
 @GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
-class _HeaderBar(Gtk.Box):
+class _HeaderBar(Gtk.HeaderBar):
     __gtype_name__ = 'HeaderBar'
-    left_header, right_header, content_title, \
-    search_button, preview_button = GtkTemplate.Child.widgets(5)
+    search_button, preview_button = GtkTemplate.Child.widgets(2)
 
     def __repr__(self):
         return '<HeaderBar>'
 
     def __init__(self, parent):
-        Gtk.Box.__init__(self)
+        Gtk.HeaderBar.__init__(self)
         self.init_template()
         self.parent = parent
-        parent.hsize_group.add_widget(self.left_header)
-        self._update_decorations (Gtk.Settings.get_default(), None)
-
-    def _update_decorations(self, settings, pspec):
-        layout_desc = settings.props.gtk_decoration_layout;
-        tokens = layout_desc.split(":", 1)
-        if len(tokens) > 1:
-            self.right_header.props.decoration_layout = ":" + tokens[1]
-        else:
-            self.right_header.props.decoration_layout = ""
-        self.left_header.props.decoration_layout = tokens[0]
 
     @GtkTemplate.Callback
     def _on_search_toggled(self, widget):
