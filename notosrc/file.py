@@ -19,7 +19,7 @@ from gi.repository import Gio, GLib
 from notosrc.data import USER_DATA_DIR
 
 BASE_NOTE_DIR = join(USER_DATA_DIR, 'notes', 'local')
-TRASH_DIR = join(USER_DATA_DIR, '.trash')
+TRASH_DIR = join(USER_DATA_DIR, 'notes', '.trash')
 
 default_encoding = 'utf-8'
 
