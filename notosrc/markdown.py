@@ -32,8 +32,10 @@ class MathBlockLexer(BlockLexer):
     def enable_math(self):
         self.rules.block_math = re.compile(r'\$\$(.*?)\$\$', re.DOTALL)
         self.default_rules.extend(['block_math'])
+        self.list_rules = self.list_rules + ('block_math',)
         # Strange hack to preserve 'block_math' in rules
         self.default_rules = sorted(self.default_rules)
+        self.list_rules = sorted(self.list_rules)
 
     def parse_block_math(self, m):
         """Parse a $$math$$ block"""
