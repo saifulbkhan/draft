@@ -42,6 +42,21 @@ class MathBlockLexer(BlockLexer):
             'text': m.group(1)
         })
 
+    def parse_paragraph(self, m):
+        text = m.group(1).rstrip('\n')
+        splits = re.split(self.rules.block_math, text)
+        for i, split in enumerate(splits):
+            if i % 2:
+                self.tokens.append({
+                    'type': 'block_math',
+                    'text': split
+                })
+            else:
+                self.tokens.append({
+                    'type': 'paragraph',
+                    'text': split
+                })
+
 
 class MathInlineLexer(InlineLexer):
     def __init__(self, renderer):
