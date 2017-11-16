@@ -30,11 +30,12 @@ class TextView(Gtk.Box):
     def __repr__(self):
         return '<TextView>'
 
-    def __init__(self, parent):
+    def __init__(self, main_window, parent):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
-        self.main_window = parent
+        self.main_window = main_window
+        self.parent = parent
         self.view = self.builder.get_object('editor')
         self._set_up_widgets()
         self.current_file = None
@@ -83,6 +84,9 @@ class TextView(Gtk.Box):
         if res:
             self.current_file, contents, self.current_file_etag = res
             self.render_content(contents)
+
+        if self.parent.in_preview_mode():
+            self.parent.preview_content()
 
     def render_content(self, contents):
         buffer = self.view.get_buffer()
