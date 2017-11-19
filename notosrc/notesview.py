@@ -32,6 +32,7 @@ class NotesView(Gtk.Bin):
 
     def _set_up_widgets(self):
         self.slider = self.builder.get_object('slider')
+        self.slider.set_hexpand(False)
         noteslist = self.builder.get_object('noteslist')
         listview = self.builder.get_object('listview')
 
@@ -58,12 +59,6 @@ class NotesView(Gtk.Bin):
 
     def set_editor(self, editor):
         self.view.editor = editor
-
-    def do_size_allocate(self, allocation):
-        if self.parent_window.content_shown():
-            allocation.width = self.sidebar_width
-
-        Gtk.Bin.do_size_allocate(self, allocation)
 
 
 class ListView(Gtk.TreeView):

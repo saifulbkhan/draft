@@ -69,16 +69,3 @@ class ContentView(Gtk.Bin):
         self.content.set_reveal_child(False)
         GLib.timeout_add(duration, self.slider.set_reveal_child, False)
         GLib.timeout_add(duration, self.slider.set_hexpand, False)
-
-    def do_size_allocate(self, allocation):
-        parent_allocation = self.get_parent().get_allocation()
-        sidebar_width = self.parent_window.notesview.sidebar_width
-
-        if self.parent_window.is_showing_content():
-            allocation.x = parent_allocation.x + sidebar_width
-            allocation.width = parent_allocation.width - sidebar_width
-            self.set_size_request(-1, -1)
-        else:
-            self.set_size_request(allocation.width, -1)
-
-        Gtk.Bin.do_size_allocate(self, allocation)
