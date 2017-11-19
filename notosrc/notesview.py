@@ -31,15 +31,22 @@ class NotesView(Gtk.Bin):
         self._set_up_widgets()
 
     def _set_up_widgets(self):
+        self.slider = self.builder.get_object('slider')
         noteslist = self.builder.get_object('noteslist')
         listview = self.builder.get_object('listview')
 
-        self.add(noteslist)
+        self.add(self.slider)
         self.view = ListView(self.parent_window)
         listview.add(self.view)
 
         self.search_bar = self.builder.get_object('search_bar')
         self.search_entry = self.builder.get_object('search_entry')
+
+    def toggle_panel(self):
+        if self.slider.get_reveal_child():
+            self.slider.set_reveal_child(False)
+        else:
+            self.slider.set_reveal_child(True)
 
     def search_toggled(self):
         if self.search_bar.get_search_mode():

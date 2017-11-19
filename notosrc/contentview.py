@@ -29,13 +29,14 @@ class ContentView(Gtk.Bin):
         self.parent_window = parent
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/contentview.ui')
+        self._set_up_widgets()
+
+    def _set_up_widgets(self):
         self.slider = self.builder.get_object('slider')
         self.content = self.builder.get_object('content')
         self.content_stack = self.builder.get_object('content_stack')
         self.add(self.slider)
-        self._set_up_widgets()
 
-    def _set_up_widgets(self):
         self.content_editor = TextView(self.parent_window, self)
         self.content_stack.add_titled(self.content_editor, 'editor', 'Editor')
 
@@ -57,13 +58,13 @@ class ContentView(Gtk.Bin):
         else:
             self.content_stack.set_visible_child_name('editor')
 
-    def _show_content_stack(self):
+    def show_content_stack(self):
         duration = self.content.get_transition_duration()
         self.slider.set_hexpand(True)
         self.slider.set_reveal_child(True)
         GLib.timeout_add(duration, self.content.set_reveal_child, True)
 
-    def _hide_content_stack(self):
+    def hide_content_stack(self):
         duration = self.content.get_transition_duration()
         self.content.set_reveal_child(False)
         GLib.timeout_add(duration, self.slider.set_reveal_child, False)

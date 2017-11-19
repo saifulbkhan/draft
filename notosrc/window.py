@@ -60,6 +60,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self._create_list_views()
         self._create_stack_views()
 
+        self.connect('key-press-event', self._on_key_press)
+
     def _create_list_views(self):
         self.notesview = NotesView(self)
         self.topbox.pack_start(self.notesview, False, True, 0)
@@ -69,11 +71,22 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.topbox.pack_start(self.contentview, False, True, 0)
         self.notesview.set_editor(self.contentview.content_editor)
 
+    def _on_key_press(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            if event.keyval == Gdk.KEY_F9:
+                self.toggle_panel()
+
+    def toggle_panel(self):
+        self.notesview.toggle_panel()
+
     def toggle_content(self):
         if self.is_showing_content():
-            self.contentview._hide_content_stack()
+            self.contentview.hide_content_stack()
         else:
-            self.contentview._show_content_stack()
+            self.contentview.show_content_stack()
 
     def is_showing_content(self):
         return self.contentview.slider.get_child_revealed()
