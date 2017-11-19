@@ -89,7 +89,7 @@ class ListView(Gtk.TreeView):
                 self.delete_selected_row()
 
     def _populate(self):
-        for i, title in enumerate(["title", "details", "last_edited"]):
+        for i, title in enumerate(["title"]):
             renderer = Gtk.CellRendererText(size_points=12,
                                             ellipsize=Pango.EllipsizeMode.END)
             renderer.set_fixed_size(-1, 36)
