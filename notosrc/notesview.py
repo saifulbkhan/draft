@@ -101,11 +101,6 @@ class ListView(Gtk.TreeView):
 
     def _on_selection_changed(self, selection):
         model, treeiter = selection.get_selected()
-        if not self.main_window.is_showing_content():
-            self.main_window.toggle_content()
-            self.details.set_visible(False)
-            self.last_edited.set_visible(False)
-
         self.model.prepare_for_edit(treeiter, self.editor.load_file)
 
     def new_note_request(self):

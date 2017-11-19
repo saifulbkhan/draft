@@ -88,14 +88,6 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         else:
             self.contentview.show_content_stack()
 
-    def is_showing_content(self):
-        return self.contentview.slider.get_child_revealed()
-
-    def content_shown(self):
-        cond1 = self.contentview.slider.get_reveal_child()
-        cond2 = self.contentview.slider.get_child_revealed()
-        return cond1 and cond2
-
     def _new_note_request(self, action, param):
         self.notesview.view.new_note_request()
 

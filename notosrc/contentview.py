@@ -32,10 +32,9 @@ class ContentView(Gtk.Bin):
         self._set_up_widgets()
 
     def _set_up_widgets(self):
-        self.slider = self.builder.get_object('slider')
-        self.content = self.builder.get_object('content')
         self.content_stack = self.builder.get_object('content_stack')
-        self.add(self.slider)
+        self.content_stack.set_hexpand(True)
+        self.add(self.content_stack)
 
         self.content_editor = TextView(self.parent_window, self)
         self.content_stack.add_titled(self.content_editor, 'editor', 'Editor')
@@ -57,15 +56,3 @@ class ContentView(Gtk.Bin):
             self.preview_content()
         else:
             self.content_stack.set_visible_child_name('editor')
-
-    def show_content_stack(self):
-        duration = self.content.get_transition_duration()
-        self.slider.set_hexpand(True)
-        self.slider.set_reveal_child(True)
-        GLib.timeout_add(duration, self.content.set_reveal_child, True)
-
-    def hide_content_stack(self):
-        duration = self.content.get_transition_duration()
-        self.content.set_reveal_child(False)
-        GLib.timeout_add(duration, self.slider.set_reveal_child, False)
-        GLib.timeout_add(duration, self.slider.set_hexpand, False)
