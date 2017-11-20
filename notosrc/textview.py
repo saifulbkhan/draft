@@ -19,7 +19,7 @@ from gettext import gettext as _
 import gi
 gi.require_version('GtkSource', '3.0')
 
-from gi.repository import Gtk, GObject, GtkSource, Gdk
+from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib
 
 from notosrc import file
 
@@ -94,6 +94,13 @@ class TextView(Gtk.Box):
             buffer.begin_not_undoable_action()
             buffer.set_text(contents)
             buffer.end_not_undoable_action()
+
+        # TODO: Use mark to scroll to desired position, to avoid segfaults
+        self.view.grab_focus()
+        iter_at_cursor = buffer.get_iter_at_mark(buffer.get_insert())
+        GLib.idle_add(self.view.scroll_to_iter,
+                      iter_at_cursor,
+                      0.0, False, 0.0, 0.0)
 
     def write_current_buffer(self):
         buffer = self.view.get_buffer()
