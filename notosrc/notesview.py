@@ -94,7 +94,6 @@ class ListView(Gtk.TreeView):
                                             ellipsize=Pango.EllipsizeMode.END)
             renderer.set_fixed_size(-1, 36)
             column = Gtk.TreeViewColumn(title, renderer, text=i)
-            column.set_min_width(250)
             setattr(self, title, column)
             self.append_column(column)
         self.title.set_expand(True)

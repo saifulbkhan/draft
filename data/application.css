@@ -1,11 +1,5 @@
 .noto-listview {
-    border-style: none;
-}
-
-.noto-content {
-    border-style: solid;
-    border-left-width: 1px;
-    border-left-color: @borders
+    border-width: 0 1px 0 0;
 }
 
 .noto-editor {
