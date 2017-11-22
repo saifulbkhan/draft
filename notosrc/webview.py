@@ -27,14 +27,23 @@ class WebView(Gtk.Box):
 
     def __init__(self):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
+        self.scrollOffset = 0;
+        self._set_up_widgets()
+
+    def _set_up_widgets(self):
         manager = self._set_up_content_manager()
         self.view = WebKit.WebView.new_with_user_content_manager(manager)
         self.view.connect('decide_policy', self._on_decision_request)
         self.view.connect('load_changed', self._on_load_changed)
         self.view.connect('unmap', self._on_unmapped)
-        self.scrollOffset = 0;
-        self._webview_settings()
-        self._set_up_widgets()
+        self.view.set_can_focus(False)
+
+        scrollable_window = Gtk.ScrolledWindow()
+        scrollable_window.hexpand = True
+        scrollable_window.vexpand = True
+
+        scrollable_window.add(self.view)
+        self.pack_start(scrollable_window, True, True, 0)
 
     def _set_up_content_manager(self):
         user_content_manager = WebKit.UserContentManager()
@@ -53,17 +62,10 @@ class WebView(Gtk.Box):
         user_content_manager.add_style_sheet(user_stylesheet)
         return user_content_manager
 
+    # TODO: Maybe we need this for debugging only
     def _webview_settings(self):
         settings = self.view.get_settings()
         # settings.set_enable_write_console_messages_to_stdout(True)
-
-    def _set_up_widgets(self):
-        scrollable_window = Gtk.ScrolledWindow()
-        scrollable_window.hexpand = True
-        scrollable_window.vexpand = True
-
-        scrollable_window.add(self.view)
-        self.pack_start(scrollable_window, True, True, 0)
 
     def _on_decision_request(self, *args):
         webview, policy_decision, decision_type = args
