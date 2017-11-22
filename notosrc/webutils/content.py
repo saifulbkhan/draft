@@ -28,7 +28,8 @@ head_string = '''
         processEscapes: true,
         imageFont: null
     },
-    showMathMenu: false
+    showMathMenu: false,
+    "HTML-CSS": { scale: 75, linebreaks: { automatic: true } }
     });
     </script>
     <script type="text/javascript"
