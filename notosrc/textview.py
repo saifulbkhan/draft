@@ -68,12 +68,11 @@ class TextView(Gtk.Box):
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
 
+        # TODO: Add shortcuts to textview
         if event_and_modifiers:
-            # Save file with (Ctrl + S)
             if (event.keyval == Gdk.KEY_s
                     and event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
-                if self.main_window.content_shown():
-                    self.write_current_buffer()
+                pass
 
     def _on_buffer_changed(self, buffer):
         count = buffer.get_char_count()
