@@ -57,6 +57,7 @@ class TextView(Gtk.Box):
         self.view.set_top_margin(10)
         self.view.set_bottom_margin(10)
         self.view.scroll_offset = 4
+        self.view.get_style_context().add_class('noto-editor')
 
         self.connect('key-press-event', self._on_key_press)
 
