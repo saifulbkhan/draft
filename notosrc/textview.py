@@ -57,6 +57,7 @@ class TextView(Gtk.Box):
         self.view.set_top_margin(10)
         self.view.set_bottom_margin(10)
         self.view.scroll_offset = 4
+        self.view.overscroll_num_lines = 3
         self.view.get_style_context().add_class('noto-editor')
 
         self.connect('key-press-event', self._on_key_press)
@@ -147,7 +148,7 @@ class NotoTextView(GtkSource.View):
     def __repr__(self):
         return '<NotoTextView>'
 
-    def init(self):
+    def __init__(self):
         GtkSource.View.__init__(self)
         self.cached_char_height = 0
         self.cached_char_width = 0
@@ -308,3 +309,17 @@ class NotoTextView(GtkSource.View):
                        use_align, xalign, yalign):
         text_iter = self.get_buffer().get_iter_at_mark(mark)
         self.scroll_to_iter(text_iter, within_margin, use_align, xalign, yalign)
+
+    def refresh_overscroll(self):
+        height = self.get_allocated_height()
+        new_margin = self.overscroll_num_lines * self.cached_char_height
+
+        if new_margin < 0:
+            new_margin = height + new_margin
+        new_margin = min(max(new_margin, 0), height)
+
+        self.set_bottom_margin(new_margin)
+
+    def do_size_allocate(self, allocation):
+        GtkSource.View.do_size_allocate(self, allocation)
+        self.refresh_overscroll()
