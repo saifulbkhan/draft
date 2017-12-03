@@ -56,7 +56,7 @@ class TextView(Gtk.Box):
         self.view.set_right_margin(24)
         self.view.set_top_margin(10)
         self.view.set_bottom_margin(10)
-        self.view.scroll_offset = 10
+        self.view.scroll_offset = 4
 
         self.connect('key-press-event', self._on_key_press)
 
