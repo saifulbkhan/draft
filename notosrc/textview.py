@@ -160,6 +160,8 @@ class NotoTextView(GtkSource.View):
         layout = Pango.Layout(context)
         layout.set_text('X', 1)
         self.cached_char_width, self.cached_char_height = layout.get_pixel_size()
+        self.cached_char_height += self.get_pixels_above_lines() +\
+                                   self.get_pixels_below_lines()
 
     def get_visible_rect(self):
         area = GtkSource.View.get_visible_rect(self)
