@@ -162,6 +162,7 @@ class NotoTextView(GtkSource.View):
 
     def get_visible_rect(self):
         area = GtkSource.View.get_visible_rect(self)
+        area.y += self.get_top_margin()
 
         # If we don't have valid line height, not much we can do now. We can
         # just adjust things later once it becomes available.
@@ -177,15 +178,14 @@ class NotoTextView(GtkSource.View):
             # If we have an even number of visible lines and scrolloffset is
             # less than our desired scrolloffset, we need to remove an extra
             # line so we don't have two visible lines.
-            if scroll_offset < self.scroll_offset and (visible_lines & 1) == 0:
+            if scroll_offset < self.scroll_offset and (visible_lines % 2) == 0:
                 area.height -= self.cached_char_height
 
             # Use a multiple of the line height so we don't jump around when
             # focusing the last line (due to Y2 not fitting in the visible
             # area).
-            area.height = (area.height / self.cached_char_height) \
+            area.height = int(area.height / self.cached_char_height) \
                           * self.cached_char_height
-
         return area
 
     def scroll_to_iter(self, text_iter, within_margin,
@@ -205,7 +205,7 @@ class NotoTextView(GtkSource.View):
         screen_y_offset = screen.height * within_margin
 
         screen.x += screen_x_offset
-        screen.y = screen_y_offset
+        screen.y += screen_y_offset
         screen.width -= screen_x_offset * 2
         screen.height -= screen_y_offset * 2
 
@@ -246,16 +246,17 @@ class NotoTextView(GtkSource.View):
 
         # Scroll offset adjustment
         if self.cached_char_height:
-            visible_lines = int(screen.height / self.cached_char_height)
+            true_height = GtkSource.View.get_visible_rect(self).height
+            visible_lines = int(true_height / self.cached_char_height)
             max_scroll_offset = (visible_lines - 1)/ 2
             scroll_offset = min(self.scroll_offset, max_scroll_offset)
             scroll_offset_height = self.cached_char_height * scroll_offset
 
             if scroll_offset_height > 0:
-                if rect.height - scroll_offset_height < yvalue:
+                if rect.y - scroll_offset_height < yvalue:
                     yvalue -= (scroll_offset_height - (rect.y - yvalue))
-                elif (rect.y + rect.height) + scroll_offset_height > yvalue + screen.height:
-                    yvalue += (rect.y + rect.height + scroll_offset_height) - (yvalue + screen.height)
+                elif self._gdk_rectangle_y2(rect) + scroll_offset_height > yvalue + screen.height:
+                    yvalue += (self._gdk_rectangle_y2(rect) + scroll_offset_height) - (yvalue + true_height)
 
         # Horizontal alignment
         scroll_dest = current_x_scroll
@@ -277,3 +278,30 @@ class NotoTextView(GtkSource.View):
 
         hadj.set_value(xvalue)
         vadj.set_value(yvalue)
+
+    # TODO: Separate from this class
+    def _gdk_rectangle_y2(self, rect):
+        return rect.y + rect.height
+
+    # TODO: Separate from this class
+    def _gdk_rectangle_x2(self, rect):
+        return rect.x + rect.width
+
+    def _gdk_rectangle_contains(self, a, b):
+        return a.x <= b.x and\
+               a.x + int(a.width) >= b.x + int(b.width) and\
+               a.y <= b.y and\
+               a.y + int(a.height) >= b.y + int(b.height)
+
+    def scroll_mark_onscreen(self, mark, use_align, xalign, yalign):
+        visible_rect = self.get_visible_rect()
+        text_iter = self.get_buffer().get_iter_at_mark(mark)
+        mark_rect = self.get_iter_location(text_iter)
+
+        if not self._gdk_rectangle_contains(visible_rect, mark_rect):
+            self.scroll_to_mark(mark, 0.0, use_align, xalign, yalign)
+
+    def scroll_to_mark(self, mark, within_margin,
+                       use_align, xalign, yalign):
+        text_iter = self.get_buffer().get_iter_at_mark(mark)
+        self.scroll_to_iter(text_iter, within_margin, use_align, xalign, yalign)
