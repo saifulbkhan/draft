@@ -15,7 +15,7 @@
 
 from gi.repository import Gtk, GLib
 
-from notosrc.textview import TextView
+from notosrc.editor import NotoEditor
 from notosrc.webview import WebView
 from notosrc.markdown import render_markdown
 
@@ -36,7 +36,7 @@ class ContentView(Gtk.Bin):
         self.content_stack.set_hexpand(True)
         self.add(self.content_stack)
 
-        self.content_editor = TextView(self.parent_window, self)
+        self.content_editor = NotoEditor(self.parent_window, self)
         self.content_stack.add_titled(self.content_editor, 'editor', 'Editor')
 
         self.content_preview = WebView()

@@ -27,14 +27,16 @@ from notosrc import file
 GObject.type_ensure(GObject.GType(GtkSource.View))
 
 
-class TextView(Gtk.Box):
+class NotoEditor(Gtk.Box):
+    __gtype_name__ = 'NotoEditor'
+
     def __repr__(self):
-        return '<TextView>'
+        return '<Editor>'
 
     def __init__(self, main_window, parent):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
         self.builder = Gtk.Builder()
-        self.builder.add_from_resource('/org/gnome/Noto/textview.ui')
+        self.builder.add_from_resource('/org/gnome/Noto/editor.ui')
         self.main_window = main_window
         self.parent = parent
         self._set_up_widgets()

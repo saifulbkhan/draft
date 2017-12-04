@@ -15,7 +15,7 @@ app_sources = [
 	'treestore.py',
 	'contentview.py',
 	'notesview.py',
-	'textview.py',
+	'editor.py',
 	'markdown.py',
 	'webview.py',
 	'window.py'
