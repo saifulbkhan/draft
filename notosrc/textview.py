@@ -144,6 +144,7 @@ class TextView(Gtk.Box):
 
 class NotoTextView(GtkSource.View):
     __gtype_name__ = 'NotoTextView'
+    scroll_duration = 150
 
     def __repr__(self):
         return '<NotoTextView>'
@@ -154,15 +155,12 @@ class NotoTextView(GtkSource.View):
         self.cached_char_width = 0
         self.scroll_offset = 0
 
-    def do_style_updated(self):
-        GtkSource.View.do_style_updated(self)
-
-        context = self.get_pango_context()
-        layout = Pango.Layout(context)
-        layout.set_text('X', 1)
-        self.cached_char_width, self.cached_char_height = layout.get_pixel_size()
-        self.cached_char_height += self.get_pixels_above_lines() +\
-                                   self.get_pixels_below_lines()
+        # Variables for scroll animation setup
+        self._tick_id = 0
+        self._source = 0.0
+        self._target = 0.0
+        self._start_time = None
+        self._end_time = None
 
     def get_visible_rect(self):
         area = GtkSource.View.get_visible_rect(self)
@@ -281,7 +279,7 @@ class NotoTextView(GtkSource.View):
         xvalue += current_x_scroll
 
         hadj.set_value(xvalue)
-        vadj.set_value(yvalue)
+        self.set_value_alt(vadj, yvalue, True)
 
     # TODO: Separate from this class
     def _gdk_rectangle_y2(self, rect):
@@ -296,6 +294,54 @@ class NotoTextView(GtkSource.View):
                a.x + int(a.width) >= b.x + int(b.width) and\
                a.y <= b.y and\
                a.y + int(a.height) >= b.y + int(b.height)
+
+    def _begin_updating(self, adjustment, clock):
+        if not self._tick_id:
+            self._tick_id = clock.connect("update",
+                                               self._on_frame_clock_update,
+                                               adjustment)
+            clock.begin_updating()
+
+    def _end_updating(self, adjustment, clock):
+        if self._tick_id:
+            clock.disconnect(self._tick_id)
+            self._tick_id = 0
+            clock.end_updating()
+
+    def _on_frame_clock_update (self, clock, adjustment):
+        now = clock.get_frame_time()
+
+        # From clutter-easing.c, based on Robert Penner's
+        # infamous easing equations, MIT license.
+        def ease_out_cubic(t):
+            p = t - 1
+            return p * p * p + 1
+
+        if now < self._end_time:
+            t = (now - self._start_time) / (self._end_time - self._start_time)
+            t = ease_out_cubic(t)
+            adjustment.set_value(self._source + t * (self._target - self._source))
+        else:
+            adjustment.set_value(self._target)
+            self._end_updating(adjustment, clock)
+
+    def set_value_alt(self, adjustment, value, animate=False):
+        value = min(value, adjustment.get_upper() - adjustment.get_page_size())
+        value = max(value, adjustment.get_lower())
+        clock = self.get_frame_clock()
+
+        if self.scroll_duration and animate and clock:
+            if self._tick_id and self._target == value:
+                return
+
+            self._source = adjustment.get_value()
+            self._target = value
+            self._start_time = clock.get_frame_time()
+            self._end_time = self._start_time + 1000 * self.scroll_duration
+            self._begin_updating(adjustment, clock)
+        else:
+            self._end_updating(adjustment, clock)
+            adjustment.set_value(value)
 
     def scroll_mark_onscreen(self, mark, use_align, xalign, yalign):
         visible_rect = self.get_visible_rect()
@@ -319,6 +365,16 @@ class NotoTextView(GtkSource.View):
         new_margin = min(max(new_margin, 0), height)
 
         self.set_bottom_margin(new_margin)
+
+    def do_style_updated(self):
+        GtkSource.View.do_style_updated(self)
+
+        context = self.get_pango_context()
+        layout = Pango.Layout(context)
+        layout.set_text('X', 1)
+        self.cached_char_width, self.cached_char_height = layout.get_pixel_size()
+        self.cached_char_height += self.get_pixels_above_lines() +\
+                                   self.get_pixels_below_lines()
 
     def do_size_allocate(self, allocation):
         GtkSource.View.do_size_allocate(self, allocation)
