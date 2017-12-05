@@ -82,12 +82,6 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def toggle_panel(self):
         self.notesview.toggle_panel()
 
-    def toggle_content(self):
-        if self.is_showing_content():
-            self.contentview.hide_content_stack()
-        else:
-            self.contentview.show_content_stack()
-
     def _new_note_request(self, action, param):
         self.notesview.view.new_note_request()
 
