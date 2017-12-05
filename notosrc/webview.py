@@ -19,15 +19,16 @@ import gi
 gi.require_version('WebKit2', '4.0')
 gi.require_version('WkJsCore', '0.1')
 
-from gi.repository import Gtk, WebKit2 as WebKit, WkJsCore
+from gi.repository import Gtk, Gdk, WebKit2 as WebKit, WkJsCore
 
 class WebView(Gtk.Box):
     def __repr__(self):
         return '<WebView>'
 
-    def __init__(self):
+    def __init__(self, main_window):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
         self.scrollOffset = 0;
+        self.main_window = main_window
         self._set_up_widgets()
 
     def _set_up_widgets(self):
@@ -36,7 +37,7 @@ class WebView(Gtk.Box):
         self.view.connect('decide_policy', self._on_decision_request)
         self.view.connect('load_changed', self._on_load_changed)
         self.view.connect('unmap', self._on_unmapped)
-        self.view.set_can_focus(False)
+        self.connect('key-press-event', self._on_key_pressed)
 
         scrollable_window = Gtk.ScrolledWindow()
         scrollable_window.hexpand = True
@@ -98,3 +99,12 @@ class WebView(Gtk.Box):
             javascript_finished_cb,
             None
         )
+
+    def _on_key_pressed(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        # TODO: Add shortcuts to textview
+        if not event_and_modifiers:
+            if event.keyval == Gdk.KEY_F9:
+                self.main_window.toggle_panel()
