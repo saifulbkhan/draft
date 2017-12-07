@@ -82,7 +82,6 @@ class NotoEditor(Gtk.Box):
                 pass
 
     def _on_buffer_changed(self, buffer):
-        count = buffer.get_char_count()
         self.write_current_buffer()
 
     def load_file(self, res):
