@@ -376,6 +376,11 @@ class NotoTextView(GtkSource.View):
 
         self.set_bottom_margin(new_margin)
 
+    def do_move_cursor(self, step, count, extend_selection):
+        GtkSource.View.do_move_cursor(self, step, count, extend_selection)
+        insert = self.get_buffer().get_insert()
+        self.scroll_mark_onscreen(insert)
+
     def do_style_updated(self):
         GtkSource.View.do_style_updated(self)
 
