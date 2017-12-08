@@ -114,6 +114,7 @@ class NotoEditor(Gtk.Box):
 
         def on_file_write(f, etag):
             self.current_file_etag = etag
+            buffer.set_modified(False)
 
         text_content = buffer.get_text(start, end, False)
         if not text_content:
