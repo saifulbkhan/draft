@@ -58,13 +58,14 @@ class NotoEditor(Gtk.Box):
         self.view.set_right_margin(24)
         self.view.set_top_margin(10)
         self.view.set_bottom_margin(10)
-        self.view.scroll_offset = 4
+        self.view.scroll_offset = 3
         self.view.overscroll_num_lines = 3
         self.view.get_style_context().add_class('noto-editor')
 
         self.connect('key-press-event', self._on_key_press)
 
         buffer = self.view.get_buffer()
+        buffer.connect('modified-changed', self._on_modified_changed)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
         language_manager = GtkSource.LanguageManager.get_default()
@@ -80,6 +81,10 @@ class NotoEditor(Gtk.Box):
             if (event.keyval == Gdk.KEY_s
                     and event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
                 pass
+
+    def _on_modified_changed(self, buffer):
+        insert = buffer.get_insert()
+        self.view.scroll_mark_onscreen(insert)
 
     def _on_buffer_changed(self, buffer):
         self.write_current_buffer()
@@ -345,13 +350,16 @@ class NotoTextView(GtkSource.View):
             self._end_updating(adjustment, clock)
             adjustment.set_value(value)
 
-    def scroll_mark_onscreen(self, mark, use_align, xalign, yalign):
+    def scroll_mark_onscreen(self, mark):
         visible_rect = self.get_visible_rect()
         text_iter = self.get_buffer().get_iter_at_mark(mark)
         mark_rect = self.get_iter_location(text_iter)
 
         if not self._gdk_rectangle_contains(visible_rect, mark_rect):
-            self.scroll_to_mark(mark, 0.0, use_align, xalign, yalign)
+            yalign = 1.0
+            if mark_rect.y < visible_rect.y:
+                yalign = 0.0
+            self.scroll_to_mark(mark, 0.0, True, 0.0, yalign)
 
     def scroll_to_mark(self, mark, within_margin,
                        use_align, xalign, yalign):
