@@ -3,3 +3,4 @@ build/
 *.py[cod]
 *.swp
 *~
+run.sh
