@@ -119,7 +119,11 @@ class TreeStore(Gtk.TreeStore):
         hashes.reverse()
         return hashes
 
-    def prepare_for_edit(self, treeiter, load_cb):
+    def prepare_for_edit(self, treeiter, switch_view, load_cb):
+        id = self[treeiter][3]
+        if switch_view(str(id)):
+            return
+
         hash_id = self[treeiter][4]
         parent_hashes = list(self[treeiter][6])
         file.read_file_contents(hash_id, parent_hashes, load_cb)

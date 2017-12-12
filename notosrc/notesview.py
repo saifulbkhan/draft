@@ -100,7 +100,9 @@ class ListView(Gtk.TreeView):
 
     def _on_selection_changed(self, selection):
         model, treeiter = selection.get_selected()
-        self.model.prepare_for_edit(treeiter, self.editor.load_file)
+        self.model.prepare_for_edit(treeiter,
+                                    self.editor.switch_view,
+                                    self.editor.load_file)
 
     def new_note_request(self):
         treeiter = self.model.new_note_request()
