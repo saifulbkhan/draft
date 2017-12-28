@@ -110,6 +110,9 @@ class NotoEditor(Gtk.Box):
 
             GLib.idle_add(self._focus_view)
 
+            if self.parent.in_preview_mode():
+                self.parent.preview_content()
+
             return True
 
         view = NotoTextView()
