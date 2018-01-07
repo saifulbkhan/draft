@@ -41,10 +41,9 @@ class NotoEditor(Gtk.Box):
         self.parent = parent
         self._set_up_widgets()
 
+        self.view = None
         self._current_file = None
-        self._current_file_etag = None
         self._open_files = {}
-        self._open_file_etags = {}
 
     def _set_up_widgets(self):
         self.editor_stack = self.builder.get_object('editor_stack')
@@ -95,7 +94,8 @@ class NotoEditor(Gtk.Box):
         self.view.scroll_mark_onscreen(insert)
 
     def _on_buffer_changed(self, buffer):
-        self.write_current_buffer()
+        self._write_current_buffer()
+        self._update_title()
 
     def switch_view(self, id):
         scrollable = self.editor_stack.get_child_by_name(id)
@@ -104,16 +104,13 @@ class NotoEditor(Gtk.Box):
 
             view = scrollable.get_child()
             self._prep_view(view)
-
             self._current_file = self._open_files[id]
-            self._current_file_etag = self._open_file_etags[id]
-
             GLib.idle_add(self._focus_view)
 
             if self.parent.in_preview_mode():
                 self.parent.preview_content()
 
-            return True
+            return
 
         view = NotoTextView()
         self._prep_view(view)
@@ -125,30 +122,18 @@ class NotoEditor(Gtk.Box):
         self.editor_stack.add_named(scrollable, id)
         self.editor_stack.set_visible_child(scrollable)
 
-        return False
+        return view.get_buffer()
 
     def load_file(self, res):
-        self.current_file_etag = None
         if res:
-            self._current_file, contents, self._current_file_etag = res
-
+            self._current_file = res
             id = self.editor_stack.get_visible_child_name()
             self._open_files[id] = self._current_file
-            self._open_file_etags[id] = self._current_file_etag
 
-            self.render_content(contents)
+            GLib.idle_add(self._focus_view, True)
 
         if self.parent.in_preview_mode():
             self.parent.preview_content()
-
-    def render_content(self, contents):
-        buffer = self.view.get_buffer()
-        with buffer.handler_block((self._on_buffer_changed_id)):
-            buffer.begin_not_undoable_action()
-            buffer.set_text(contents)
-            buffer.end_not_undoable_action()
-
-        GLib.idle_add(self._focus_view, True)
 
     def _focus_view(self, scroll_to_insert=False):
         self.view.grab_focus()
@@ -158,25 +143,19 @@ class NotoEditor(Gtk.Box):
             insert = buffer.get_insert()
             self.view.scroll_mark_onscreen(insert)
 
-    def write_current_buffer(self):
+    def _write_current_buffer(self):
+        if not self.view or not self._current_file:
+            return
+
+        buffer = self.view.get_buffer()
+        file.write_to_source_file_async(self._current_file,
+                                        buffer)
+
+    def _update_title(self):
         buffer = self.view.get_buffer()
         start = buffer.get_start_iter()
         end = buffer.get_end_iter()
-
-        def on_file_write(f, etag):
-            self._current_file_etag = etag
-            buffer.set_modified(False)
-
-        text_content = buffer.get_text(start, end, False)
-        if not text_content:
-            self.current_file_etag = file.write_to_file(self._current_file,
-                                                        text_content,
-                                                        self._current_file_etag)
-        else:
-            file.write_to_file_async(self._current_file,
-                                     text_content,
-                                     on_file_write)
-
+        text_content = buffer.get_text(start, end, True)
         title = self._get_title_for_text(text_content)
         self.main_window.notesview.view.set_title_for_current_selection(title)
 

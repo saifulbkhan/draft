@@ -119,14 +119,15 @@ class TreeStore(Gtk.TreeStore):
         hashes.reverse()
         return hashes
 
-    def prepare_for_edit(self, treeiter, switch_view, load_cb):
+    def prepare_for_edit(self, treeiter, switch_view, load_file):
         id = self[treeiter][3]
-        if switch_view(str(id)):
+        buffer = switch_view(str(id))
+        if not buffer:
             return
 
         hash_id = self[treeiter][4]
         parent_hashes = list(self[treeiter][6])
-        file.read_file_contents(hash_id, parent_hashes, load_cb)
+        file.read_file_contents(hash_id, parent_hashes, buffer, load_file)
 
     def set_title_for_iter(self, treeiter, title):
         id = self[treeiter][3]

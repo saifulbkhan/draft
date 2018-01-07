@@ -14,7 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from os.path import join, sep
-from gi.repository import Gio, GLib
+
+import gi
+gi.require_version("GtkSource", "3.0")
+from gi.repository import GtkSource, Gio, GLib
 
 from notosrc.data import USER_DATA_DIR
 
@@ -24,30 +27,30 @@ TRASH_DIR = join(USER_DATA_DIR, 'notes', '.trash')
 default_encoding = 'utf-8'
 
 
-def read_file_contents(filename, parent_names, load_cb):
+def read_file_contents(filename, parent_names, buffer, load_file):
     parent_dir = sep.join(parent_names)
     fpath = join(BASE_NOTE_DIR, parent_dir, filename)
 
-    def read_file_cb(f, res, user_data):
+    def load_finish_cb(loader, res, user_data):
+        gsf = user_data
         try:
-            success, contents, etag = f.load_contents_finish(res)
-            if success:
-                contents = contents.decode('utf-8')
-                load_cb((f, contents, etag))
-            else:
+            success = loader.load_finish(res)
+            if not success:
                 raise IOError
         except Exception as e:
             # TODO: Warn file read error so overwriting path with blank file...
-            f = Gio.File.new_for_path(fpath)
-            etag = write_to_file(f, "", None)
-            load_cb((f, "", etag))
+            write_to_file(gsf.get_location(), "")
 
     f = Gio.File.new_for_path(fpath)
-    f.load_contents_async(None, read_file_cb, None)
-    return None
+    gsf = GtkSource.File(location=f)
+    loader = GtkSource.FileLoader.new(buffer, gsf)
+    load_file(gsf)
+    loader.load_async(GLib.PRIORITY_HIGH,
+                      None, None, None,
+                      load_finish_cb, gsf)
 
 
-def write_to_file(f, contents, etag):
+def write_to_file(f, contents):
     contents = bytes(contents, default_encoding)
     try:
         success, etag = f.replace_contents(contents,
@@ -64,29 +67,23 @@ def write_to_file(f, contents, etag):
     return None
 
 
-def write_to_file_async(f, contents, write_cb, etag=None):
-    if not contents:
-        write_to_file(f, contents, etag)
-    contents = bytes(contents, default_encoding)
+def write_to_source_file_async(gsf, buffer):
 
-    def write_buffer_cb(f, res, user_data):
+    def write_buffer_cb(saver, res, user_data):
         try:
-            success, etag = f.replace_contents_finish(res)
+            success = saver.save_finish(res)
             if success:
-                write_cb(f, etag)
+                buffer.set_modified(False)
             else:
                 raise IOError
         except Exception as e:
             # TODO: Warn write async failure
             pass
 
-    f.replace_contents_bytes_async(GLib.Bytes(contents),
-                                   etag,
-                                   False,
-                                   Gio.FileCreateFlags.PRIVATE,
-                                   None,
-                                   write_buffer_cb,
-                                   None)
+    saver = GtkSource.FileSaver.new(buffer, gsf)
+    saver.save_async(GLib.PRIORITY_HIGH,
+                     None, None, None,
+                     write_buffer_cb, gsf)
 
 
 def create_dir(dirname, parent_names):
