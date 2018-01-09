@@ -18,13 +18,10 @@ from gettext import gettext as _
 
 from notosrc.notesview import NotesView
 from notosrc.contentview import ContentView
-from notosrc.utils.gi_composites import GtkTemplate
 
 
-@GtkTemplate(ui='/org/gnome/Noto/window.ui')
 class ApplicationWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'ApplicationWindow'
-    topbox = GtkTemplate.Child.widgets(1)[0]
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -33,14 +30,15 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         Gtk.ApplicationWindow.__init__(self,
                                        application=app,
                                        title="Noto")
-        self.init_template()
+
+        self.set_default_size(800, 600)
 
         if Gdk.Screen.get_default().get_height() < 700:
             self.maximize()
-        
+
         self.set_icon_name("noto")
         self._set_up_actions()
-        self._add_widgets()
+        self._set_up_widgets()
         self.show_all()
 
     def _set_up_actions(self):
@@ -54,8 +52,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             simple_action.connect('activate', cb)
             self.add_action(simple_action)
 
-    def _add_widgets(self):
-        titlebar = _HeaderBar(self)
+    def _set_up_widgets(self):
+        self._topbox = Gtk.Box()
+        self.add(self._topbox)
+
+        titlebar = _NotoHeaderBar(self)
         self.set_titlebar(titlebar)
         self._create_list_views()
         self._create_stack_views()
@@ -64,11 +65,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     def _create_list_views(self):
         self.notesview = NotesView(self)
-        self.topbox.pack_start(self.notesview, False, True, 0)
+        self._topbox.pack_start(self.notesview, False, True, 0)
 
     def _create_stack_views(self):
         self.contentview = ContentView(self)
-        self.topbox.pack_start(self.contentview, False, True, 0)
+        self._topbox.pack_start(self.contentview, False, True, 0)
         self.notesview.set_editor(self.contentview.content_editor)
 
     def _on_key_press(self, widget, event):
@@ -89,23 +90,31 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         pass
 
 
-@GtkTemplate(ui='/org/gnome/Noto/headerbar.ui')
-class _HeaderBar(Gtk.HeaderBar):
-    __gtype_name__ = 'HeaderBar'
-    search_button, preview_button = GtkTemplate.Child.widgets(2)
+class _NotoHeaderBar(Gtk.Box):
+    __gtype_name__ = 'NotoHeaderBar'
 
     def __repr__(self):
-        return '<HeaderBar>'
+        return '<NotoHeaderBar>'
 
     def __init__(self, parent):
-        Gtk.HeaderBar.__init__(self)
-        self.init_template()
+        Gtk.Box.__init__(self)
         self.parent = parent
+        self._set_up_widgets()
 
-    @GtkTemplate.Callback
+    def _set_up_widgets(self):
+        self._builder = Gtk.Builder()
+        self._builder.add_from_resource('/org/gnome/Noto/headerbar.ui')
+
+        self._headerbar = self._builder.get_object('HeaderBar')
+        self.pack_start(self._headerbar, True, True, 0)
+
+        self._search_button = self._builder.get_object('search_button')
+        self._search_button.connect('toggled', self._on_search_toggled)
+        self._preview_button = self._builder.get_object('preview_button')
+        self._preview_button.connect('toggled', self._on_preview_toggled)
+
     def _on_search_toggled(self, widget):
         self.parent.notesview.search_toggled()
 
-    @GtkTemplate.Callback
     def _on_preview_toggled(self, widget):
         self.parent.contentview.preview_toggled()

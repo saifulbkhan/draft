@@ -23,8 +23,7 @@ app_sources = [
 
 utils_sources = [
 	'utils/__init__.py',
-	'utils/mistune.py',
-	'utils/gi_composites.py'
+	'utils/mistune.py'
 ]
 
 webutils_sources = [
