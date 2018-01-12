@@ -16,7 +16,8 @@
 from gettext import gettext as _
 
 from gi.repository import Gtk, GLib, Pango, Gdk
-from notosrc.treestore import TreeStore
+from notosrc.store import NotoListStore, TreeStore
+
 
 class NotesView(Gtk.Bin):
     sidebar_width = 250
@@ -37,7 +38,7 @@ class NotesView(Gtk.Bin):
         listview = self.builder.get_object('listview')
 
         self.add(self.slider)
-        self.view = ListView(self.parent_window)
+        self.view = NotoNotesList(None)
         listview.add(self.view)
 
         self.search_bar = self.builder.get_object('search_bar')
@@ -59,6 +60,102 @@ class NotesView(Gtk.Bin):
 
     def set_editor(self, editor):
         self.view.editor = editor
+
+
+class NotoNotesList(Gtk.ListBox):
+    """The listbox containing all the notes in a note group"""
+    __gtype__name__ = 'NotoNotesList'
+
+    def __repr__(self):
+        return '<NotoNotesList>'
+
+    def __init__(self, parent_group):
+        """Initialize a new NotoNotesList for given @parent_group
+
+        @parent_group: string, unique hash string for @parent_group
+        """
+        Gtk.ListBox.__init__(self)
+        self._model = NotoListStore(parent_group)
+
+        self.bind_model(self._model, self._create_row_widget, None)
+        self.connect('key-press-event', self._on_key_press)
+        self.connect('row-selected', self._on_row_selected)
+        self._model.connect('items-changed', self._on_items_changed)
+
+    def _create_row_widget(self, note_data, user_data):
+        """Create a row widget for @note_data"""
+        data_dict = note_data.to_dict()
+        title = data_dict['title']
+
+        label = Gtk.Label()
+        self._make_title_label(label, title)
+        title_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        title_box.pack_start(label, True, False, 0)
+
+        return title_box
+
+    def _make_title_label(self, label, title):
+        """Set label for @label to @title, set ellipsize, justification and
+        visibility.
+        """
+        label.set_markup('<b>%s</b>' % title)
+        label.set_ellipsize(Pango.EllipsizeMode.END)
+        label.set_justify(Gtk.Justification.LEFT)
+        label.set_halign(Gtk.Align.START)
+        label.set_visible(True)
+        for direction in ['left', 'right', 'top', 'bottom']:
+            method = 'set_margin_%s' % direction
+            getattr(label, method)(6)
+
+    def _on_key_press(self, widget, event):
+        """Handler for signal `key-press-event`"""
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            # Delete row and file with (Del)
+            if event.keyval == Gdk.KEY_Delete:
+                self.delete_selected_row()
+
+    def _on_row_selected(self, widget, row):
+        """Handler for signal `row-selected`"""
+        if not row:
+            return
+
+        position = row.get_index()
+        self._model.prepare_for_edit(position,
+                                    self.editor.switch_view,
+                                    self.editor.load_file)
+
+    def _on_items_changed(self, model, position, removed, added):
+        """Handler for model's `items-changed` signal"""
+        row = self.get_row_at_index(position)
+        self.select_row(row)
+
+    def new_note_request(self):
+        """Request for creation of a new note and append it to the list"""
+        self._model.new_note_request()
+
+    def set_title_for_current_selection(self, title):
+        """Set the title for currently selected note, as well as write this to
+        the db.
+
+        @self: NotoNotesList
+        @title: string, the title to be saved for current selection
+        """
+        row = self.get_selected_row()
+        position = row.get_index()
+        self._model.set_title_for_position(position, title)
+
+        box = row.get_child()
+        labels = box.get_children()
+        label = labels[0]
+        self._make_title_label(label, title)
+
+    def delete_selected_row(self):
+        """Delete currently selected note in the list"""
+        position = self.get_selected_row().get_index()
+        self._model.delete_item_at_postion(position)
 
 
 class ListView(Gtk.TreeView):

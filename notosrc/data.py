@@ -125,6 +125,9 @@ def fetch_notes_not_in_notebooks(session):
 
 
 def fetch_notes_in_notebook(notebook, session):
+    if not notebook:
+        return fetch_notes_not_in_notebooks(session)
+
     notes = session.query(Note).\
             filter(Note.notebook_id==notebook.id).\
             all()
@@ -136,7 +139,7 @@ def fetch_all_notebooks(session):
     return notebooks
 
 
-def fetch_notebooks_not_in_notebook(session):
+def fetch_notebooks_not_in_notebooks(session):
     notebooks = session.query(Notebook).\
                 filter(Notebook.parent_id==None).\
                 all()
@@ -144,6 +147,9 @@ def fetch_notebooks_not_in_notebook(session):
 
 
 def fetch_notebook_in_notebook(notebooks, session):
+    if not notebook:
+        return fetch_notebooks_not_in_notebooks(session)
+
     notebooks = session.query(Notebook).\
                 filter(Notebook.parent_id==notebook.id).\
                 all()
