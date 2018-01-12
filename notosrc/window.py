@@ -16,8 +16,8 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
-from notosrc.notesview import NotesView
-from notosrc.contentview import ContentView
+from notosrc.views.notesview import NotesView
+from notosrc.views.contentview import ContentView
 
 
 class ApplicationWindow(Gtk.ApplicationWindow):

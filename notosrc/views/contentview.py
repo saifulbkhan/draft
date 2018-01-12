@@ -15,9 +15,9 @@
 
 from gi.repository import Gtk, GLib
 
-from notosrc.editor import NotoEditor
-from notosrc.webview import WebView
-from notosrc.markdown import render_markdown
+from notosrc.widgets.editor import NotoEditor
+from notosrc.widgets.preview import NotoPreview
+from notosrc.parsers.markup import render_markdown
 
 
 # TODO: Make this a horizontal box to support side-by-side editing
@@ -40,7 +40,7 @@ class ContentView(Gtk.Bin):
         self.content_editor = NotoEditor(self.parent_window, self)
         self.content_stack.add_titled(self.content_editor, 'editor', 'Editor')
 
-        self.content_preview = WebView(self.parent_window)
+        self.content_preview = NotoPreview(self.parent_window)
         self.content_stack.add_titled(self.content_preview, 'preview', 'Preview')
 
         self.content_stack.set_visible_child_name('editor')

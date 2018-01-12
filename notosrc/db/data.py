@@ -22,7 +22,7 @@ from sqlalchemy.sql import text
 
 from gi.repository import GLib, Gio
 
-from notosrc.datamodel import Base, Notebook, Note, Tag
+from notosrc.db.datamodel import Base, Notebook, Note, Tag
 
 USER_DATA_DIR = os.path.join(GLib.get_user_data_dir(), 'noto')
 DB_URL = 'sqlite:///' + os.path.join(USER_DATA_DIR, 'noto.db')

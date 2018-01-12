@@ -20,7 +20,7 @@ gi.require_version('Notify', '0.7')
 from gi.repository import Gtk, GLib, Gio, Gdk, Notify
 
 from notosrc.window import ApplicationWindow
-from notosrc import data
+from notosrc.db import data
 
 class Application(Gtk.Application):
     def __repr__(self):

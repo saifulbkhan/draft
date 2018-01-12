@@ -17,9 +17,9 @@ import re, os.path
 
 from gi.repository import GLib
 
-from notosrc.utils.mistune import escape
-from notosrc.utils.mistune import Markdown, InlineLexer, BlockLexer, Renderer
-from notosrc.webutils.content import html_string
+from notosrc.parsers.mistune import escape
+from notosrc.parsers.mistune import Markdown, InlineLexer, BlockLexer, Renderer
+from notosrc.parsers.webstrings import html_string
 from notosrc.defs import DATA_DIR
 
 NOTO_DIR = 'file://' + os.path.join(DATA_DIR, 'noto')

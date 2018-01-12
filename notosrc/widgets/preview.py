@@ -21,9 +21,12 @@ gi.require_version('WkJsCore', '0.1')
 
 from gi.repository import Gtk, Gdk, WebKit2 as WebKit, WkJsCore
 
-class WebView(Gtk.Box):
+
+class NotoPreview(Gtk.Box):
+    __gtype_name__ = 'NotoPreview'
+
     def __repr__(self):
-        return '<WebView>'
+        return '<NotoPreview>'
 
     def __init__(self, main_window):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)

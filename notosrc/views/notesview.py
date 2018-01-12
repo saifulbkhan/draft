@@ -16,7 +16,7 @@
 from gettext import gettext as _
 
 from gi.repository import Gtk, GLib, Pango, Gdk
-from notosrc.store import NotoListStore, TreeStore
+from notosrc.views.store import NotoListStore, TreeStore
 
 
 # TODO: Another class for note groups with TreeView as view

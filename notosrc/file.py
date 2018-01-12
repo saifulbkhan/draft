@@ -19,7 +19,7 @@ import gi
 gi.require_version("GtkSource", "3.0")
 from gi.repository import GtkSource, Gio, GLib
 
-from notosrc.data import USER_DATA_DIR
+from notosrc.db.data import USER_DATA_DIR
 
 BASE_NOTE_DIR = join(USER_DATA_DIR, 'notes', 'local')
 TRASH_DIR = join(USER_DATA_DIR, 'notes', '.trash')

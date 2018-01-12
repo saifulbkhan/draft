@@ -16,7 +16,8 @@
 from gettext import gettext as _
 from gi.repository import GLib, GObject, Gtk, Gio
 
-from notosrc import data, file
+from notosrc.db import data
+from notosrc import file
 from notosrc.datamodel import Note, Notebook
 
 
