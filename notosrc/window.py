@@ -70,6 +70,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def _create_stack_views(self):
         self.contentview = ContentView(self)
         self._topbox.pack_start(self.contentview, False, True, 0)
+        # TODO: make this switchable, when supporting side-by-side editing
         self.notesview.set_editor(self.contentview.content_editor)
 
     def _on_key_press(self, widget, event):
@@ -84,7 +85,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.notesview.toggle_panel()
 
     def _new_note_request(self, action, param):
-        self.notesview.view.new_note_request()
+        self.notesview.new_note_request()
 
     def _new_notebook_request(self, action, param):
         pass

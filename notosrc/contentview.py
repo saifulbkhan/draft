@@ -20,6 +20,7 @@ from notosrc.webview import WebView
 from notosrc.markdown import render_markdown
 
 
+# TODO: Make this a horizontal box to support side-by-side editing
 class ContentView(Gtk.Bin):
     def __repr__(self):
         return '<ContentView>'

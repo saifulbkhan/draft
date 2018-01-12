@@ -19,6 +19,9 @@ from gi.repository import Gtk, GLib, Pango, Gdk
 from notosrc.store import NotoListStore, TreeStore
 
 
+# TODO: Another class for note groups with TreeView as view
+
+# TODO: Make this a stack for storing multiple NotoNotesList
 class NotesView(Gtk.Bin):
     sidebar_width = 250
     def __repr__(self):
@@ -60,6 +63,9 @@ class NotesView(Gtk.Bin):
 
     def set_editor(self, editor):
         self.view.editor = editor
+
+    def new_note_request(self):
+        self.view.new_note_request()
 
 
 class NotoNotesList(Gtk.ListBox):
