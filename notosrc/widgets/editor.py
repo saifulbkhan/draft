@@ -141,7 +141,7 @@ class NotoEditor(Gtk.Box):
         if scroll_to_insert:
             buffer = self.view.get_buffer()
             insert = buffer.get_insert()
-            self.view.scroll_mark_onscreen(insert)
+            GLib.idle_add(self.view.scroll_mark_onscreen, insert)
 
     def _write_current_buffer(self):
         if not self.view or not self._current_file:
