@@ -33,7 +33,8 @@ views_sources = [
 
 widgets_sources = [
   'widgets/editor.py',
-  'widgets/preview.py'
+  'widgets/preview.py',
+  'widgets/statusbar.py'
 ]
 
 install_data(app_sources, install_dir: notosrcdir)

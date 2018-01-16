@@ -22,6 +22,7 @@ gi.require_version('GtkSource', '3.0')
 from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, Pango
 
 from notosrc import file
+from notosrc.widgets.statusbar import NotoStatusbar
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
 GObject.type_ensure(GObject.GType(GtkSource.View))
@@ -48,13 +49,15 @@ class NotoEditor(Gtk.Box):
         self.editor_stack = Gtk.Stack()
         self.pack_start(self.editor_stack, True, True, 0)
 
-        self.status_bar = Gtk.Statusbar()
-        self.pack_start(self.status_bar, False, False, 0)
+        self.statusbar = NotoStatusbar(self)
+        self.pack_start(self.statusbar, False, False, 0)
 
         self.connect('key-press-event', self._on_key_press)
 
     def _prep_view(self, view):
         self.view = view
+        self.statusbar.update_state()
+        self.view.connect('toggle-overwrite', self._on_toggle_overwrite)
 
         self.view.set_visible(True)
         self.view.set_pixels_above_lines(6)
@@ -95,6 +98,9 @@ class NotoEditor(Gtk.Box):
     def _on_buffer_changed(self, buffer):
         self._write_current_buffer()
         self._update_title()
+
+    def _on_toggle_overwrite(self, textview):
+        GLib.idle_add(self.statusbar.update_overwrite_mode)
 
     def switch_view(self, id):
         scrollable = self.editor_stack.get_child_by_name(id)
