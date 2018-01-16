@@ -98,6 +98,7 @@ class NotoEditor(Gtk.Box):
     def _on_buffer_changed(self, buffer):
         self._write_current_buffer()
         self._update_title()
+        self.statusbar.update_word_count()
 
     def _on_toggle_overwrite(self, textview):
         GLib.idle_add(self.statusbar.update_overwrite_mode)

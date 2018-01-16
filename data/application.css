@@ -6,3 +6,7 @@
     font-family: Helvetica;
     font-size: 16px;
 }
+
+.noto-statusbar-widget {
+    margin: 0 12px;
+}

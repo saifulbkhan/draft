@@ -13,7 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 from gettext import gettext as _
+
 from gi.repository import Gtk, GLib
 
 UPDATE_REGISTRY = []    # registry of functions called when updating state
@@ -31,7 +33,6 @@ class NotoStatusbar(Gtk.Statusbar):
     """A status bar for providing commentary and some mimimal utility"""
     flash_timeout = 500     # time in miliseconds for which message is flashed
 
-    # TODO: Add word-count button
     # TODO: Add tags button
     # TODO: Add markup button
 
@@ -51,7 +52,14 @@ class NotoStatusbar(Gtk.Statusbar):
     def _set_up_widgets(self):
         """Set up widgets contained within statusbar"""
         self.overwrite_mode_label = Gtk.Label()
+        self.overwrite_mode_label.get_style_context()\
+                                 .add_class('noto-statusbar-widget')
         self.pack_end(self.overwrite_mode_label, False, False, 0)
+
+        self.word_count_label = Gtk.Label()
+        self.word_count_label.get_style_context()\
+                             .add_class('noto-statusbar-widget')
+        self.pack_end(self.word_count_label, False, False, 0)
 
     def update_state(self):
         """Update the state of statusbar to represent the currently visible
@@ -69,6 +77,17 @@ class NotoStatusbar(Gtk.Statusbar):
             self.overwrite_mode_label.set_label(_("OVR"))
         else:
             self.overwrite_mode_label.set_label(_("INS"))
+
+    @registered_for_update
+    def update_word_count(self):
+        """Update @self::word_count_label to the number of words in the current
+        document"""
+        text = self.editor.get_text()
+
+        # simple regexp to match words. can do better?
+        word_rule = re.compile('\S+')
+        num_words = len(word_rule.findall(text))
+        self.word_count_label.set_label(str(num_words) + ' ' + _("Words"))
 
     def add_message(self, msg, flash_only=False):
         """Adds a new @msg, to @self's message stack, using visible text-view's
