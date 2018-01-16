@@ -36,7 +36,6 @@ class NotoEditor(Gtk.Box):
     def __init__(self, main_window, parent):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
         self.builder = Gtk.Builder()
-        self.builder.add_from_resource('/org/gnome/Noto/editor.ui')
         self.main_window = main_window
         self.parent = parent
         self._set_up_widgets()
@@ -46,10 +45,10 @@ class NotoEditor(Gtk.Box):
         self._open_files = {}
 
     def _set_up_widgets(self):
-        self.editor_stack = self.builder.get_object('editor_stack')
+        self.editor_stack = Gtk.Stack()
         self.pack_start(self.editor_stack, True, True, 0)
 
-        self.status_bar = self.builder.get_object('status_bar')
+        self.status_bar = Gtk.Statusbar()
         self.pack_start(self.status_bar, False, False, 0)
 
         self.connect('key-press-event', self._on_key_press)
