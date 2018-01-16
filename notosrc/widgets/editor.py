@@ -102,6 +102,14 @@ class NotoEditor(Gtk.Box):
     def _on_toggle_overwrite(self, textview):
         GLib.idle_add(self.statusbar.update_overwrite_mode)
 
+    def get_text(self):
+        buffer = self.view.get_buffer()
+        start = buffer.get_start_iter()
+        end = buffer.get_end_iter()
+        text = buffer.get_text(start, end, False)
+
+        return text
+
     def switch_view(self, id):
         scrollable = self.editor_stack.get_child_by_name(id)
         if scrollable:
@@ -157,10 +165,7 @@ class NotoEditor(Gtk.Box):
                                         buffer)
 
     def _update_title(self):
-        buffer = self.view.get_buffer()
-        start = buffer.get_start_iter()
-        end = buffer.get_end_iter()
-        text_content = buffer.get_text(start, end, True)
+        text_content = self.get_text()
         title = self._get_title_for_text(text_content)
         self.main_window.notesview.view.set_title_for_current_selection(title)
 
