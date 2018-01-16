@@ -27,7 +27,7 @@ TRASH_DIR = join(USER_DATA_DIR, 'notes', '.trash')
 default_encoding = 'utf-8'
 
 
-def read_file_contents(filename, parent_names, buffer, load_file):
+def read_file_contents(filename, parent_names, buffer, load_file_cb):
     parent_dir = sep.join(parent_names)
     fpath = join(BASE_NOTE_DIR, parent_dir, filename)
 
@@ -35,7 +35,9 @@ def read_file_contents(filename, parent_names, buffer, load_file):
         gsf = user_data
         try:
             success = loader.load_finish(res)
-            if not success:
+            if success:
+                load_file_cb(gsf, buffer)
+            else:
                 raise IOError
         except Exception as e:
             # TODO: Warn file read error so overwriting path with blank file...
@@ -44,7 +46,6 @@ def read_file_contents(filename, parent_names, buffer, load_file):
     f = Gio.File.new_for_path(fpath)
     gsf = GtkSource.File(location=f)
     loader = GtkSource.FileLoader.new(buffer, gsf)
-    load_file(gsf)
     loader.load_async(GLib.PRIORITY_HIGH,
                       None, None, None,
                       load_finish_cb, gsf)

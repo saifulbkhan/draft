@@ -120,11 +120,18 @@ class NotoEditor(Gtk.Box):
         self.editor_stack.add_named(scrollable, id)
         self.editor_stack.set_visible_child(scrollable)
 
-        return view.get_buffer()
+        buffer = view.get_buffer()
+        # blocking buffer's `buffer-changed` signal handler while loading
+        buffer.handler_block(self._on_buffer_changed_id)
 
-    def load_file(self, res):
-        if res:
-            self._current_file = res
+        return buffer
+
+    def load_file(self, gsf, buffer):
+        if gsf:
+            self._current_file = gsf
+            # unblock buffer's `buffer-changed` signal to enable saves
+            buffer.handler_unblock(self._on_buffer_changed_id)
+
             id = self.editor_stack.get_visible_child_name()
             self._open_files[id] = self._current_file
 
