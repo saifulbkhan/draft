@@ -31,19 +31,19 @@ GObject.type_ensure(GObject.GType(GtkSource.View))
 class NotoEditor(Gtk.Box):
     __gtype_name__ = 'NotoEditor'
 
+    markup_type = 'markdown'    # default markup used by the editor
+    view = None
+    _current_file = None
+    _open_files = {}
+
     def __repr__(self):
         return '<Editor>'
 
     def __init__(self, main_window, parent):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
-        self.builder = Gtk.Builder()
         self.main_window = main_window
         self.parent = parent
         self._set_up_widgets()
-
-        self.view = None
-        self._current_file = None
-        self._open_files = {}
 
     def _set_up_widgets(self):
         self.editor_stack = Gtk.Stack()

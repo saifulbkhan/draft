@@ -34,7 +34,6 @@ class NotoStatusbar(Gtk.Statusbar):
     flash_timeout = 500     # time in miliseconds for which message is flashed
 
     # TODO: Add tags button
-    # TODO: Add markup button
 
     def __repr__(self):
         return '<NotoStatusbar>'
@@ -60,6 +59,11 @@ class NotoStatusbar(Gtk.Statusbar):
         self.word_count_label.get_style_context()\
                              .add_class('noto-statusbar-widget')
         self.pack_end(self.word_count_label, False, False, 0)
+
+        self.markup_label = Gtk.Label()
+        self.markup_label.get_style_context()\
+                         .add_class('noto-statusbar-widget')
+        self.pack_end(self.markup_label, False, False, 0)
 
     def update_state(self):
         """Update the state of statusbar to represent the currently visible
@@ -88,6 +92,15 @@ class NotoStatusbar(Gtk.Statusbar):
         word_rule = re.compile('\S+')
         num_words = len(word_rule.findall(text))
         self.word_count_label.set_label(str(num_words) + ' ' + _("Words"))
+
+    @registered_for_update
+    def update_markup(self):
+        """Update @self::markup_label to the type of markup being used in
+        text view"""
+        markup_type = self.editor.markup_type
+
+        if markup_type == 'markdown':
+            self.markup_label.set_label(_("Markdown"))
 
     def add_message(self, msg, flash_only=False):
         """Adds a new @msg, to @self's message stack, using visible text-view's
