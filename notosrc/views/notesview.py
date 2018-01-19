@@ -62,7 +62,7 @@ class NotesView(Gtk.Bin):
             self.search_entry.grab_focus()
 
     def set_editor(self, editor):
-        self.view.editor = editor
+        self.view.set_editor(editor)
 
     def new_note_request(self):
         self.view.new_note_request()
@@ -138,11 +138,22 @@ class NotoNotesList(Gtk.ListBox):
         row = self.get_row_at_index(position)
         self.select_row(row)
 
+    def set_editor(self, editor):
+        """Set editor for @self
+
+        @self: NotoNotesList
+        @editor: NotoEditor, the editor to display selected notes and listen
+                 for changes that need to be conveyed to the backend
+        """
+        self.editor = editor
+        editor.connect('title-changed', self.set_title_for_current_selection)
+        editor.connect('tags-changed', self.set_tags_for_current_selection)
+
     def new_note_request(self):
         """Request for creation of a new note and append it to the list"""
         self._model.new_note_request()
 
-    def set_title_for_current_selection(self, title):
+    def set_title_for_current_selection(self, widget, title):
         """Set the title for currently selected note, as well as write this to
         the db.
 
@@ -157,6 +168,24 @@ class NotoNotesList(Gtk.ListBox):
         labels = box.get_children()
         label = labels[0]
         self._make_title_label(label, title)
+
+    def set_tags_for_current_selection(self, widget, tags):
+        """Ask store to make changes to the tags of the currently selected note
+        so that it can be written to db.
+
+        @self: NotoNotesList
+        @tags: list, the list of string keywords which the selected note will be
+               tagged with.
+        """
+        row = self.get_selected_row()
+        position = row.get_index()
+        new_tags = self._model.set_tags_for_position(position, tags)
+
+        # since @new_tags might have slightly different letter case tags, we
+        # should re-update editor tags as well and then update statusbar, though
+        # this is probably not the best place to do it.
+        self.editor.current_note_data['tags'] = new_tags
+        self.editor.statusbar.update_note_data()
 
     def delete_selected_row(self):
         """Delete currently selected note in the list"""

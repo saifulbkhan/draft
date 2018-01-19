@@ -102,6 +102,21 @@ class NotoStatusbar(Gtk.Statusbar):
         if markup_type == 'markdown':
             self.markup_label.set_label(_("Markdown"))
 
+    @registered_for_update
+    def update_note_data(self):
+        """Updates the note specific information presented by @self, such
+        as tags"""
+        data_dict = self.editor.current_note_data
+
+        tags = data_dict['tags']
+        if tags:
+            self._refresh_tag_widget(tags)
+
+        # TODO: Update other information
+
+    def _refresh_tag_widget(self, tags):
+        pass
+
     def add_message(self, msg, flash_only=False):
         """Adds a new @msg, to @self's message stack, using visible text-view's
         name as context. Optionally, a @flash_only parameter makes @msg

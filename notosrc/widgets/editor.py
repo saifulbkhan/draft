@@ -31,8 +31,14 @@ GObject.type_ensure(GObject.GType(GtkSource.View))
 class NotoEditor(Gtk.Box):
     __gtype_name__ = 'NotoEditor'
 
+    __gsignals__ = {
+        'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
+        'tags-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+    }
+
     markup_type = 'markdown'    # default markup used by the editor
     view = None
+    current_note_data = None
     _current_file = None
     _open_files = {}
 
@@ -111,7 +117,27 @@ class NotoEditor(Gtk.Box):
 
         return text
 
-    def switch_view(self, id):
+    def add_tag(self, tag):
+        lower_case_tags = [x.lower() for x in self.current_note_data['tags']]
+        if tag.lower() in lower_case_tags:
+            return
+
+        self.current_note_data['tags'].append(tag)
+        self.emit('tags-changed', self.current_note_data['tags'])
+
+    def delete_tag(self, tag):
+        lower_case_tags = [x.lower() for x in self.current_note_data['tags']]
+        if tag.lower() not in lower_case_tags:
+            return
+
+        index = lower_case_tags.index(tag.lower())
+        self.current_note_data['tags'].pop(index)
+        self.emit('tags-changed', self.current_note_data['tags'])
+
+    def switch_view(self, note_data):
+        self.current_note_data = note_data
+
+        id = str(note_data['db-id'])
         scrollable = self.editor_stack.get_child_by_name(id)
         if scrollable:
             self.editor_stack.set_visible_child(scrollable)
@@ -168,7 +194,7 @@ class NotoEditor(Gtk.Box):
     def _update_title(self):
         text_content = self.get_text()
         title = self._get_title_for_text(text_content)
-        self.main_window.notesview.view.set_title_for_current_selection(title)
+        self.emit('title-changed', title)
 
     def _get_title_for_text(self, text):
         stripped = text.lstrip()
