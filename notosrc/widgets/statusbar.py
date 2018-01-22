@@ -29,11 +29,10 @@ def registered_for_update(fn):
     return fn
 
 
-class NotoStatusbar(Gtk.Statusbar):
-    """A status bar for providing commentary and some mimimal utility"""
-    flash_timeout = 500     # time in miliseconds for which message is flashed
+class NotoStatusbar(Gtk.Box):
+    """A status bar for providing tagging and some mimimal information"""
 
-    # TODO: Add tags button
+    __gtype_name__ = 'NotoStatusbar'
 
     def __repr__(self):
         return '<NotoStatusbar>'
@@ -44,9 +43,12 @@ class NotoStatusbar(Gtk.Statusbar):
         @self: NotoStatusbar
         @editor: NotoEditor, the editor which @self serves
         """
-        Gtk.Statusbar.__init__(self)
+        Gtk.Box.__init__(self)
         self.editor = editor
+        self.builder = Gtk.Builder()
+        self.builder.add_from_resource('/org/gnome/Noto/statusbar.ui')
         self._set_up_widgets()
+        self.get_style_context().add_class('noto-statusbar')
 
     def _set_up_widgets(self):
         """Set up widgets contained within statusbar"""
@@ -64,6 +66,19 @@ class NotoStatusbar(Gtk.Statusbar):
         self.markup_label.get_style_context()\
                          .add_class('noto-statusbar-widget')
         self.pack_end(self.markup_label, False, False, 0)
+
+        self.tag_labels = self.builder.get_object('tag_labels')
+        self.tag_popover = self.builder.get_object('tag_popover')
+        self.tag_popover_list = self.builder.get_object('tag_popover_list')
+        self.new_tag_entry = self.builder.get_object('new_tag_entry')
+        new_tag_button = self.builder.get_object('new_tag_button')
+        clickable = self.builder.get_object('tag_button')
+
+        self.new_tag_entry.connect('activate', self._on_tag_added)
+        new_tag_button.connect('clicked', self._on_tag_added)
+        clickable.connect('clicked', self._on_labels_clicked)
+
+        self.pack_start(clickable, True, True, 0)
 
     def update_state(self):
         """Update the state of statusbar to represent the currently visible
@@ -109,28 +124,78 @@ class NotoStatusbar(Gtk.Statusbar):
         data_dict = self.editor.current_note_data
 
         tags = data_dict['tags']
-        if tags:
-            self._refresh_tag_widget(tags)
+        self._refresh_tag_widget(tags)
 
         # TODO: Update other information
 
     def _refresh_tag_widget(self, tags):
-        pass
+        """Add tags from @tags (list) as labels to statusbar as well as refresh
+        the state of tag editing popover"""
+        def _clear_container(widget):
+            assert isinstance(widget, Gtk.Container)
+            widget.set_visible(True)
 
-    def add_message(self, msg, flash_only=False):
-        """Adds a new @msg, to @self's message stack, using visible text-view's
-        name as context. Optionally, a @flash_only parameter makes @msg
-        get popped out of message stack (and hence no longer visible) after
-        a time period of @self::timeout.
+            children = widget.get_children()
+            for child in children:
+                widget.remove(child)
 
-        @self: NotoStatusbar
-        @msg: string, a message to be pushed in context to visible textview
-        @flash_only: boolean, whether @msg should be remvoved after timeout
-        """
-        context = self.editor.editor_stack.get_visible_child_name()
-        context_id = self.get_context_id(context)
-        msg_id = self.push(context_id, msg)
+        _clear_container(self.tag_popover_list)
+        _clear_container(self.tag_labels)
 
-        if flash_only:
-            GLib.timeout_add(self.flash_timeout,
-                             self.remove, context_id, msg_id)
+        if not tags:
+            empty_label = Gtk.Label(_("Add a keyword …"))
+            empty_label.get_style_context().add_class('noto-placeholder-label')
+            empty_label.set_visible(True)
+            self.tag_labels.pack_start(empty_label, False, False, 0)
+            self.tag_popover_list.set_visible(False)
+            return
+
+        def _add_tag_label(tag):
+            label = Gtk.Label()
+            label.set_label(tag)
+            label.get_style_context()\
+                 .add_class('noto-tag-label')
+            label.set_visible(True)
+
+            self.tag_labels.pack_start(label, False, False, 0)
+
+        def _append_to_list(tag, icon, action_cb):
+            label = Gtk.Label()
+            label.set_label(tag)
+            label.set_visible(True)
+
+            button = Gtk.Button()
+            button.get_style_context().add_class('image-button')
+            button.get_style_context().add_class('noto-label-del-button')
+            image = Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.BUTTON)
+            button.set_image(image)
+            button.set_visible(True)
+
+            box = Gtk.Box()
+            box.pack_start(label, False, False, 0)
+            box.pack_end(button, False, False, 0)
+            box.set_visible(True)
+
+            button.connect('clicked', action_cb, label)
+            self.tag_popover_list.pack_start(box, False, False, 0)
+
+        for tag in tags:
+            _add_tag_label(tag)
+            _append_to_list(tag, 'window-close-symbolic', self._on_tag_deleted)
+
+    def _on_labels_clicked(self, button, user_data=None):
+        """Handle click on labels"""
+        self.tag_popover.popup()
+        self.new_tag_entry.grab_focus()
+
+    def _on_tag_added(self, widget, user_data=None):
+        """Handle addition of a tag to the note"""
+        tag = self.new_tag_entry.get_text()
+        if tag:
+            self.editor.add_tag(tag)
+            self.new_tag_entry.set_text('')
+
+    def _on_tag_deleted(self, widget, label=None):
+        """Handle deletion of a tag from the note"""
+        tag = label.get_label()
+        self.editor.delete_tag(tag)
