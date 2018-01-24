@@ -100,7 +100,8 @@ class NotoStatusbar(Gtk.Bin):
         """Update @self::word_count_label to the number of words in the current
         document"""
         word_count = self._count_words()
-        self.word_count_label.set_label(str(word_count) + ' ' + _("Words"))
+        word_count_string = ('{:,}'.format(word_count))
+        self.word_count_label.set_label(word_count_string + ' ' + _("Words"))
 
     @registered_for_update
     def update_note_data(self):
@@ -204,17 +205,18 @@ class NotoStatusbar(Gtk.Bin):
         self.goal_set_entry.grab_focus()
 
     def _on_set_goal(self, widget, stack=None):
-        goal = self.goal_set_entry.get_text()
         current = self._count_words()
-        percent_complete = 0
-
+        goal = 0
+        done = 0
         try:
-            percent_complete = (current / int(goal))
-        except Exception:
-            # TODO: warn error occurred, maybe non int goal?
+            goal = int(self.goal_set_entry.get_text())
+            done = (current / goal)
+        except Exception as e:
+            # TODO: warn error occurred, maybe non int goal set?
             pass
 
-        self.word_goal_label.set_markup('<span size="x-large">%s Words</span>' % goal)
-        percent_string = '<span>({:.0%} Complete)</span>'.format(percent_complete)
+        word_goal_string = '<span size="x-large">{:,} Words</span>'.format(goal)
+        percent_string = '<span>({:.0%} Complete)</span>'.format(done)
+        self.word_goal_label.set_markup(word_goal_string)
         self.word_goal_complete_label.set_markup(percent_string)
         self._switch_stack_child(stack)
