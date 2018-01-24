@@ -63,7 +63,6 @@ class NotoEditor(Gtk.Box):
     def _prep_view(self, view):
         self.view = view
         self.statusbar.update_state()
-        self.view.connect('toggle-overwrite', self._on_toggle_overwrite)
 
         self.view.set_visible(True)
         self.view.set_pixels_above_lines(6)
@@ -105,9 +104,6 @@ class NotoEditor(Gtk.Box):
         self._write_current_buffer()
         self._update_title()
         self.statusbar.update_word_count()
-
-    def _on_toggle_overwrite(self, textview):
-        GLib.idle_add(self.statusbar.update_overwrite_mode)
 
     def get_text(self):
         buffer = self.view.get_buffer()

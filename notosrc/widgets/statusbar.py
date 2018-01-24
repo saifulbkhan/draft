@@ -87,15 +87,6 @@ class NotoStatusbar(Gtk.Bin):
         for update_method in UPDATE_REGISTRY:
             update_method(self)
 
-    def update_overwrite_mode(self):
-        """Update @self::overwrite_mode_label to denote whether editor is in overwrite
-        mode or not.
-        """
-        if self.editor.view.get_overwrite():
-            self.overwrite_mode_label.set_label(_("OVR"))
-        else:
-            self.overwrite_mode_label.set_label(_("INS"))
-
     @registered_for_update
     def update_word_count(self):
         """Update @self::word_count_label to the number of words in the current
@@ -106,14 +97,6 @@ class NotoStatusbar(Gtk.Bin):
         word_rule = re.compile('\S+')
         num_words = len(word_rule.findall(text))
         self.word_count_label.set_label(str(num_words) + ' ' + _("Words"))
-
-    def update_markup(self):
-        """Update @self::markup_label to the type of markup being used in
-        text view"""
-        markup_type = self.editor.markup_type
-
-        if markup_type == 'markdown':
-            self.markup_label.set_label(_("Markdown"))
 
     @registered_for_update
     def update_note_data(self):
