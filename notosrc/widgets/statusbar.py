@@ -16,7 +16,7 @@
 import re
 from gettext import gettext as _
 
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, GObject
 
 UPDATE_REGISTRY = []    # registry of functions called when updating state
 
@@ -34,6 +34,13 @@ class NotoStatusbar(Gtk.Bin):
 
     __gtype_name__ = 'NotoStatusbar'
 
+    __gsignals__ = {
+        'word-goal-set': (GObject.SignalFlags.RUN_FIRST,
+                                  None, (GObject.TYPE_BOOLEAN,)),
+    }
+
+    _word_goal_set = False
+
     def __repr__(self):
         return '<NotoStatusbar>'
 
@@ -48,6 +55,7 @@ class NotoStatusbar(Gtk.Bin):
         self.builder = Gtk.Builder()
         self.builder.add_from_resource('/org/gnome/Noto/statusbar.ui')
         self._set_up_widgets()
+        self.connect('word-goal-set', self._on_word_goal_set)
         self.get_style_context().add_class('noto-statusbar')
 
     def _set_up_widgets(self):
@@ -59,15 +67,20 @@ class NotoStatusbar(Gtk.Bin):
         self.word_goal_label = self.builder.get_object('word_goal_label')
         self.word_goal_complete_label = self.builder.get_object('word_goal_complete_label')
         self.word_goal_popover = self.builder.get_object('word_goal_popover')
+        self.word_goal_title = self.builder.get_object('word_goal_title')
         self.goal_set_entry = self.builder.get_object('word_goal_entry')
         word_goal_button = self.builder.get_object('word_goal_button')
         stack = self.builder.get_object('word_goal_stack')
         goal_edit_button = self.builder.get_object('word_goal_edit_button')
+        goal_remove_button = self.builder.get_object('word_goal_remove_button')
         goal_set_button = self.builder.get_object('word_goal_set_button')
 
+        self.word_goal_popover.connect('closed', self._on_goal_popover_closed, stack)
+        self.goal_set_entry.connect('changed', self._on_goal_entry_changed)
         self.goal_set_entry.connect('activate', self._on_set_goal, stack)
         word_goal_button.connect('clicked', self._on_word_count_clicked)
         goal_edit_button.connect('clicked', self._on_request_goal_change, stack)
+        goal_remove_button.connect('clicked', self._on_request_goal_remove, stack)
         goal_set_button.connect('clicked', self._on_set_goal, stack)
 
         self.tag_labels = self.builder.get_object('tag_labels')
@@ -102,6 +115,9 @@ class NotoStatusbar(Gtk.Bin):
         word_count = self._count_words()
         word_count_string = ('{:,}'.format(word_count))
         self.word_count_label.set_label(word_count_string + ' ' + _("Words"))
+
+        # TODO: actually update word goal from db
+        self.emit('word-goal-set', False)
 
     @registered_for_update
     def update_note_data(self):
@@ -190,6 +206,13 @@ class NotoStatusbar(Gtk.Bin):
         """Handle click on word count label"""
         self.word_goal_popover.popup()
 
+    def _on_word_goal_set(self, widget, is_set):
+        self._word_goal_set = is_set
+        if is_set:
+            self.word_goal_title.set_label(_("Writing Goal"))
+        else:
+            self.word_goal_title.set_label(_("Set Writing Goal"))
+
     def _switch_stack_child(self, stack):
         """Given a GtkStack with two children switch to the other child"""
         children = stack.get_children()
@@ -200,23 +223,45 @@ class NotoStatusbar(Gtk.Bin):
         else:
             stack.set_visible_child(child1)
 
+    def _on_goal_entry_changed(self, widget, user_data=None):
+        string = widget.get_text()
+        context = widget.get_style_context()
+        if string and not string.isdigit():
+            context.add_class('error')
+        elif context.has_class('error'):
+            context.remove_class('error')
+
+    def _on_goal_popover_closed(self, widget, stack=None):
+        parent = self.goal_set_entry.get_parent()
+        if self._word_goal_set and stack.get_visible_child() is parent:
+            self._switch_stack_child(stack)
+
     def _on_request_goal_change(self, widget, stack=None):
         self._switch_stack_child(stack)
         self.goal_set_entry.grab_focus()
 
+    def _on_request_goal_remove(self, widget, stack=None):
+        self.goal_set_entry.set_text('')
+        self._on_request_goal_change(widget, stack)
+        self.word_goal_label.set_visible(False)
+        self.word_goal_complete_label.set_visible(False)
+        self.emit('word-goal-set', False)
+
     def _on_set_goal(self, widget, stack=None):
         current = self._count_words()
-        goal = 0
-        done = 0
-        try:
-            goal = int(self.goal_set_entry.get_text())
-            done = (current / goal)
-        except Exception as e:
-            # TODO: warn error occurred, maybe non int goal set?
-            pass
+        goal = self.goal_set_entry.get_text()
 
+        if not goal or not goal.isdigit() or int(goal) == 0:
+            # TODO: warn, goal should be an number
+            return
+
+        goal = int(goal)
+        done = (current / goal)
         word_goal_string = '<span size="x-large">{:,} Words</span>'.format(goal)
         percent_string = '<span>({:.0%} Complete)</span>'.format(done)
         self.word_goal_label.set_markup(word_goal_string)
         self.word_goal_complete_label.set_markup(percent_string)
+        self.word_goal_label.set_visible(True)
+        self.word_goal_complete_label.set_visible(True)
+        self.emit('word-goal-set', True)
         self._switch_stack_child(stack)

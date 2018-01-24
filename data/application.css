@@ -1,4 +1,5 @@
 @define-color highlight_color mix(@theme_bg_color, @theme_fg_color, 0.1);
+@define-color title_color mix(@theme_bg_color, @theme_fg_color, 0.5);
 
 .noto-listview {
     border-width: 0 1px 0 0;
@@ -56,4 +57,10 @@
 
 .noto-label-del-button:hover image {
     opacity: 1.0;
+}
+
+.noto-menu-title {
+    color: @title_color;
+    font-weight: bold;
+    font-size: 0.8em;
 }
