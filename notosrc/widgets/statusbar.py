@@ -57,6 +57,7 @@ class NotoStatusbar(Gtk.Bin):
 
         self.word_count_label = self.builder.get_object('word_count_label')
         self.word_goal_label = self.builder.get_object('word_goal_label')
+        self.word_goal_complete_label = self.builder.get_object('word_goal_complete_label')
         self.word_goal_popover = self.builder.get_object('word_goal_popover')
         self.goal_set_entry = self.builder.get_object('word_goal_entry')
         word_goal_button = self.builder.get_object('word_goal_button')
@@ -87,16 +88,19 @@ class NotoStatusbar(Gtk.Bin):
         for update_method in UPDATE_REGISTRY:
             update_method(self)
 
+    def _count_words(self):
+        text = self.editor.get_text()
+        # simple regexp to match words. can do better?
+        word_rule = re.compile('\S+')
+        num_words = len(word_rule.findall(text))
+        return num_words
+
     @registered_for_update
     def update_word_count(self):
         """Update @self::word_count_label to the number of words in the current
         document"""
-        text = self.editor.get_text()
-
-        # simple regexp to match words. can do better?
-        word_rule = re.compile('\S+')
-        num_words = len(word_rule.findall(text))
-        self.word_count_label.set_label(str(num_words) + ' ' + _("Words"))
+        word_count = self._count_words()
+        self.word_count_label.set_label(str(word_count) + ' ' + _("Words"))
 
     @registered_for_update
     def update_note_data(self):
@@ -201,5 +205,16 @@ class NotoStatusbar(Gtk.Bin):
 
     def _on_set_goal(self, widget, stack=None):
         goal = self.goal_set_entry.get_text()
-        self.word_goal_label.set_markup('<span size="x-large">%s</span>' % goal)
+        current = self._count_words()
+        percent_complete = 0
+
+        try:
+            percent_complete = (current / int(goal))
+        except Exception:
+            # TODO: warn error occurred, maybe non int goal?
+            pass
+
+        self.word_goal_label.set_markup('<span size="x-large">%s Words</span>' % goal)
+        percent_string = '<span>({:.0%} Complete)</span>'.format(percent_complete)
+        self.word_goal_complete_label.set_markup(percent_string)
         self._switch_stack_child(stack)
