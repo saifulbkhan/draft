@@ -62,7 +62,6 @@ class NotoEditor(Gtk.Box):
 
     def _prep_view(self, view):
         self.view = view
-        self.statusbar.update_state()
 
         self.view.set_visible(True)
         self.view.set_pixels_above_lines(6)
@@ -146,6 +145,8 @@ class NotoEditor(Gtk.Box):
             if self.parent.in_preview_mode():
                 self.parent.preview_content()
 
+            self.statusbar.update_state()
+
             return
 
         view = NotoTextView()
@@ -177,6 +178,8 @@ class NotoEditor(Gtk.Box):
 
         if self.parent.in_preview_mode():
             self.parent.preview_content()
+
+        self.statusbar.update_state()
 
     def _focus_view(self, scroll_to_insert=False):
         self.view.grab_focus()
