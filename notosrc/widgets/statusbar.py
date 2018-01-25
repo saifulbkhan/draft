@@ -56,11 +56,11 @@ class NotoStatusbar(Gtk.Bin):
         self._builder.add_from_resource('/org/gnome/Noto/statusbar.ui')
         self._set_up_widgets()
         self.connect('word-goal-set', self._on_word_goal_set)
-        self.get_style_context().add_class('noto-statusbar')
 
     def _set_up_widgets(self):
         """Set up widgets contained within statusbar"""
         self._main_button_box = self._builder.get_object('main_button_box')
+        self._main_button_box.get_style_context().add_class('noto-statusbar')
         self.add(self._main_button_box)
 
         self._word_count_label = self._builder.get_object('word_count_label')
