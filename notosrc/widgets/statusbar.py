@@ -36,10 +36,11 @@ class NotoStatusbar(Gtk.Bin):
 
     __gsignals__ = {
         'word-goal-set': (GObject.SignalFlags.RUN_FIRST,
-                                  None, (GObject.TYPE_BOOLEAN,)),
+                          None, (GObject.TYPE_BOOLEAN,)),
     }
 
     _word_goal_set = False
+    _builder = Gtk.Builder()
 
     def __repr__(self):
         return '<NotoStatusbar>'
@@ -51,46 +52,49 @@ class NotoStatusbar(Gtk.Bin):
         @editor: NotoEditor, the editor which @self serves
         """
         Gtk.Bin.__init__(self)
-        self.editor = editor
-        self.builder = Gtk.Builder()
-        self.builder.add_from_resource('/org/gnome/Noto/statusbar.ui')
+        self._editor = editor
+        self._builder.add_from_resource('/org/gnome/Noto/statusbar.ui')
         self._set_up_widgets()
         self.connect('word-goal-set', self._on_word_goal_set)
         self.get_style_context().add_class('noto-statusbar')
 
     def _set_up_widgets(self):
         """Set up widgets contained within statusbar"""
-        self.main_button_box = self.builder.get_object('main_button_box')
-        self.add(self.main_button_box)
+        self._main_button_box = self._builder.get_object('main_button_box')
+        self.add(self._main_button_box)
 
-        self.word_count_label = self.builder.get_object('word_count_label')
-        self.word_goal_label = self.builder.get_object('word_goal_label')
-        self.word_goal_complete_label = self.builder.get_object('word_goal_complete_label')
-        self.word_goal_popover = self.builder.get_object('word_goal_popover')
-        self.word_goal_title = self.builder.get_object('word_goal_title')
-        self.goal_set_entry = self.builder.get_object('word_goal_entry')
-        word_goal_button = self.builder.get_object('word_goal_button')
-        stack = self.builder.get_object('word_goal_stack')
-        goal_edit_button = self.builder.get_object('word_goal_edit_button')
-        goal_remove_button = self.builder.get_object('word_goal_remove_button')
-        goal_set_button = self.builder.get_object('word_goal_set_button')
+        self._word_count_label = self._builder.get_object('word_count_label')
+        self._word_goal_label = self._builder.get_object('word_goal_label')
+        self._word_goal_complete_label = self._builder.get_object('word_goal_complete_label')
+        self._word_goal_popover = self._builder.get_object('word_goal_popover')
+        self._word_goal_title = self._builder.get_object('word_goal_title')
+        self._goal_set_entry = self._builder.get_object('word_goal_entry')
+        word_goal_button = self._builder.get_object('word_goal_button')
+        stack = self._builder.get_object('word_goal_stack')
+        goal_edit_button = self._builder.get_object('word_goal_edit_button')
+        goal_remove_button = self._builder.get_object('word_goal_remove_button')
+        goal_set_button = self._builder.get_object('word_goal_set_button')
 
-        self.word_goal_popover.connect('closed', self._on_goal_popover_closed, stack)
-        self.goal_set_entry.connect('changed', self._on_goal_entry_changed)
-        self.goal_set_entry.connect('activate', self._on_set_goal, stack)
+        self._word_goal_popover.connect('closed',
+                                        self._on_goal_popover_closed,
+                                        stack)
+        self._goal_set_entry.connect('changed', self._on_goal_entry_changed)
+        self._goal_set_entry.connect('activate', self._on_set_goal, stack)
         word_goal_button.connect('clicked', self._on_word_count_clicked)
         goal_edit_button.connect('clicked', self._on_request_goal_change, stack)
-        goal_remove_button.connect('clicked', self._on_request_goal_remove, stack)
+        goal_remove_button.connect('clicked',
+                                   self._on_request_goal_remove,
+                                   stack)
         goal_set_button.connect('clicked', self._on_set_goal, stack)
 
-        self.tag_labels = self.builder.get_object('tag_labels')
-        self.tag_popover = self.builder.get_object('tag_popover')
-        self.tag_popover_list = self.builder.get_object('tag_popover_list')
-        self.new_tag_entry = self.builder.get_object('new_tag_entry')
-        new_tag_button = self.builder.get_object('new_tag_button')
-        clickable = self.builder.get_object('tag_button')
+        self._tag_labels = self._builder.get_object('tag_labels')
+        self._tag_popover = self._builder.get_object('tag_popover')
+        self._tag_popover_list = self._builder.get_object('tag_popover_list')
+        self._new_tag_entry = self._builder.get_object('new_tag_entry')
+        new_tag_button = self._builder.get_object('new_tag_button')
+        clickable = self._builder.get_object('tag_button')
 
-        self.new_tag_entry.connect('activate', self._on_tag_added)
+        self._new_tag_entry.connect('activate', self._on_tag_added)
         new_tag_button.connect('clicked', self._on_tag_added)
         clickable.connect('clicked', self._on_labels_clicked)
 
@@ -102,7 +106,7 @@ class NotoStatusbar(Gtk.Bin):
             update_method(self)
 
     def _count_words(self):
-        text = self.editor.get_text()
+        text = self._editor.get_text()
         # simple regexp to match words. can do better?
         word_rule = re.compile('\S+')
         num_words = len(word_rule.findall(text))
@@ -114,7 +118,7 @@ class NotoStatusbar(Gtk.Bin):
         document"""
         word_count = self._count_words()
         word_count_string = ('{:,}'.format(word_count))
-        self.word_count_label.set_label(word_count_string + ' ' + _("Words"))
+        self._word_count_label.set_label(word_count_string + ' ' + _("Words"))
 
         # TODO: actually update word goal from db
         self.emit('word-goal-set', False)
@@ -123,7 +127,7 @@ class NotoStatusbar(Gtk.Bin):
     def update_note_data(self):
         """Updates the note specific information presented by @self, such
         as tags"""
-        data_dict = self.editor.current_note_data
+        data_dict = self._editor.current_note_data
 
         tags = data_dict['tags']
         self._refresh_tag_widget(tags)
@@ -141,15 +145,15 @@ class NotoStatusbar(Gtk.Bin):
             for child in children:
                 widget.remove(child)
 
-        _clear_container(self.tag_popover_list)
-        _clear_container(self.tag_labels)
+        _clear_container(self._tag_popover_list)
+        _clear_container(self._tag_labels)
 
         if not tags:
             empty_label = Gtk.Label(_("Add a keyword …"))
             empty_label.get_style_context().add_class('noto-placeholder-label')
             empty_label.set_visible(True)
-            self.tag_labels.pack_start(empty_label, False, False, 0)
-            self.tag_popover_list.set_visible(False)
+            self._tag_labels.pack_start(empty_label, False, False, 0)
+            self._tag_popover_list.set_visible(False)
             return
 
         def _add_tag_label(tag):
@@ -159,7 +163,7 @@ class NotoStatusbar(Gtk.Bin):
                  .add_class('noto-tag-label')
             label.set_visible(True)
 
-            self.tag_labels.pack_start(label, False, False, 0)
+            self._tag_labels.pack_start(label, False, False, 0)
 
         def _append_to_list(tag, icon, action_cb):
             label = Gtk.Label()
@@ -179,7 +183,7 @@ class NotoStatusbar(Gtk.Bin):
             box.set_visible(True)
 
             button.connect('clicked', action_cb, label)
-            self.tag_popover_list.pack_start(box, False, False, 0)
+            self._tag_popover_list.pack_start(box, False, False, 0)
 
         for tag in tags:
             _add_tag_label(tag)
@@ -187,31 +191,31 @@ class NotoStatusbar(Gtk.Bin):
 
     def _on_labels_clicked(self, button, user_data=None):
         """Handle click on tag labels"""
-        self.tag_popover.popup()
-        self.new_tag_entry.grab_focus()
+        self._tag_popover.popup()
+        self._new_tag_entry.grab_focus()
 
     def _on_tag_added(self, widget, user_data=None):
         """Handle addition of a tag to the note"""
-        tag = self.new_tag_entry.get_text()
+        tag = self._new_tag_entry.get_text()
         if tag:
-            self.editor.add_tag(tag)
-            self.new_tag_entry.set_text('')
+            self._editor.add_tag(tag)
+            self._new_tag_entry.set_text('')
 
     def _on_tag_deleted(self, widget, label=None):
         """Handle deletion of a tag from the note"""
         tag = label.get_label()
-        self.editor.delete_tag(tag)
+        self._editor.delete_tag(tag)
 
     def _on_word_count_clicked(self, widget, user_data=None):
         """Handle click on word count label"""
-        self.word_goal_popover.popup()
+        self._word_goal_popover.popup()
 
     def _on_word_goal_set(self, widget, is_set):
         self._word_goal_set = is_set
         if is_set:
-            self.word_goal_title.set_label(_("Writing Goal"))
+            self._word_goal_title.set_label(_("Writing Goal"))
         else:
-            self.word_goal_title.set_label(_("Set Writing Goal"))
+            self._word_goal_title.set_label(_("Set Writing Goal"))
 
     def _switch_stack_child(self, stack):
         """Given a GtkStack with two children switch to the other child"""
@@ -232,24 +236,24 @@ class NotoStatusbar(Gtk.Bin):
             context.remove_class('error')
 
     def _on_goal_popover_closed(self, widget, stack=None):
-        parent = self.goal_set_entry.get_parent()
+        parent = self._goal_set_entry.get_parent()
         if self._word_goal_set and stack.get_visible_child() is parent:
             self._switch_stack_child(stack)
 
     def _on_request_goal_change(self, widget, stack=None):
         self._switch_stack_child(stack)
-        self.goal_set_entry.grab_focus()
+        self._goal_set_entry.grab_focus()
 
     def _on_request_goal_remove(self, widget, stack=None):
-        self.goal_set_entry.set_text('')
+        self._goal_set_entry.set_text('')
         self._on_request_goal_change(widget, stack)
-        self.word_goal_label.set_visible(False)
-        self.word_goal_complete_label.set_visible(False)
+        self._word_goal_label.set_visible(False)
+        self._word_goal_complete_label.set_visible(False)
         self.emit('word-goal-set', False)
 
     def _on_set_goal(self, widget, stack=None):
         current = self._count_words()
-        goal = self.goal_set_entry.get_text()
+        goal = self._goal_set_entry.get_text()
 
         if not goal or not goal.isdigit() or int(goal) == 0:
             # TODO: warn, goal should be an number
@@ -259,9 +263,9 @@ class NotoStatusbar(Gtk.Bin):
         done = (current / goal)
         word_goal_string = '<span size="x-large">{:,} Words</span>'.format(goal)
         percent_string = '<span>({:.0%} Complete)</span>'.format(done)
-        self.word_goal_label.set_markup(word_goal_string)
-        self.word_goal_complete_label.set_markup(percent_string)
-        self.word_goal_label.set_visible(True)
-        self.word_goal_complete_label.set_visible(True)
+        self._word_goal_label.set_markup(word_goal_string)
+        self._word_goal_complete_label.set_markup(percent_string)
+        self._word_goal_label.set_visible(True)
+        self._word_goal_complete_label.set_visible(True)
         self.emit('word-goal-set', True)
         self._switch_stack_child(stack)
