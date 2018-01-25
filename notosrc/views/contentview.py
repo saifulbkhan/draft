@@ -46,7 +46,10 @@ class ContentView(Gtk.Bin):
         self.content_stack.set_visible_child_name('editor')
 
     def preview_content(self):
-        render_markdown(self.content_editor.view, self.content_preview.view)
+        markup = self.content_editor.get_text()
+        markup_type = self.content_editor.markup_type
+        if markup_type == 'markdown':
+            render_markdown(markup, self.content_preview.view)
 
     def in_preview_mode(self):
         return self.content_stack.get_visible_child_name() == 'preview'

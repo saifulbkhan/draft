@@ -22,6 +22,7 @@ gi.require_version('GtkSource', '3.0')
 from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, Pango
 
 from notosrc import file
+from notosrc.widgets.statusbar import NotoStatusbar
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
 GObject.type_ensure(GObject.GType(GtkSource.View))
@@ -29,6 +30,17 @@ GObject.type_ensure(GObject.GType(GtkSource.View))
 
 class NotoEditor(Gtk.Box):
     __gtype_name__ = 'NotoEditor'
+
+    __gsignals__ = {
+        'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
+        'tags-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+    }
+
+    markup_type = 'markdown'    # default markup used by the editor
+    view = None
+    current_note_data = None
+    _current_file = None
+    _open_files = {}
 
     def __repr__(self):
         return '<Editor>'
@@ -39,21 +51,18 @@ class NotoEditor(Gtk.Box):
         self.parent = parent
         self._set_up_widgets()
 
-        self.view = None
-        self._current_file = None
-        self._open_files = {}
-
     def _set_up_widgets(self):
         self.editor_stack = Gtk.Stack()
         self.pack_start(self.editor_stack, True, True, 0)
 
-        self.status_bar = Gtk.Statusbar()
-        self.pack_start(self.status_bar, False, False, 0)
+        self.statusbar = NotoStatusbar(self)
+        self.pack_start(self.statusbar, False, False, 0)
 
         self.connect('key-press-event', self._on_key_press)
 
     def _prep_view(self, view):
         self.view = view
+        self.statusbar.update_state()
 
         self.view.set_visible(True)
         self.view.set_pixels_above_lines(6)
@@ -94,8 +103,37 @@ class NotoEditor(Gtk.Box):
     def _on_buffer_changed(self, buffer):
         self._write_current_buffer()
         self._update_title()
+        self.statusbar.update_word_count()
 
-    def switch_view(self, id):
+    def get_text(self):
+        buffer = self.view.get_buffer()
+        start = buffer.get_start_iter()
+        end = buffer.get_end_iter()
+        text = buffer.get_text(start, end, False)
+
+        return text
+
+    def add_tag(self, tag):
+        lower_case_tags = [x.lower() for x in self.current_note_data['tags']]
+        if tag.lower() in lower_case_tags:
+            return
+
+        self.current_note_data['tags'].append(tag)
+        self.emit('tags-changed', self.current_note_data['tags'])
+
+    def delete_tag(self, tag):
+        lower_case_tags = [x.lower() for x in self.current_note_data['tags']]
+        if tag.lower() not in lower_case_tags:
+            return
+
+        index = lower_case_tags.index(tag.lower())
+        self.current_note_data['tags'].pop(index)
+        self.emit('tags-changed', self.current_note_data['tags'])
+
+    def switch_view(self, note_data):
+        self.current_note_data = note_data
+
+        id = str(note_data['db-id'])
         scrollable = self.editor_stack.get_child_by_name(id)
         if scrollable:
             self.editor_stack.set_visible_child(scrollable)
@@ -157,12 +195,9 @@ class NotoEditor(Gtk.Box):
                                         buffer)
 
     def _update_title(self):
-        buffer = self.view.get_buffer()
-        start = buffer.get_start_iter()
-        end = buffer.get_end_iter()
-        text_content = buffer.get_text(start, end, True)
+        text_content = self.get_text()
         title = self._get_title_for_text(text_content)
-        self.main_window.notesview.view.set_title_for_current_selection(title)
+        self.emit('title-changed', title)
 
     def _get_title_for_text(self, text):
         stripped = text.lstrip()

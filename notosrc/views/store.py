@@ -127,7 +127,7 @@ class NotoListStore(Gio.ListStore):
 
     def _row_data_for_note(self, note):
         """Create NoteData for one note"""
-        tags = map(lambda x: x.keyword, note.tags)
+        tags = [x.keyword for x in note.tags]
         hash_list = self._get_parent_hash_list(note)
 
         note_data = self.NoteData()
@@ -184,7 +184,7 @@ class NotoListStore(Gio.ListStore):
         """
         item = self.get_item(position)
         id = item.prop_db_id
-        buffer = switch_view(str(id))
+        buffer = switch_view(item.to_dict())
         if not buffer:
             return
 
@@ -207,6 +207,36 @@ class NotoListStore(Gio.ListStore):
         with data.session_scope() as session:
             note = data.fetch_note_by_id(id, session)
             note.title = title
+
+    def set_tags_for_position(self, position, tags):
+        """Set the tags for the item at given position
+
+        @self: NotoListStore model
+        @position: integer, position at which  item is located
+        @tags: list, the collection of strings as keywords for the item
+        """
+        item = self.get_item(position)
+        id = item.prop_db_id
+
+        with data.session_scope() as session:
+            note = data.fetch_note_by_id(id, session)
+
+            # add new tags if any
+            for keyword in tags:
+                tag = data.fetch_tag(keyword, session)
+                if tag not in note.tags:
+                    note.tags.append(tag)
+
+            # remove old tags if any
+            lower_case_tags = [x.lower() for x in tags]
+            for tag in note.tags:
+                if tag.keyword.lower() not in lower_case_tags:
+                    note.tags.remove(tag)
+
+            # update tags after, they have been updated in db
+            item.prop_tags = [x.keyword for x in note.tags]
+
+        return item.prop_tags
 
     def delete_item_at_postion(self, position):
         """Delete item at @position in model

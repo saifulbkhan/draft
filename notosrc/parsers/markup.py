@@ -117,18 +117,13 @@ def format_code(text, lang, inlinestyles=False, linenos=False):
         text = text.strip()
         return '\n<pre><code>%s</code></pre>\n' % escape(text)
 
-def render_markdown(editor, webview):
+def render_markdown(markup, webview):
     renderer = CustomRenderer(hard_wrap=True)
     inline_renderer = MathInlineLexer(renderer)
     block_renderer = MathBlockLexer()
     markdown = CustomMarkdown(renderer, inline_renderer, block_renderer)
 
-    text_buffer = editor.get_buffer()
-    start = text_buffer.get_start_iter()
-    end = text_buffer.get_end_iter()
-    text = text_buffer.get_text(start, end, False)
-
-    content = markdown(text)
+    content = markdown(markup)
     webview.set_editable(True)
     content = html_string % content
     GLib.idle_add(webview.load_html, content, NOTO_DIR)

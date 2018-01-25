@@ -68,17 +68,21 @@ def init_db():
 
 
 def fetch_tag(name, session):
+    # TODO: support case-insensitive matching for Unicode characters in keyword.
+    # sqlite `LIKE` operator only does case-insensitive matching for ASCII
+    # characters. To do case-insensitive matching for Unicode as well, maybe
+    # use ICU plugin for sqlite or filter another way.
     tag = session.query(Tag).\
-            filter_by(keyword=name.lower()).\
-            one()
+            filter(Tag.keyword.like(name.lower())).\
+            one_or_none()
     if tag:
         return tag
-    return create_tag(name)
+    return create_tag(name, session)
 
 
 def create_tag(name, session):
-    tag = Tag(name.lower())
-    session.add(Tag)
+    tag = Tag(name)
+    session.add(tag)
     return tag
 
 
