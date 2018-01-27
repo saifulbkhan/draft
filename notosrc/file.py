@@ -35,13 +35,11 @@ def read_file_contents(filename, parent_names, buffer, load_file_cb):
         gsf = user_data
         try:
             success = loader.load_finish(res)
-            if success:
-                load_file_cb(gsf, buffer)
-            else:
-                raise IOError
         except Exception as e:
             # TODO: Warn file read error so overwriting path with blank file...
             write_to_file(gsf.get_location(), "")
+        finally:
+            load_file_cb(gsf, buffer)
 
     f = Gio.File.new_for_path(fpath)
     gsf = GtkSource.File(location=f)
