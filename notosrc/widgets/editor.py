@@ -33,7 +33,7 @@ class NotoEditor(Gtk.Box):
 
     __gsignals__ = {
         'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
-        'tags-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+        'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
     markup_type = 'markdown'    # default markup used by the editor
@@ -113,26 +113,26 @@ class NotoEditor(Gtk.Box):
         return text
 
     def add_tag(self, tag):
-        lower_case_tags = [x.lower() for x in self.current_note_data['tags']]
-        if tag.lower() in lower_case_tags:
+        lower_case_keywords = [x.lower() for x in self.current_note_data['keywords']]
+        if tag.lower() in lower_case_keywords:
             return
 
-        self.current_note_data['tags'].append(tag)
-        self.emit('tags-changed', self.current_note_data['tags'])
+        self.current_note_data['keywords'].append(tag)
+        self.emit('keywords-changed', self.current_note_data['keywords'])
 
     def delete_tag(self, tag):
-        lower_case_tags = [x.lower() for x in self.current_note_data['tags']]
-        if tag.lower() not in lower_case_tags:
+        lower_case_keywords = [x.lower() for x in self.current_note_data['keywords']]
+        if tag.lower() not in lower_case_keywords:
             return
 
-        index = lower_case_tags.index(tag.lower())
-        self.current_note_data['tags'].pop(index)
-        self.emit('tags-changed', self.current_note_data['tags'])
+        index = lower_case_keywords.index(tag.lower())
+        self.current_note_data['keywords'].pop(index)
+        self.emit('keywords-changed', self.current_note_data['keywords'])
 
     def switch_view(self, note_data):
         self.current_note_data = note_data
 
-        id = str(note_data['db-id'])
+        id = str(note_data['id'])
         scrollable = self.editor_stack.get_child_by_name(id)
         if scrollable:
             self.editor_stack.set_visible_child(scrollable)

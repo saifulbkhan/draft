@@ -16,24 +16,24 @@
 from gettext import gettext as _
 from gi.repository import GLib, GObject, Gtk, Gio
 
+from notosrc import file, db
 from notosrc.db import data
-from notosrc import file
-from notosrc.datamodel import Note, Notebook
 
 
 class NotoListStore(Gio.ListStore):
-    """Model for a list of notes (only) from one particular note group"""
+    """Model for a list of texts (only) from one particular text group"""
 
-    class NoteData(GObject.Object):
-        """Represents one entry in list of notes"""
-        __gtype_name__ = 'NoteData'
+    class RowData(GObject.Object):
+        """Represents one entry in list of texts"""
+        __gtype_name__ = 'RowData'
 
         title = ''
-        tags = []
+        keywords = []
         last_modified = ''
         db_id = None
         hash_id = ''
         in_trash = False
+        parent_id = None
         parent_list = []
 
         @GObject.Property(type=str)
@@ -45,12 +45,12 @@ class NotoListStore(Gio.ListStore):
             self.title = value
 
         @GObject.Property(type=GObject.TYPE_PYOBJECT)
-        def prop_tags(self):
-            return self.tags
+        def prop_keywords(self):
+            return self.keywords
 
-        @prop_tags.setter
-        def prop_tags(self, value):
-            self.tags = value
+        @prop_keywords.setter
+        def prop_keywords(self, value):
+            self.keywords = value
 
         @GObject.Property(type=str)
         def prop_last_modified(self):
@@ -84,6 +84,14 @@ class NotoListStore(Gio.ListStore):
         def prop_in_trash(self, value):
             self.in_trash = value
 
+        @GObject.Property(type=int)
+        def prop_parent_id(self):
+            return self.parent_id
+
+        @prop_parent_id.setter
+        def prop_parent_id(self, value):
+            self.parent_id = value
+
         @GObject.Property(type=GObject.TYPE_PYOBJECT)
         def prop_parent_list(self):
             return self.parent_list
@@ -92,15 +100,26 @@ class NotoListStore(Gio.ListStore):
         def prop_parent_list(self, value):
             self.parent_list = value
 
+        def from_dict(self, data_dict):
+            self.title = data_dict['title']
+            self.keywords = data_dict['keywords']
+            self.last_modified = data_dict['last_modified']
+            self.db_id = data_dict['id']
+            self.hash_id = data_dict['hash_id']
+            self.in_trash = bool(data_dict['in_trash'])
+            self.parent_id = data_dict['parent_id']
+            self.parent_list = data_dict['parents']
+
         def to_dict(self):
             return {
                 'title': self.title,
-                'tags': self.tags,
-                'last-modified': self.last_modified,
-                'db-id': self.db_id,
-                'hash-str': self.hash_id,
-                'in-trash': self.in_trash,
-                'parent-list': self.parent_list
+                'keywords': self.keywords,
+                'last_modified': self.last_modified,
+                'id': self.db_id,
+                'hash_id': self.hash_id,
+                'in_trash': int(self.in_trash),
+                'parent_id': self.parent_id,
+                'parent_list': self.parent_list
             }
 
     def __repr__(self):
@@ -108,73 +127,44 @@ class NotoListStore(Gio.ListStore):
 
     def __init__(self, parent_group):
         """Initialises a new NotoListStore for the given parent group. If
-        @parent_group is None, orphan notes (not part of any group) are queried.
+        @parent_group is None, orphan texts (not part of any group) are queried.
 
         @parent_group: string, The unique hash string for the parent group
         """
-        Gio.ListStore.__init__(self, item_type=self.NoteData.__gtype__)
+        Gio.ListStore.__init__(self, item_type=self.RowData.__gtype__)
         self._parent_group = parent_group
-        self._load_notes(parent_group)
+        self._load_texts(parent_group)
 
-    def _load_notes(self, parent):
-        """Asks db to fetch the set of notes in @parent group"""
-        with data.session_scope() as session:
-            notes = data.fetch_notes_not_in_notebooks(session)
-            for note in notes:
-                row = self._row_data_for_note(note)
+    def _load_texts(self, parent):
+        """Asks db to fetch the set of texts in @parent group"""
+        with db.connect() as connection:
+            for text in data.texts_not_in_groups(connection):
+                row = self._row_data_for_text(text)
                 if not row.in_trash:
                     self.append(row)
 
-    def _row_data_for_note(self, note):
-        """Create NoteData for one note"""
-        tags = [x.keyword for x in note.tags]
-        hash_list = self._get_parent_hash_list(note)
+    def _row_data_for_text(self, text_metadata):
+        """Create RowData for one text document. Expects a dict of metadata"""
+        row_data = self.RowData()
+        row_data.from_dict(text_metadata)
+        return row_data
 
-        note_data = self.NoteData()
-        note_data.prop_title = note.title
-        note_data.prop_tags = tags
-        note_data.prop_last_modified = note.get_last_modified_relative_time()
-        note_data.prop_db_id = note.id
-        note_data.prop_hash_id = note.hash_id
-        note_data.prop_in_trash = bool(note.in_trash)
-        note_data.prop_parent_list = hash_list
-
-        return note_data
-
-    def _get_parent_hash_list(self, entity, parent_id='notebook_id'):
-        """Returns a list of hash strings for parent groups that joined
-        together can form a relative path to note dir.
-        """
-        hashes = []
-        while getattr(entity, parent_id):
-            notebook_id = getattr(entity, parent_id)
-            entity = fetch_notebook_by_id(notebook_id)
-            hashes.append(entity.hash_id)
-        hashes.reverse()
-        return hashes
-
-    def new_note_request(self):
-        """Request for a new note
+    def new_text_request(self):
+        """Request for a new text
 
         @self: NotoListStore model
         """
         id = None
-        with data.session_scope() as session:
-            note = Note(_("Untitled"), self._parent_group)
-            session.add(note)
-            # premature commit to ensure we get proper id
-            session.commit()
-            id = note.id
-
-        # new session needed for fetch by id, hopefully will be able to avoid
-        # all this when we move away from sqlalchemy
-        with data.session_scope() as session:
-            note = data.fetch_note_by_id(id, session)
-            note_row = self._row_data_for_note(note)
-            return self.append(note_row)
+        with db.connect() as connection:
+            text_id = data.create_text(connection,
+                                       _("Untitled"),
+                                       self._parent_group)
+            text = data.text_for_id(connection, text_id)
+            text_row = self._row_data_for_text(text)
+            return self.append(text_row)
 
     def prepare_for_edit(self, position, switch_view, load_file):
-        """Prepare note at @position in @self to be edited.
+        """Prepare text at @position in @self to be edited.
 
         @self: NotoListStore model
         @position: integer, position at which the item to be edited is located
@@ -204,39 +194,27 @@ class NotoListStore(Gio.ListStore):
         item.prop_title = title
         # TODO: 'notify' view that a prop for an item has changed
 
-        with data.session_scope() as session:
-            note = data.fetch_note_by_id(id, session)
-            note.title = title
+        with db.connect() as connection:
+            data.update_text(connection, id, item.to_dict())
 
-    def set_tags_for_position(self, position, tags):
-        """Set the tags for the item at given position
+    def set_keywords_for_position(self, position, keywords):
+        """Set the keywords for the item at given position
 
         @self: NotoListStore model
         @position: integer, position at which  item is located
-        @tags: list, the collection of strings as keywords for the item
+        @keywords: list, the collection of strings as keywords for the item
         """
         item = self.get_item(position)
+        item.prop_keywords = keywords
         id = item.prop_db_id
 
-        with data.session_scope() as session:
-            note = data.fetch_note_by_id(id, session)
+        with db.connect() as connection:
+            data.update_text(connection, id, item.to_dict())
 
-            # add new tags if any
-            for keyword in tags:
-                tag = data.fetch_tag(keyword, session)
-                if tag not in note.tags:
-                    note.tags.append(tag)
+            # update keywords after, they have been updated in db
+            item.prop_keywords = data.fetch_keywords_for_text(connection, id)
 
-            # remove old tags if any
-            lower_case_tags = [x.lower() for x in tags]
-            for tag in note.tags:
-                if tag.keyword.lower() not in lower_case_tags:
-                    note.tags.remove(tag)
-
-            # update tags after, they have been updated in db
-            item.prop_tags = [x.keyword for x in note.tags]
-
-        return item.prop_tags
+        return item.prop_keywords
 
     def delete_item_at_postion(self, position):
         """Delete item at @position in model
@@ -248,13 +226,13 @@ class NotoListStore(Gio.ListStore):
         id = item.prop_db_id
         hash_id = item.prop_hash_id
         parent_hashes = item.prop_parent_list
+        item.prop_in_trash = True
 
         self.remove(position)
         file.trash_file(hash_id, parent_hashes)
 
-        with data.session_scope() as session:
-            note = data.fetch_note_by_id(id, session)
-            note.in_trash = True
+        with db.connect() as connection:
+            data.update_text(connection, id, item.to_dict())
 
 
 class TreeStore(Gtk.TreeStore):
@@ -266,7 +244,7 @@ class TreeStore(Gtk.TreeStore):
         Gtk.TreeStore.__init__(
             self,
             GObject.TYPE_STRING,        # title or name
-            GObject.TYPE_STRING,        # tags or number of items
+            GObject.TYPE_STRING,        # keywords or number of items
             GObject.TYPE_STRING,        # last modified
             GObject.TYPE_INT,           # id for the entity
             GObject.TYPE_STRING,        # hash-id for file or folder name
@@ -293,7 +271,7 @@ class TreeStore(Gtk.TreeStore):
             self.append(None, notebook_row)
 
     def row_for_notebook(self, notebook):
-        items = len(notebook.notes) + len(notebook.notebooks)
+        items = len(notebook.texts) + len(notebook.notebooks)
         row = [notebook.name,
                str(items),
                notebook.get_last_modified_relative_time(),

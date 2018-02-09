@@ -13,148 +13,345 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os.path
-from contextlib import contextmanager
+from hashlib import sha256
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql import text
-
-from gi.repository import GLib, Gio
-
-from notosrc.db.datamodel import Base, Notebook, Note, Tag
-
-USER_DATA_DIR = os.path.join(GLib.get_user_data_dir(), 'noto')
-DB_URL = 'sqlite:///' + os.path.join(USER_DATA_DIR, 'noto.db')
-
-# TODO: Pass 'echo=True' when debugging
-engine = create_engine(DB_URL)
-Session = sessionmaker(bind=engine)
-
-@contextmanager
-def session_scope():
-    """Provide a transactional scope around a series of operations."""
-    session = Session()
-    try:
-        yield session
-        session.commit()
-    except Exception as e:
-        session.rollback()
-        raise e
-    finally:
-        session.close()
+from notosrc import db
 
 
-def init_db():
-    Base.metadata.create_all(engine)
-    try:
-        note_dir = os.path.join(USER_DATA_DIR, 'notes')
-        Gio.file_new_for_path(note_dir).make_directory()
-    except Exception:
-        # TODO: Critial error: failed to make storage directory for notes
-        pass
-    try:
-        note_local_dir = os.path.join(note_dir, 'local')
-        Gio.file_new_for_path(note_local_dir).make_directory()
-    except Exception:
-        # TODO: Critial error: failed to make storage for local notes
-        pass
-    try:
-        note_trash_dir = os.path.join(note_dir, '.trash')
-        Gio.file_new_for_path(note_trash_dir).make_directory()
-    except Exception as e:
-        # TODO: Critial error: failed to make directory for trashed notes
-        pass
+def create_keyword(conn, keyword):
+    """Create a new keyword"""
+    query = '''
+        INSERT INTO tag (keyword)
+             VALUES (:keyword)'''
+    cursor = conn.cursor()
+    cursor.execute(query, {'keyword': keyword})
+
+    return get_last_insert_id(conn)
 
 
-def fetch_tag(name, session):
+def create_text(conn, name, group_id=None):
+    """Create a new text document and return its id"""
+    datetime = db.get_datetime()
+    query = '''
+        INSERT INTO note (created, last_modified, title, notebook_id, in_trash)
+             VALUES (:created, :modified, :title, :parent_id, :in_trash)'''
+    cursor = conn.cursor()
+    cursor.execute(query, {"created": datetime,
+                           "modified": datetime,
+                           "title": name,
+                           "parent_id": group_id,
+                           "in_trash": 0})
+
+    return get_last_insert_id(conn)
+
+
+def create_group(conn, name, group_id=None):
+    """Create a new text group and return its id"""
+    datetime = db.get_datetime()
+    query = '''
+        INSERT INTO notebook (created, last_modified, name, parent_id, in_trash)
+             VALUES (:created, :modified, :name, :parent_id, :in_trash)'''
+    cursor = conn.cursor()
+    cursor.execute(query, {"created": datetime,
+                           "modified": datetime,
+                           "name": name,
+                           "parent_id": group_id,
+                           "in_trash": 0})
+
+    return get_last_insert_id(conn)
+
+
+def get_last_insert_id(conn):
+    """Returns the rowid of the last row that was inserted through the active
+    connection"""
+    # premature commit to ensure we get proper id
+    conn.commit()
+
+    id_query = 'SELECT last_insert_rowid()'
+    cursor = conn.cursor()
+    res = cursor.execute(id_query)
+    return res.fetchone()[0]
+
+
+def update_text(conn, text_id, values):
+    """Update the values for given text id"""
+    query = '''
+        UPDATE note
+           SET last_modified = :modified
+             , title = :title
+             , notebook_id = :parent_id
+             , in_trash = :in_trash
+         WHERE id = :id'''
+    cursor = conn.cursor()
+    cursor.execute(query, {"modified": values['last_modified'],
+                           "title": values['title'],
+                           "parent_id": values['parent_id'],
+                           "in_trash": values['in_trash'],
+                           "id": text_id})
+
+    update_keywords_for_text(conn, text_id, values['keywords'])
+
+
+def update_keywords_for_text(conn, text_id, keywords):
+    """Update the keywords on given text"""
+    values = []
+    for k in keywords:
+        keyword = fetch_keyword(conn, k)
+        values.append({"note_id": text_id, "tag_id": keyword})
+
+    cursor = conn.cursor()
+
+    # remove old keywords if any
+    delete_query = '''
+        DELETE FROM note_tags
+              WHERE note_id = :id'''
+    cursor.execute(delete_query, {"id": text_id})
+
+    # add new keywords if any
+    insert_query = '''
+        INSERT INTO note_tags (note_id, tag_id)
+             VALUES (:note_id, :tag_id)'''
+    cursor.executemany(insert_query, values)
+
+
+def update_group(conn, group_id, values):
+    """Update the values for given group id"""
+    update_query = '''
+        UPDATE notebook
+           SET last_modified = :modified
+             , name = :name
+             , parent_id = :parent_id
+             , in_trash = :in_trash
+         WHERE id = :group_id'''
+    cursor = conn.cursor()
+    cursor.execute(update_query, {"modified": values['last_modified'],
+                                  "name": values['name'],
+                                  "parent_id": values['parent_id'],
+                                  "in_trash": values['in_trash'],
+                                  "group_id": group_id})
+
+    # trash items in group, if the group is being trashed
+    if values['in_trash']:
+
+        # recursive function that sets `in_trash` to true
+        # for given group, its subgroups and texts.
+        def _trash_groups_and_texts(conn, group):
+            trash_group_query = '''
+                UPDATE notebook
+                   SET in_trash = 1
+                 WHERE id = :id'''
+            cursor.execute(trash_group_query, {"id": group})
+
+            trash_texts_query = '''
+                UPDATE note
+                   SET in_trash = 1
+                 WHERE notebook_id = :id'''
+            cursor.execute(trash_texts_query, {"id": group})
+
+            select_subgroups_query = '''
+                SELECT id
+                  FROM notebook
+                 WHERE parent_id = :id'''
+            for subgroup in cursor.execute(select_subgroups_query, {"id": group}):
+                _trash_groups_and_texts(conn, subgroup[0])
+
+        _trash_groups_and_texts(conn, group_id)
+
+
+def delete_text(conn, text_id):
+    """Delete a text document from db"""
+    query = '''
+        DELETE FROM note
+              WHERE id = :id'''
+    cursor = conn.cursor()
+    cursor.execute(query, {"id": text_id})
+
+
+def delete_group(conn, group_id):
+    """Delete a text group from db"""
+    query = '''
+        DELETE FROM notebook
+              WHERE id = :id'''
+    cursor = conn.cursor()
+    cursor.execute(query, {"id": group_id})
+
+    # delete texts belonging to group from the db
+    delete_texts_query = '''
+        DELETE FROM note
+              WHERE notebook_id = :id'''
+    cursor.execute(delete_texts_query, {"id": group_id})
+
+    select_query = '''
+        SELECT id
+          FROM notebook
+         WHERE parent_id = :id'''
+    for row in cursor.execute(query, {"id": group_id}):
+        delete_group(conn, row[0])
+
+
+def delete_orphan_tags(conn):
+    """Delete keywords not associated with  any text"""
+    orphan_tags_query = '''
+        DELETE FROM tag
+              WHERE tag.id NOT IN (SELECT tag_id
+                                    FROM note_tags)'''
+    cursor = conn.cursor()
+    cursor.execute(orphan_tags_query)
+
+
+def fetch_keyword(conn, keyword):
+    """Fetch equivalent of the given keyword if exists, create new otherwise"""
     # TODO: support case-insensitive matching for Unicode characters in keyword.
     # sqlite `LIKE` operator only does case-insensitive matching for ASCII
     # characters. To do case-insensitive matching for Unicode as well, maybe
     # use ICU plugin for sqlite or filter another way.
-    tag = session.query(Tag).\
-            filter(Tag.keyword.like(name.lower())).\
-            one_or_none()
-    if tag:
-        return tag
-    return create_tag(name, session)
+    query = '''
+        SELECT id
+          FROM tag
+         WHERE keyword LIKE :keyword'''
+    cursor = conn.cursor()
+    cursor.execute(query, {"keyword": keyword})
+
+    res = cursor.fetchone()
+    if res:
+        return res[0]
+
+    keyword_id = create_keyword(conn, keyword)
+    return keyword_id
 
 
-def create_tag(name, session):
-    tag = Tag(name)
-    session.add(tag)
-    return tag
+def fetch_keywords_for_text(conn, text_id):
+    """Return a list of keywords tagged to given text"""
+    query = '''
+        SELECT keyword
+          FROM tag
+         WHERE id IN (SELECT tag_id
+                        FROM note_tags
+                       WHERE note_id = :id)'''
+    cursor = conn.cursor()
+    keywords = [k[0] for k in cursor.execute(query, {"id": text_id})]
+    return keywords
 
 
-def delete_orphan_tags(session):
-    with engine.connect() as connection:
-        orphan_tags_query = text("""
-            SELECT keyword
-              FROM tag
-             WHERE tag.id NOT IN (SELECT tag_id
-                                    FROM note_tags)
-        """)
-        res = connection.execute(orphan_tag_query).fetchall()
-        if not res:
-            return
-        for i in range(len(res)):
-            tag = session.query(Tag).filter_by(keyword=res[i][0]).one_or_none()
-            ssesion.delete(tag)
+def fetch_parents_for_text(conn, text_id):
+    """Returns a list of hash strings for parent groups that joined
+    together can form a relative path to text dir"""
+    query = '''
+        SELECT %s
+          FROM %s
+         WHERE id = :id'''
+
+    cursor = conn.cursor()
+    res = cursor.execute(query % ('notebook_id', 'note'), {"id": text_id})
+
+    parents = []
+    parent = res.fetchone()[0]
+    while parent:
+        parents.append(sha256(('notebook%s' % parent).encode()).hexdigest())
+        res = cursor.execute(query % ('parent_id', 'notebook'), {"id": parent})
+        parent = res.fetchone()[0]
+
+    parents.reverse()
+    return parents
 
 
-def fetch_notebook_by_id(notebook_id, session):
-    notebook = session.query(Notebook).\
-               filter(Notebook.id==notebook_id).\
-               one_or_none()
-    return note
+def fetch_texts(conn, where='', order='', args={}):
+    """Return an iterator of texts from the db, satisfying optional
+    constraints"""
+    query = '''
+        SELECT id
+             , title
+             , created
+             , last_modified
+             , notebook_id
+             , in_trash
+          FROM note'''
+    if where:
+        query += '\nWHERE %s' % where
+    if order:
+        query += '\nORDER BY %s' % order
+
+    cursor = conn.cursor()
+    for row in cursor.execute(query, args):
+        values = {
+            'id': row[0],
+            'title': row[1],
+            'created': row[2],
+            'last_modified': row[3],
+            'parent_id': row[4],
+            'in_trash': row[5]
+        }
+
+        # create hash_id for text
+        values['hash_id'] = sha256(('note%s' % values['id']).encode()).hexdigest()
+
+        # create a list of parents
+        values['parents'] = fetch_parents_for_text(conn, values['id'])
+
+        # obtain a list of keywords
+        values['keywords'] = fetch_keywords_for_text(conn, values['id'])
+
+        yield values
 
 
-def fetch_note_by_id(note_id, session):
-    note = session.query(Note).\
-           filter(Note.id==note_id).\
-           one_or_none()
-    return note
+def texts_not_in_groups(conn):
+    """Return an iterator of texts from the db, which have no parent group"""
+    where_condition = 'notebook_id IS NULL'
+    return fetch_texts(conn, where_condition)
 
 
-def fetch_all_notes(session):
-    notes = session.query(Note).all()
-    return notes
+def text_in_group(conn, group_id):
+    """Return an iterator of texts from the db, with given parent group"""
+    where_condition = 'notebook_id = :id'
+    args = {"id": group_id}
+    return fetch_texts(conn, where_condition, args=args)
 
 
-def fetch_notes_not_in_notebooks(session):
-    notes = session.query(Note).\
-            filter(Note.notebook_id==None).\
-            all()
-    return notes
+def text_for_id(conn, text_id):
+    """Return the text for given db id"""
+    where_condition = 'id = :id'
+    args = {"id": text_id}
+    gen = fetch_texts(conn, where_condition, args=args)
+    return next(gen)
 
 
-def fetch_notes_in_notebook(notebook, session):
-    if not notebook:
-        return fetch_notes_not_in_notebooks(session)
+def fetch_groups(conn, where='', order='', args={}):
+    """Return an iterator of text groups from the db, satisfying optional
+    constraints"""
+    query = '''
+        SELECT id
+             , name
+             , created
+             , last_modified
+             , parent_id
+             , in_trash
+          FROM notebook'''
+    if where:
+        query += '\nWHERE %s' % where
+    if order:
+        query += '\nORDER BY %s' % order
 
-    notes = session.query(Note).\
-            filter(Note.notebook_id==notebook.id).\
-            all()
-    return notes
+    cursor = conn.cursor()
+    for row in cursor.execute(query, args):
+        values = {
+            'id': row[0],
+            'name': row[1],
+            'created': row[2],
+            'last_modified': row[3],
+            'parent_id': row[4],
+            'in_trash': row[5]
+        }
+        yield values
 
 
-def fetch_all_notebooks(session):
-    notebooks = session.query(Notebook).all()
-    return notebooks
+def groups_not_in_groups(conn):
+    """Return an iterator of groups from the db, which have no parent group"""
+    where_condition = 'parent_id IS NULL'
+    return fetch_groups(conn, where_condition)
 
 
-def fetch_notebooks_not_in_notebooks(session):
-    notebooks = session.query(Notebook).\
-                filter(Notebook.parent_id==None).\
-                all()
-    return notebooks
-
-
-def fetch_notebook_in_notebook(notebooks, session):
-    if not notebook:
-        return fetch_notebooks_not_in_notebooks(session)
-
-    notebooks = session.query(Notebook).\
-                filter(Notebook.parent_id==notebook.id).\
-                all()
-    return notebooks
+def groups_in_group(conn, group_id):
+    """Return an iterator of groups from the db, with given parent group"""
+    where_condition = 'parent_id is :id'
+    args = {"id": group_id}
+    return fetch_groups(conn, where_condition, args=args)

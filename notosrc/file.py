@@ -19,12 +19,34 @@ import gi
 gi.require_version("GtkSource", "3.0")
 from gi.repository import GtkSource, Gio, GLib
 
-from notosrc.db.data import USER_DATA_DIR
-
+USER_DATA_DIR = join(GLib.get_user_data_dir(), 'noto')
 BASE_NOTE_DIR = join(USER_DATA_DIR, 'notes', 'local')
 TRASH_DIR = join(USER_DATA_DIR, 'notes', '.trash')
 
 default_encoding = 'utf-8'
+
+
+def init_storage():
+    try:
+        note_dir = os.path.join(USER_DATA_DIR, 'notes')
+        Gio.file_new_for_path(note_dir).make_directory()
+    except Exception:
+        # TODO: Failed to make storage directory for notes or already exists
+        pass
+
+    try:
+        note_local_dir = os.path.join(note_dir, 'local')
+        Gio.file_new_for_path(note_local_dir).make_directory()
+    except Exception:
+        # TODO: Failed to make storage for local notes or already exists
+        pass
+
+    try:
+        note_trash_dir = os.path.join(note_dir, '.trash')
+        Gio.file_new_for_path(note_trash_dir).make_directory()
+    except Exception as e:
+        # TODO: Failed to make directory for trashed notes or already exists
+       pass
 
 
 def read_file_contents(filename, parent_names, buffer, load_file_cb):

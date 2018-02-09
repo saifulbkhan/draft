@@ -14,8 +14,8 @@ app_sources = [
 ]
 
 db_sources = [
+  'db/__init__.py',
   'db/data.py',
-  'db/datamodel.py'
 ]
 
 parsers_sources = [

@@ -129,7 +129,7 @@ class NotoStatusbar(Gtk.Bin):
         as tags"""
         data_dict = self._editor.current_note_data
 
-        tags = data_dict['tags']
+        tags = data_dict['keywords']
         self._refresh_tag_widget(tags)
 
         # TODO: Update other information

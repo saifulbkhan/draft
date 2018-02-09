@@ -147,11 +147,11 @@ class NotoNotesList(Gtk.ListBox):
         """
         self.editor = editor
         editor.connect('title-changed', self.set_title_for_current_selection)
-        editor.connect('tags-changed', self.set_tags_for_current_selection)
+        editor.connect('keywords-changed', self.set_keywords_for_current_selection)
 
     def new_note_request(self):
         """Request for creation of a new note and append it to the list"""
-        self._model.new_note_request()
+        self._model.new_text_request()
 
     def set_title_for_current_selection(self, widget, title):
         """Set the title for currently selected note, as well as write this to
@@ -169,22 +169,22 @@ class NotoNotesList(Gtk.ListBox):
         label = labels[0]
         self._make_title_label(label, title)
 
-    def set_tags_for_current_selection(self, widget, tags):
-        """Ask store to make changes to the tags of the currently selected note
+    def set_keywords_for_current_selection(self, widget, keywords):
+        """Ask store to make changes to the keywords of the currently selected note
         so that it can be written to db.
 
         @self: NotoNotesList
-        @tags: list, the list of string keywords which the selected note will be
+        @keywords: list, the list of string keywords which the selected note will be
                tagged with.
         """
         row = self.get_selected_row()
         position = row.get_index()
-        new_tags = self._model.set_tags_for_position(position, tags)
+        new_keywords = self._model.set_keywords_for_position(position, keywords)
 
-        # since @new_tags might have slightly different letter case tags, we
-        # should re-update editor tags as well and then update statusbar, though
+        # since @new_keywords might have slightly different letter case keywords, we
+        # should re-update editor keywords as well and then update statusbar, though
         # this is probably not the best place to do it.
-        self.editor.current_note_data['tags'] = new_tags
+        self.editor.current_note_data['keywords'] = new_keywords
         self.editor.statusbar.update_note_data()
 
     def delete_selected_row(self):
