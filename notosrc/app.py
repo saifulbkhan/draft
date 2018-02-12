@@ -20,6 +20,7 @@ gi.require_version('Notify', '0.7')
 from gi.repository import Gtk, GLib, Gio, Gdk, Notify
 
 from notosrc.window import ApplicationWindow
+from notosrc.defs import VERSION as app_version
 from notosrc.file import init_storage
 from notosrc.db import init_db
 
@@ -77,7 +78,7 @@ class Application(Gtk.Application):
         Gtk.Application.do_startup(self)
         Notify.init("Noto")
         init_storage()
-        init_db()
+        init_db(app_version)
         self.builder = Gtk.Builder()
         self._build_app_menu()
 

@@ -16,6 +16,7 @@ app_sources = [
 db_sources = [
   'db/__init__.py',
   'db/data.py',
+  'db/migrations.py'
 ]
 
 parsers_sources = [

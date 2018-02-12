@@ -21,6 +21,7 @@ from datetime import datetime
 from gi.repository import GLib, Gio
 
 from notosrc.file import USER_DATA_DIR
+from notosrc.db.migrations import migrate_db
 
 DB_URL = os.path.join(USER_DATA_DIR, 'noto.db')
 
@@ -41,8 +42,11 @@ def connect():
         connection.close()
 
 
-def init_db():
-    """Perform some initial work to set up db and directories for storage"""
+def init_db(app_version):
+    """Perform some initial work to set up db for use with the current
+    application version"""
+    migrate_db(app_version)
+
     with connect() as connection:
         cursor = connection.cursor()
 
