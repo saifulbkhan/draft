@@ -200,7 +200,8 @@ class NotoEditor(Gtk.Box):
     def _update_title(self):
         text_content = self.get_text()
         title = self._get_title_for_text(text_content)
-        self.emit('title-changed', title)
+        if title != self.current_note_data['title']:
+            self.emit('title-changed', title)
 
     def _get_title_for_text(self, text):
         stripped = text.lstrip()
