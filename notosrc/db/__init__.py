@@ -20,7 +20,7 @@ from datetime import datetime
 
 from gi.repository import GLib, Gio
 
-from notosrc.file import USER_DATA_DIR
+from notosrc.file import USER_DATA_DIR, make_backup
 from notosrc.db.migrations import migrate_db
 
 DB_URL = os.path.join(USER_DATA_DIR, 'noto.db')
@@ -42,78 +42,96 @@ def connect():
         connection.close()
 
 
+def version():
+    """Returns the current db version (stored in user_version pragma)"""
+    with connect() as conn:
+        cursor = conn.cursor()
+        res = cursor.execute('PRAGMA user_version')
+        return res.fetchone()[0]
+
+
+def is_new():
+    """Returns True if db has no tables otherwise False"""
+    with connect() as conn:
+        cursor = conn.cursor()
+        res = cursor.execute('''
+            SELECT count(*) FROM sqlite_master WHERE type = "table"
+        ''')
+        return res.fetchone()[0] == 0
+
+
 def init_db(app_version):
     """Perform some initial work to set up db for use with the current
     application version"""
-    migrate_db(app_version)
+    # if existing db, then migration needed
+    if not is_new():
+        with make_backup(DB_URL):
+            migrate_db(app_version)
+            return
+    else:
+        with connect() as connection:
+            cursor = connection.cursor()
 
-    with connect() as connection:
-        cursor = connection.cursor()
+            # create table for storing keywords
+            try:
+                create_tag_table = '''
+                    CREATE TABLE tag (
+                        keyword TEXT NOT NULL DEFAULT NULL PRIMARY KEY,
+                    )'''
+                cursor.execute(create_tag_table)
+            except:
+                # TODO (notify): something went wrong
+                pass
 
-        # create table for storing keywords
-        try:
-            create_tag_table = '''
-                CREATE TABLE tag (
-                    id      INTEGER NOT NULL,
-                    keyword VARCHAR,
-                    PRIMARY KEY (id)
-                )'''
-            cursor.execute(create_tag_table)
-        except:
-            # TODO (notify): tag table exists
-            pass
+            try:
+                # create table for storing text-group metadata
+                create_group_table = '''
+                    CREATE TABLE 'group' (
+                        id            TEXT    NOT NULL DEFAULT NULL PRIMARY KEY,
+                        name          TEXT    NOT NULL DEFAULT NULL,
+                        created       TEXT    NOT NULL DEFAULT NULL,
+                        last_modified TEXT    NOT NULL DEFAULT NULL,
+                        parent_id     INTEGER          DEFAULT NULL REFERENCES 'group' (id),
+                        in_trash      INTEGER NOT NULL DEFAULT 0
+                    )'''
+                cursor.execute(create_group_table)
+            except:
+                # TODO (notify): something went wrong
+                pass
 
-        try:
-            # create table for storing text-group metadata
-            create_notebook_table = '''
-                CREATE TABLE notebook (
-                    id            INTEGER NOT NULL,
-                    created       VARCHAR,
-                    last_modified VARCHAR,
-                    name          VARCHAR,
-                    parent_id     INTEGER,
-                    in_trash      INTEGER,
-                    PRIMARY KEY (id),
-                    FOREIGN KEY(parent_id) REFERENCES notebook (id)
-                )'''
-            cursor.execute(create_notebook_table)
-        except:
-            # TODO (notify): notebook table exists
-            pass
+            try:
+                # create table for storing text metadata
+                create_text_table = '''
+                    CREATE TABLE text (
+                        id                 TEXT    NOT NULL DEFAULT NULL PRIMARY KEY,
+                        title              TEXT    NOT NULL DEFAULT NULL,
+                        created            TEXT    NOT NULL DEFAULT NULL,
+                        last_modified      TEXT    NOT NULL DEFAULT NULL,
+                        parent_id          INTEGER          DEFAULT NULL REFERENCES 'group' (id),
+                        in_trash           INTEGER NOT NULL DEFAULT 0,
+                        markup             TEXT             DEFAULT NULL,
+                        subtitle           TEXT             DEFAULT NULL,
+                        word_goal          INTEGER          DEFAULT NULL,
+                        last_edit_position INTEGER          DEFAULT NULL
+                    )'''
+                cursor.execute(create_text_table)
+            except:
+                # TODO (notify): something went wrong
+                pass
 
-        try:
-            # create table for storing text metadata
-            create_note_table = '''
-                CREATE TABLE note (
-                    id            INTEGER NOT NULL,
-                    created       VARCHAR,
-                    last_modified VARCHAR,
-                    title         VARCHAR,
-                    notebook_id   INTEGER,
-                    in_trash      INTEGER,
-                    PRIMARY KEY (id),
-                    FOREIGN KEY(notebook_id) REFERENCES notebook (id)
-                )'''
-            cursor.execute(create_note_table)
-        except:
-            # TODO (notify): note table exists
-            pass
-
-        try:
-            # create junction table for storing associations between
-            # note and tag tables
-            create_note_tags_table = '''
-                CREATE TABLE note_tags (
-                    note_id INTEGER NOT NULL,
-                    tag_id  INTEGER NOT NULL,
-                    PRIMARY KEY (note_id, tag_id),
-                    FOREIGN KEY(note_id) REFERENCES note (id),
-                    FOREIGN KEY(tag_id) REFERENCES tag (id)
-                )'''
-            cursor.execute(create_note_tags_table)
-        except:
-            # TODO (notify): note_tag table exists
-            pass
+            try:
+                # create junction table for storing associations between
+                # text and tag tables
+                create_text_tags_table = '''
+                    CREATE TABLE text_tags (
+                        text_id     INTEGER NOT NULL DEFAULT NULL REFERENCES text (id),
+                        tag_keyword TEXT    NOT NULL DEFAULT NULL REFERENCES tag (keyword),
+                        UNIQUE (text_id, tag_keyword)
+                    )'''
+                cursor.execute(create_text_tags_table)
+            except:
+                # TODO (notify): something went wrong
+                pass
 
 
 def get_datetime():

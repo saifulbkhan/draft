@@ -26,14 +26,12 @@ def create_keyword(conn, keyword):
     cursor = conn.cursor()
     cursor.execute(query, {'keyword': keyword})
 
-    return get_last_insert_id(conn)
-
 
 def create_text(conn, name, group_id=None):
     """Create a new text document and return its id"""
     datetime = db.get_datetime()
     query = '''
-        INSERT INTO note (created, last_modified, title, notebook_id, in_trash)
+        INSERT INTO text (created, last_modified, title, parent_id, in_trash)
              VALUES (:created, :modified, :title, :parent_id, :in_trash)'''
     cursor = conn.cursor()
     cursor.execute(query, {"created": datetime,
@@ -49,7 +47,7 @@ def create_group(conn, name, group_id=None):
     """Create a new text group and return its id"""
     datetime = db.get_datetime()
     query = '''
-        INSERT INTO notebook (created, last_modified, name, parent_id, in_trash)
+        INSERT INTO group (created, last_modified, name, parent_id, in_trash)
              VALUES (:created, :modified, :name, :parent_id, :in_trash)'''
     cursor = conn.cursor()
     cursor.execute(query, {"created": datetime,
@@ -76,10 +74,10 @@ def get_last_insert_id(conn):
 def update_text(conn, text_id, values):
     """Update the values for given text id"""
     query = '''
-        UPDATE note
+        UPDATE text
            SET last_modified = :modified
              , title = :title
-             , notebook_id = :parent_id
+             , parent_id = :parent_id
              , in_trash = :in_trash
          WHERE id = :id'''
     cursor = conn.cursor()
@@ -97,27 +95,27 @@ def update_keywords_for_text(conn, text_id, keywords):
     values = []
     for k in keywords:
         keyword = fetch_keyword(conn, k)
-        values.append({"note_id": text_id, "tag_id": keyword})
+        values.append({"text_id": text_id, "tag_keyword": keyword})
 
     cursor = conn.cursor()
 
     # remove old keywords if any
     delete_query = '''
-        DELETE FROM note_tags
-              WHERE note_id = :id'''
+        DELETE FROM text_tags
+              WHERE text_id = :id'''
     cursor.execute(delete_query, {"id": text_id})
 
     # add new keywords if any
     insert_query = '''
-        INSERT INTO note_tags (note_id, tag_id)
-             VALUES (:note_id, :tag_id)'''
+        INSERT INTO text_tags (text_id, tag_keyword)
+             VALUES (:text_id, :tag_keyword)'''
     cursor.executemany(insert_query, values)
 
 
 def update_group(conn, group_id, values):
     """Update the values for given group id"""
     update_query = '''
-        UPDATE notebook
+        UPDATE group
            SET last_modified = :modified
              , name = :name
              , parent_id = :parent_id
@@ -137,20 +135,20 @@ def update_group(conn, group_id, values):
         # for given group, its subgroups and texts.
         def _trash_groups_and_texts(conn, group):
             trash_group_query = '''
-                UPDATE notebook
+                UPDATE group
                    SET in_trash = 1
                  WHERE id = :id'''
             cursor.execute(trash_group_query, {"id": group})
 
             trash_texts_query = '''
-                UPDATE note
+                UPDATE text
                    SET in_trash = 1
-                 WHERE notebook_id = :id'''
+                 WHERE parent_id = :id'''
             cursor.execute(trash_texts_query, {"id": group})
 
             select_subgroups_query = '''
                 SELECT id
-                  FROM notebook
+                  FROM group
                  WHERE parent_id = :id'''
             for subgroup in cursor.execute(select_subgroups_query, {"id": group}):
                 _trash_groups_and_texts(conn, subgroup[0])
@@ -161,7 +159,7 @@ def update_group(conn, group_id, values):
 def delete_text(conn, text_id):
     """Delete a text document from db"""
     query = '''
-        DELETE FROM note
+        DELETE FROM text
               WHERE id = :id'''
     cursor = conn.cursor()
     cursor.execute(query, {"id": text_id})
@@ -170,20 +168,20 @@ def delete_text(conn, text_id):
 def delete_group(conn, group_id):
     """Delete a text group from db"""
     query = '''
-        DELETE FROM notebook
+        DELETE FROM group
               WHERE id = :id'''
     cursor = conn.cursor()
     cursor.execute(query, {"id": group_id})
 
     # delete texts belonging to group from the db
     delete_texts_query = '''
-        DELETE FROM note
-              WHERE notebook_id = :id'''
+        DELETE FROM text
+              WHERE parent_id = :id'''
     cursor.execute(delete_texts_query, {"id": group_id})
 
     select_query = '''
         SELECT id
-          FROM notebook
+          FROM group
          WHERE parent_id = :id'''
     for row in cursor.execute(query, {"id": group_id}):
         delete_group(conn, row[0])
@@ -193,8 +191,8 @@ def delete_orphan_tags(conn):
     """Delete keywords not associated with  any text"""
     orphan_tags_query = '''
         DELETE FROM tag
-              WHERE tag.id NOT IN (SELECT tag_id
-                                    FROM note_tags)'''
+              WHERE keyword NOT IN (SELECT tag_keyword
+                                      FROM text_tags)'''
     cursor = conn.cursor()
     cursor.execute(orphan_tags_query)
 
@@ -206,7 +204,7 @@ def fetch_keyword(conn, keyword):
     # characters. To do case-insensitive matching for Unicode as well, maybe
     # use ICU plugin for sqlite or filter another way.
     query = '''
-        SELECT id
+        SELECT keyword
           FROM tag
          WHERE keyword LIKE :keyword'''
     cursor = conn.cursor()
@@ -216,18 +214,16 @@ def fetch_keyword(conn, keyword):
     if res:
         return res[0]
 
-    keyword_id = create_keyword(conn, keyword)
-    return keyword_id
+    create_keyword(conn, keyword)
+    return keyword
 
 
 def fetch_keywords_for_text(conn, text_id):
     """Return a list of keywords tagged to given text"""
     query = '''
-        SELECT keyword
-          FROM tag
-         WHERE id IN (SELECT tag_id
-                        FROM note_tags
-                       WHERE note_id = :id)'''
+        SELECT tag_keyword
+          FROM text_tags
+         WHERE text_id = :id'''
     cursor = conn.cursor()
     keywords = [k[0] for k in cursor.execute(query, {"id": text_id})]
     return keywords
@@ -242,13 +238,13 @@ def fetch_parents_for_text(conn, text_id):
          WHERE id = :id'''
 
     cursor = conn.cursor()
-    res = cursor.execute(query % ('notebook_id', 'note'), {"id": text_id})
+    res = cursor.execute(query % ('parent_id', 'text'), {"id": text_id})
 
     parents = []
     parent = res.fetchone()[0]
     while parent:
         parents.append(sha256(('notebook%s' % parent).encode()).hexdigest())
-        res = cursor.execute(query % ('parent_id', 'notebook'), {"id": parent})
+        res = cursor.execute(query % ('parent_id', 'group'), {"id": parent})
         parent = res.fetchone()[0]
 
     parents.reverse()
@@ -263,9 +259,9 @@ def fetch_texts(conn, where='', order='', args={}):
              , title
              , created
              , last_modified
-             , notebook_id
+             , parent_id
              , in_trash
-          FROM note'''
+          FROM text'''
     if where:
         query += '\nWHERE %s' % where
     if order:
@@ -296,13 +292,13 @@ def fetch_texts(conn, where='', order='', args={}):
 
 def texts_not_in_groups(conn):
     """Return an iterator of texts from the db, which have no parent group"""
-    where_condition = 'notebook_id IS NULL'
+    where_condition = 'parent_id IS NULL'
     return fetch_texts(conn, where_condition)
 
 
 def text_in_group(conn, group_id):
     """Return an iterator of texts from the db, with given parent group"""
-    where_condition = 'notebook_id = :id'
+    where_condition = 'parent_id = :id'
     args = {"id": group_id}
     return fetch_texts(conn, where_condition, args=args)
 
@@ -325,7 +321,7 @@ def fetch_groups(conn, where='', order='', args={}):
              , last_modified
              , parent_id
              , in_trash
-          FROM notebook'''
+          FROM group'''
     if where:
         query += '\nWHERE %s' % where
     if order:

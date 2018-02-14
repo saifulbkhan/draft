@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from os.path import join, sep
+from datetime import datetime
+from contextlib import contextmanager
 
 import gi
 gi.require_version("GtkSource", "3.0")
@@ -145,3 +147,24 @@ def trash_file(filename, parent_names, untrash=False):
         move_from_src_to_dest(dest_path, src_path)
     else:
         move_from_src_to_dest(src_path, dest_path)
+
+
+@contextmanager
+def make_backup(url):
+    file = Gio.File.new_for_path(url)
+
+    basename = file.get_basename()
+    parentname = file.get_parent().get_path()
+    backup_name = '.%s_%s' % (basename,
+                              datetime.now().isoformat(timespec='milliseconds'))
+    backup_path = join(parentname, backup_name)
+    backup_file = Gio.File.new_for_path(backup_path)
+    file.copy(backup_file, Gio.FileCopyFlags.OVERWRITE, None, None, None)
+
+    try:
+        yield
+    except Exception as e:
+        backup_file.copy(file, Gio.FileCopyFlags.OVERWRITE, None, None, None)
+        # TODO (notify): something went wrong
+    finally:
+        backup_file.delete()
