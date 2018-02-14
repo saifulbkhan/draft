@@ -79,12 +79,20 @@ def update_text(conn, text_id, values):
              , title = :title
              , parent_id = :parent_id
              , in_trash = :in_trash
+             , markup = :markup
+             , subtitle = :subtitle
+             , word_goal = :word_goal
+             , last_edit_position = last_edit_position
          WHERE id = :id'''
     cursor = conn.cursor()
     cursor.execute(query, {"modified": values['last_modified'],
                            "title": values['title'],
                            "parent_id": values['parent_id'],
                            "in_trash": values['in_trash'],
+                           "markup": values['markup'],
+                           "subtitle": values['subtitle'],
+                           "word_goal": values['word_goal'],
+                           "last_edit_position": values['last_edit_position'],
                            "id": text_id})
 
     update_keywords_for_text(conn, text_id, values['keywords'])
@@ -261,6 +269,10 @@ def fetch_texts(conn, where='', order='', args={}):
              , last_modified
              , parent_id
              , in_trash
+             , markup
+             , subtitle
+             , word_goal
+             , last_edit_position
           FROM text'''
     if where:
         query += '\nWHERE %s' % where
@@ -275,7 +287,11 @@ def fetch_texts(conn, where='', order='', args={}):
             'created': row[2],
             'last_modified': row[3],
             'parent_id': row[4],
-            'in_trash': row[5]
+            'in_trash': row[5],
+            'markup': row[6],
+            'subtitle': row[7],
+            'word_goal': row[8],
+            'last_edit_position': row[9]
         }
 
         # create hash_id for text; hope they are not created at the same time

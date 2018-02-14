@@ -35,6 +35,10 @@ class NotoListStore(Gio.ListStore):
         in_trash = False
         parent_id = None
         parent_list = []
+        markup = None
+        subtitle = None
+        word_goal = None
+        last_edit_position = None
 
         @GObject.Property(type=str)
         def prop_title(self):
@@ -100,6 +104,38 @@ class NotoListStore(Gio.ListStore):
         def prop_parent_list(self, value):
             self.parent_list = value
 
+        @GObject.Property(type=str)
+        def prop_markup(self):
+            return self.markup
+
+        @prop_markup.setter
+        def prop_markup(self, value):
+            self.markup = value
+
+        @GObject.Property(type=str)
+        def prop_subtitle(self):
+            return self.subtitle
+
+        @prop_subtitle.setter
+        def prop_subtitle(self, value):
+            self.subtitle = value
+
+        @GObject.Property(type=int)
+        def prop_word_goal(self):
+            return self.word_goal
+
+        @prop_word_goal.setter
+        def prop_word_goal(self, value):
+            self.word_goal = value
+
+        @GObject.Property(type=int)
+        def prop_last_edit_position(self):
+            return self.last_edit_position
+
+        @prop_last_edit_position.setter
+        def prop_last_edit_position(self, value):
+            self.last_edit_position = value
+
         def from_dict(self, data_dict):
             self.title = data_dict['title']
             self.keywords = data_dict['keywords']
@@ -109,6 +145,10 @@ class NotoListStore(Gio.ListStore):
             self.in_trash = bool(data_dict['in_trash'])
             self.parent_id = data_dict['parent_id']
             self.parent_list = data_dict['parents']
+            self.markup = data_dict['markup']
+            self.subtitle = data_dict['subtitle']
+            self.word_goal = data_dict['word_goal']
+            self.last_edit_position = data_dict['last_edit_position']
 
         def to_dict(self):
             return {
@@ -119,7 +159,11 @@ class NotoListStore(Gio.ListStore):
                 'hash_id': self.hash_id,
                 'in_trash': int(self.in_trash),
                 'parent_id': self.parent_id,
-                'parent_list': self.parent_list
+                'parent_list': self.parent_list,
+                'markup': self.markup,
+                'subtitle': self.subtitle,
+                'word_goal': self.word_goal,
+                'last_edit_position': self.last_edit_position
             }
 
     def __repr__(self):
