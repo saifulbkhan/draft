@@ -233,19 +233,19 @@ def fetch_parents_for_text(conn, text_id):
     """Returns a list of hash strings for parent groups that joined
     together can form a relative path to text dir"""
     query = '''
-        SELECT %s
-          FROM %s
-         WHERE id = :id'''
+        SELECT id, created
+          FROM 'group'
+         WHERE id = (SELECT parent_id
+                       FROM %s
+                      WHERE id = :id)'''
 
     cursor = conn.cursor()
-    res = cursor.execute(query % ('parent_id', 'text'), {"id": text_id})
-
     parents = []
-    parent = res.fetchone()[0]
-    while parent:
-        parents.append(sha256(('notebook%s' % parent).encode()).hexdigest())
-        res = cursor.execute(query % ('parent_id', 'group'), {"id": parent})
-        parent = res.fetchone()[0]
+    res = cursor.execute(query % 'text', {"id": text_id}).fetchone()
+    while res:
+        # parent strings are hashes of their creation date
+        parents.append(sha256(res[1].encode()).hexdigest())
+        res = cursor.execute(query % 'group', {"id": res[0]}).fetchone()
 
     parents.reverse()
     return parents
@@ -278,8 +278,9 @@ def fetch_texts(conn, where='', order='', args={}):
             'in_trash': row[5]
         }
 
-        # create hash_id for text
-        values['hash_id'] = sha256(('note%s' % values['id']).encode()).hexdigest()
+        # create hash_id for text; hope they are not created at the same time
+        # on milliseconds scale!
+        values['hash_id'] = sha256(values['created'].encode()).hexdigest()
 
         # create a list of parents
         values['parents'] = fetch_parents_for_text(conn, values['id'])
