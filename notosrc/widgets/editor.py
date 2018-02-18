@@ -15,6 +15,7 @@
 
 from collections import OrderedDict
 from gettext import gettext as _
+from string import whitespace
 
 import gi
 gi.require_version('GtkSource', '3.0')
@@ -33,6 +34,7 @@ class NotoEditor(Gtk.Box):
 
     __gsignals__ = {
         'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
+        'subtitle-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
@@ -101,7 +103,7 @@ class NotoEditor(Gtk.Box):
 
     def _on_buffer_changed(self, buffer):
         self._write_current_buffer()
-        self._update_title()
+        self._update_title_and_subtitle()
         self.statusbar.update_word_count()
 
     def get_text(self):
@@ -197,25 +199,32 @@ class NotoEditor(Gtk.Box):
         file.write_to_source_file_async(self._current_file,
                                         buffer)
 
-    def _update_title(self):
-        text_content = self.get_text()
-        title = self._get_title_for_text(text_content)
+    def _update_title_and_subtitle(self):
+        content = self.get_text()
+        title, subtitle = self._get_title_and_subtitle_for_text(content)
+
         if title != self.current_note_data['title']:
             self.emit('title-changed', title)
 
-    def _get_title_for_text(self, text):
-        stripped = text.lstrip()
+        if subtitle != self.current_note_data['subtitle']:
+            self.emit('subtitle-changed', subtitle)
+
+    def _get_title_and_subtitle_for_text(self, text):
+        # TODO: title identifier for specific markup, only markdown for now
+        header_symbol = '#'
+
+        stripped = text.strip(header_symbol + whitespace)
         split = stripped.split('\n', maxsplit=1)
         title = split[0]
 
         if not title:
-            return _("Untitled")
-        # Strip any leading '#'s from the title
-        elif title[0] == '#':
-            title = title[1:]
-            return self._get_title_for_text(title)
+            return _("Untitled"), None
 
-        return title
+        if len(split) > 1:
+            subtitle = split[1].strip().split('\n', maxsplit=1)[0]
+            return title, subtitle
+
+        return title, None
 
 
 class NotoTextView(GtkSource.View):

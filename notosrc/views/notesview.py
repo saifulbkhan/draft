@@ -147,6 +147,7 @@ class NotoNotesList(Gtk.ListBox):
         """
         self.editor = editor
         editor.connect('title-changed', self.set_title_for_current_selection)
+        editor.connect('subtitle-changed', self.set_subtitle_for_current_selection)
         editor.connect('keywords-changed', self.set_keywords_for_current_selection)
 
     def new_note_request(self):
@@ -162,12 +163,23 @@ class NotoNotesList(Gtk.ListBox):
         """
         row = self.get_selected_row()
         position = row.get_index()
-        self._model.set_title_for_position(position, title)
+        self._model.set_prop_for_position(position, 'title', title)
 
         box = row.get_child()
         labels = box.get_children()
         label = labels[0]
         self._make_title_label(label, title)
+
+    def set_subtitle_for_current_selection(self, widget, subtitle):
+        """Set the subtitle for currently selected text, as well as write this
+        to the db.
+
+        @self: NotoNotesList
+        @subtitle: string, the subtitle to be saved for current selection
+        """
+        row = self.get_selected_row()
+        position = row.get_index()
+        self._model.set_prop_for_position(position, 'subtitle', subtitle)
 
     def set_keywords_for_current_selection(self, widget, keywords):
         """Ask store to make changes to the keywords of the currently selected note

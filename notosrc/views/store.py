@@ -226,16 +226,20 @@ class NotoListStore(Gio.ListStore):
         parent_hashes = list(item.prop_parent_list)
         file.read_file_contents(hash_id, parent_hashes, buffer, load_file)
 
-    def set_title_for_position(self, position, title):
-        """Modify title for item at @position in @title
+    def set_prop_for_position(self, position, prop, value):
+        """Set property @prop for item at @position to @value
 
         @self: NotoListStore model
         @position: integer, position at which item is located
-        @title: string, new value for item's title
+        @prop: string, property to be set
+        @value: obj, value to be assigned to @prop
         """
+        if prop == 'keywords':
+            return self.set_keywords_for_position(position, value)
+
         item = self.get_item(position)
         id = item.prop_db_id
-        item.prop_title = title
+        setattr(item, 'prop_' + prop, value)
         # TODO: 'notify' view that a prop for an item has changed
 
         with db.connect() as connection:
