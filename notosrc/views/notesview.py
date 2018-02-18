@@ -92,26 +92,57 @@ class NotoNotesList(Gtk.ListBox):
         """Create a row widget for @note_data"""
         data_dict = note_data.to_dict()
         title = data_dict['title']
+        subtitle = data_dict['subtitle']
 
-        label = Gtk.Label()
-        self._make_title_label(label, title)
-        title_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        title_box.pack_start(label, True, False, 0)
+        row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        row_box.set_spacing(2)
+        for direction in ['left', 'right', 'top', 'bottom']:
+            method = 'set_margin_%s' % direction
+            getattr(row_box, method)(6)
 
-        return title_box
+        title_label = Gtk.Label()
+        row_box.pack_start(title_label, True, False, 0)
 
-    def _make_title_label(self, label, title):
-        """Set label for @label to @title, set ellipsize, justification and
-        visibility.
-        """
+        self._set_title_label(row_box, title)
+        self._append_subtitle_label(row_box, subtitle)
+
+        return row_box
+
+    def _set_title_label(self, box, title):
+        """Set label for @label to @title"""
+        labels = box.get_children()
+        label = labels[0]
         label.set_markup('<b>%s</b>' % title)
+        self._shape_row_label(label)
+
+    def _append_subtitle_label(self, box, subtitle):
+        """Set label for @label to @subtitle"""
+        subtitle_label = None
+        labels = box.get_children()
+
+        # check if subtitle label already exists
+        if len(labels) > 1:
+            subtitle_label = labels[1]
+        else:
+            subtitle_label = Gtk.Label()
+            box.pack_start(subtitle_label, True, False, 1)
+
+        if subtitle is None:
+            box.remove(subtitle_label)
+            return
+
+        subtitle_label.set_label(subtitle)
+        subtitle_label.set_line_wrap(True)
+        subtitle_label.set_lines(3)
+        subtitle_label.set_xalign(0.0)
+        self._shape_row_label(subtitle_label)
+
+    def _shape_row_label(self, label):
+        """Perform some general adjustments on label for row widgets"""
         label.set_ellipsize(Pango.EllipsizeMode.END)
         label.set_justify(Gtk.Justification.LEFT)
         label.set_halign(Gtk.Align.START)
         label.set_visible(True)
-        for direction in ['left', 'right', 'top', 'bottom']:
-            method = 'set_margin_%s' % direction
-            getattr(label, method)(6)
 
     def _on_key_press(self, widget, event):
         """Handler for signal `key-press-event`"""
@@ -164,11 +195,10 @@ class NotoNotesList(Gtk.ListBox):
         row = self.get_selected_row()
         position = row.get_index()
         self._model.set_prop_for_position(position, 'title', title)
+        self.editor.current_note_data['title'] = title
 
         box = row.get_child()
-        labels = box.get_children()
-        label = labels[0]
-        self._make_title_label(label, title)
+        self._set_title_label(box, title)
 
     def set_subtitle_for_current_selection(self, widget, subtitle):
         """Set the subtitle for currently selected text, as well as write this
@@ -180,6 +210,10 @@ class NotoNotesList(Gtk.ListBox):
         row = self.get_selected_row()
         position = row.get_index()
         self._model.set_prop_for_position(position, 'subtitle', subtitle)
+        self.editor.current_note_data['subtitle'] = subtitle
+
+        box = row.get_child()
+        self._append_subtitle_label(box, subtitle)
 
     def set_keywords_for_current_selection(self, widget, keywords):
         """Ask store to make changes to the keywords of the currently selected note
