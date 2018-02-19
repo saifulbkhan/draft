@@ -56,14 +56,14 @@ class NotoPreview(Gtk.Box):
         css_path = path.join(home, '.local/share/noto/styles/webview.css')
         with open(css_path) as f:
             css_str = f.read()
-        user_stylesheet = WebKit.UserStyleSheet(
-            css_str,
-            WebKit.UserContentInjectedFrames.ALL_FRAMES,
-            WebKit.UserStyleLevel.USER,
-            None,
-            None
-        )
-        user_content_manager.add_style_sheet(user_stylesheet)
+            user_stylesheet = WebKit.UserStyleSheet(
+                css_str,
+                WebKit.UserContentInjectedFrames.ALL_FRAMES,
+                WebKit.UserStyleLevel.USER,
+                None,
+                None
+            )
+            user_content_manager.add_style_sheet(user_stylesheet)
         return user_content_manager
 
     # TODO: Maybe we need this for debugging only
