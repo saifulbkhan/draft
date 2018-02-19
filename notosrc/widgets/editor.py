@@ -111,13 +111,13 @@ class NotoEditor(Gtk.Box):
         self._write_current_buffer()
         self._update_title_and_subtitle()
         self.statusbar.update_word_count()
+        self._set_insert_offset(buffer)
 
     def get_text(self):
         buffer = self.view.get_buffer()
         start = buffer.get_start_iter()
         end = buffer.get_end_iter()
         text = buffer.get_text(start, end, False)
-
         return text
 
     def add_tag(self, tag):
@@ -203,7 +203,7 @@ class NotoEditor(Gtk.Box):
 
         if scroll_to_insert:
             buffer = self.view.get_buffer()
-            insert = buffer.get_insert()
+            insert = self._get_insert_for_buffer(buffer)
             GLib.idle_add(self.view.scroll_mark_onscreen, insert)
 
     def _write_current_buffer(self):
@@ -213,6 +213,22 @@ class NotoEditor(Gtk.Box):
         buffer = self.view.get_buffer()
         file.write_to_source_file_async(self._current_file,
                                         buffer)
+
+    def _get_insert_for_buffer(self, buffer):
+        last_edited_position = self.current_note_data['last_edit_position']
+        if last_edited_position:
+            insert_iter = buffer.get_iter_at_offset(last_edited_position)
+            buffer.place_cursor(insert_iter)
+
+        return buffer.get_insert()
+
+    def _set_insert_offset(self, buffer):
+        insert_mark = buffer.get_insert()
+        insert_iter = buffer.get_iter_at_mark(insert_mark)
+        offset = insert_iter.get_offset()
+
+        # TODO: when queue updates are brought in, queue save operation to db
+        self.current_note_data['last_edit_position'] = offset
 
     def _update_title_and_subtitle(self):
         content = self.get_text()

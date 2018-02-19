@@ -156,7 +156,7 @@ class NotoListStore(Gio.ListStore):
             if data_dict['last_edit_position']:
                 self.last_edit_position = int(data_dict['last_edit_position'])
             else:
-                self.last_edit_position = None
+                self.last_edit_position = 0
 
         def to_dict(self):
             return {
@@ -171,7 +171,7 @@ class NotoListStore(Gio.ListStore):
                 'markup': self.markup,
                 'subtitle': self.subtitle,
                 'word_goal': int(self.word_goal),
-                'last_edit_position': self.last_edit_position
+                'last_edit_position': int(self.last_edit_position)
             }
 
     def __repr__(self):
