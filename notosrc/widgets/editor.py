@@ -136,11 +136,11 @@ class NotoEditor(Gtk.Box):
         self.emit('keywords-changed', self.current_note_data['keywords'])
 
     def set_markup(self, markup):
+        language_manager = GtkSource.LanguageManager.get_default()
+        language = language_manager.get_language(markup)
+        buffer = self.view.get_buffer()
+        buffer.set_language(language)
         if self.current_note_data['markup'] != markup:
-            language_manager = GtkSource.LanguageManager.get_default()
-            language = language_manager.get_language(markup)
-            buffer = self.view.get_buffer()
-            buffer.set_language(language)
             self.emit('markup-changed', markup)
 
     def switch_view(self, note_data):
