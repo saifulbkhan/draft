@@ -214,6 +214,7 @@
             <property name="margin_right">12</property>
             <property name="margin_top">6</property>
             <property name="margin_bottom">12</property>
+            <property name="transition_type">crossfade</property>
             <child>
               <object class="GtkBox">
                 <property name="visible">True</property>
@@ -256,7 +257,7 @@
                 </style>
               </object>
               <packing>
-                <property name="name">page0</property>
+                <property name="name">entry_mode</property>
                 <property name="title" translatable="yes">page0</property>
               </packing>
             </child>
@@ -296,7 +297,7 @@
                 </style>
               </object>
               <packing>
-                <property name="name">page1</property>
+                <property name="name">button_mode</property>
                 <property name="title" translatable="yes">page1</property>
                 <property name="position">1</property>
               </packing>

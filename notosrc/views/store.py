@@ -147,8 +147,16 @@ class NotoListStore(Gio.ListStore):
             self.parent_list = data_dict['parents']
             self.markup = data_dict['markup']
             self.subtitle = data_dict['subtitle']
-            self.word_goal = data_dict['word_goal']
-            self.last_edit_position = data_dict['last_edit_position']
+
+            if data_dict['word_goal']:
+                self.word_goal = int(data_dict['word_goal'])
+            else:
+                self.word_goal = 0
+
+            if data_dict['last_edit_position']:
+                self.last_edit_position = int(data_dict['last_edit_position'])
+            else:
+                self.last_edit_position = None
 
         def to_dict(self):
             return {
@@ -162,7 +170,7 @@ class NotoListStore(Gio.ListStore):
                 'parent_list': self.parent_list,
                 'markup': self.markup,
                 'subtitle': self.subtitle,
-                'word_goal': self.word_goal,
+                'word_goal': int(self.word_goal),
                 'last_edit_position': self.last_edit_position
             }
 

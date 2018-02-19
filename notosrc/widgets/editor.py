@@ -36,6 +36,7 @@ class NotoEditor(Gtk.Box):
         'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'subtitle-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'markup-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
+        'word-goal-set': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_INT,)),
         'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
@@ -60,6 +61,7 @@ class NotoEditor(Gtk.Box):
         self.statusbar = NotoStatusbar(self)
         self.pack_start(self.statusbar, False, False, 0)
 
+        self.statusbar.connect('word-goal-set', self._on_word_goal_set)
         self.connect('key-press-event', self._on_key_press)
 
     def _prep_view(self, view):
@@ -94,6 +96,10 @@ class NotoEditor(Gtk.Box):
             if (event.keyval == Gdk.KEY_s
                     and event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
                 pass
+
+    def _on_word_goal_set(self, widget, goal):
+        if self.current_note_data['word_goal'] != goal:
+            self.emit('word-goal-set', goal)
 
     def _on_modified_changed(self, buffer):
         insert = buffer.get_insert()

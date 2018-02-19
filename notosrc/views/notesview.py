@@ -180,6 +180,7 @@ class NotoNotesList(Gtk.ListBox):
         editor.connect('title-changed', self.set_title_for_current_selection)
         editor.connect('subtitle-changed', self.set_subtitle_for_current_selection)
         editor.connect('markup-changed', self.set_markup_for_current_selection)
+        editor.connect('word-goal-set', self.set_word_goal_for_current_selection)
         editor.connect('keywords-changed', self.set_keywords_for_current_selection)
 
     def new_note_request(self):
@@ -226,6 +227,17 @@ class NotoNotesList(Gtk.ListBox):
         position = row.get_index()
         self._model.set_prop_for_position(position, 'markup', markup)
         self.editor.current_note_data['markup'] = markup
+
+    def set_word_goal_for_current_selection(self, widget, goal):
+        """Save the word count goal for currently selected text to the db.
+
+        @self: NotoNotesList
+        @markup: int, the word count goal to be saved for current selection
+        """
+        row = self.get_selected_row()
+        position = row.get_index()
+        self._model.set_prop_for_position(position, 'word_goal', goal)
+        self.editor.current_note_data['word_goal'] = goal
 
     def set_keywords_for_current_selection(self, widget, keywords):
         """Ask store to make changes to the keywords of the currently selected note

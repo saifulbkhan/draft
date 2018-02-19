@@ -36,7 +36,7 @@ class NotoStatusbar(Gtk.Bin):
 
     __gsignals__ = {
         'word-goal-set': (GObject.SignalFlags.RUN_FIRST,
-                          None, (GObject.TYPE_BOOLEAN,)),
+                          None, (GObject.TYPE_INT,)),
     }
 
     _word_goal_set = False
@@ -55,7 +55,6 @@ class NotoStatusbar(Gtk.Bin):
         self._editor = editor
         self._builder.add_from_resource('/org/gnome/Noto/statusbar.ui')
         self._set_up_widgets()
-        self.connect('word-goal-set', self._on_word_goal_set)
 
     def _set_up_widgets(self):
         """Set up widgets contained within statusbar"""
@@ -69,23 +68,19 @@ class NotoStatusbar(Gtk.Bin):
         self._word_goal_popover = self._builder.get_object('word_goal_popover')
         self._word_goal_title = self._builder.get_object('word_goal_title')
         self._goal_set_entry = self._builder.get_object('word_goal_entry')
+        self._word_goal_stack = self._builder.get_object('word_goal_stack')
         word_goal_button = self._builder.get_object('word_goal_button')
-        stack = self._builder.get_object('word_goal_stack')
         goal_edit_button = self._builder.get_object('word_goal_edit_button')
         goal_remove_button = self._builder.get_object('word_goal_remove_button')
         goal_set_button = self._builder.get_object('word_goal_set_button')
 
-        self._word_goal_popover.connect('closed',
-                                        self._on_goal_popover_closed,
-                                        stack)
+        self._word_goal_popover.connect('closed', self._on_goal_popover_closed)
         self._goal_set_entry.connect('changed', self._on_goal_entry_changed)
-        self._goal_set_entry.connect('activate', self._on_set_goal, stack)
+        self._goal_set_entry.connect('activate', self._on_set_goal)
         word_goal_button.connect('clicked', self._on_word_count_clicked)
-        goal_edit_button.connect('clicked', self._on_request_goal_change, stack)
-        goal_remove_button.connect('clicked',
-                                   self._on_request_goal_remove,
-                                   stack)
-        goal_set_button.connect('clicked', self._on_set_goal, stack)
+        goal_edit_button.connect('clicked', self._on_request_goal_change)
+        goal_remove_button.connect('clicked', self._on_request_goal_remove)
+        goal_set_button.connect('clicked', self._on_set_goal)
 
         self._tag_labels = self._builder.get_object('tag_labels')
         self._tag_popover = self._builder.get_object('tag_popover')
@@ -120,8 +115,11 @@ class NotoStatusbar(Gtk.Bin):
         word_count_string = ('{:,}'.format(word_count))
         self._word_count_label.set_label(word_count_string + ' ' + _("Words"))
 
-        # TODO: actually update word goal from db
-        self.emit('word-goal-set', False)
+        goal = self._editor.current_note_data['word_goal']
+        if goal and str(goal) != self._goal_set_entry.get_text():
+            self._goal_set_entry.set_text(str(goal))
+            self._goal_set_entry.activate()
+        self._update_word_goal_state(bool(goal))
 
     @registered_for_update
     def update_note_data(self):
@@ -210,22 +208,29 @@ class NotoStatusbar(Gtk.Bin):
         """Handle click on word count label"""
         self._word_goal_popover.popup()
 
-    def _on_word_goal_set(self, widget, is_set):
+    def _update_word_goal_state(self, is_set):
         self._word_goal_set = is_set
         if is_set:
             self._word_goal_title.set_label(_("Writing Goal"))
+            self._word_goal_stack.set_visible_child_name('button_mode')
         else:
             self._word_goal_title.set_label(_("Set Writing Goal"))
+            self._unset_word_goal()
+            self._word_goal_stack.set_visible_child_name('entry_mode')
 
-    def _switch_stack_child(self, stack):
-        """Given a GtkStack with two children switch to the other child"""
-        children = stack.get_children()
-        child1 = children[0]
-        child2 = children[1]
-        if stack.get_visible_child() is child1:
-            stack.set_visible_child(child2)
-        else:
-            stack.set_visible_child(child1)
+    def _unset_word_goal(self):
+        self._goal_set_entry.set_text('')
+        self._word_goal_label.set_visible(False)
+        self._word_goal_complete_label.set_visible(False)
+
+    def _set_goal_entry_mode(self, val):
+        self._switch_stack_child(int(val))
+
+    def _switch_stack_child(self, child):
+        """Set visible stack child as given. 0: entry mode, 1: button mode"""
+        children = self._word_goal_stack.get_children()
+        active_child = children[child]
+        self._word_goal_stack.set_visible_child(active_child)
 
     def _on_goal_entry_changed(self, widget, user_data=None):
         string = widget.get_text()
@@ -235,23 +240,23 @@ class NotoStatusbar(Gtk.Bin):
         elif context.has_class('error'):
             context.remove_class('error')
 
-    def _on_goal_popover_closed(self, widget, stack=None):
+    def _on_goal_popover_closed(self, widget, user_data=None):
         parent = self._goal_set_entry.get_parent()
-        if self._word_goal_set and stack.get_visible_child() is parent:
-            self._switch_stack_child(stack)
+        if self._word_goal_set and \
+           self._word_goal_stack.get_visible_child() is parent:
+            self._word_goal_stack.set_visible_child_name('button_mode')
 
-    def _on_request_goal_change(self, widget, stack=None):
-        self._switch_stack_child(stack)
+    def _on_request_goal_change(self, widget, user_data=None):
+        self._word_goal_stack.set_visible_child_name('entry_mode')
         self._goal_set_entry.grab_focus()
 
-    def _on_request_goal_remove(self, widget, stack=None):
-        self._goal_set_entry.set_text('')
-        self._on_request_goal_change(widget, stack)
-        self._word_goal_label.set_visible(False)
-        self._word_goal_complete_label.set_visible(False)
-        self.emit('word-goal-set', False)
+    def _on_request_goal_remove(self, widget, user_data=None):
+        self._unset_word_goal()
+        self._on_request_goal_change(widget)
+        self._update_word_goal_state(False)
+        self.emit('word-goal-set', 0)
 
-    def _on_set_goal(self, widget, stack=None):
+    def _on_set_goal(self, widget, user_data=None):
         current = self._count_words()
         goal = self._goal_set_entry.get_text()
 
@@ -267,5 +272,5 @@ class NotoStatusbar(Gtk.Bin):
         self._word_goal_complete_label.set_markup(percent_string)
         self._word_goal_label.set_visible(True)
         self._word_goal_complete_label.set_visible(True)
-        self.emit('word-goal-set', True)
-        self._switch_stack_child(stack)
+        self._update_word_goal_state(True)
+        self.emit('word-goal-set', goal)
