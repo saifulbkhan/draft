@@ -179,6 +179,7 @@ class NotoNotesList(Gtk.ListBox):
         self.editor = editor
         editor.connect('title-changed', self.set_title_for_current_selection)
         editor.connect('subtitle-changed', self.set_subtitle_for_current_selection)
+        editor.connect('markup-changed', self.set_markup_for_current_selection)
         editor.connect('keywords-changed', self.set_keywords_for_current_selection)
 
     def new_note_request(self):
@@ -214,6 +215,17 @@ class NotoNotesList(Gtk.ListBox):
 
         box = row.get_child()
         self._append_subtitle_label(box, subtitle)
+
+    def set_markup_for_current_selection(self, widget, markup):
+        """Save the markup for currently selected text to the db.
+
+        @self: NotoNotesList
+        @markup: string, the markup to be saved for current selection
+        """
+        row = self.get_selected_row()
+        position = row.get_index()
+        self._model.set_prop_for_position(position, 'markup', markup)
+        self.editor.current_note_data['markup'] = markup
 
     def set_keywords_for_current_selection(self, widget, keywords):
         """Ask store to make changes to the keywords of the currently selected note

@@ -35,10 +35,10 @@ class NotoEditor(Gtk.Box):
     __gsignals__ = {
         'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'subtitle-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
+        'markup-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
-    markup_type = 'markdown'    # default markup used by the editor
     view = None
     current_note_data = None
     _current_file = None
@@ -83,9 +83,7 @@ class NotoEditor(Gtk.Box):
         buffer.connect('modified-changed', self._on_modified_changed)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
-        language_manager = GtkSource.LanguageManager.get_default()
-        language = language_manager.get_language(markup)
-        buffer.set_language(language)
+        self.set_markup(markup)
 
     def _on_key_press(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -130,6 +128,14 @@ class NotoEditor(Gtk.Box):
         index = lower_case_keywords.index(tag.lower())
         self.current_note_data['keywords'].pop(index)
         self.emit('keywords-changed', self.current_note_data['keywords'])
+
+    def set_markup(self, markup):
+        if self.current_note_data['markup'] != markup:
+            language_manager = GtkSource.LanguageManager.get_default()
+            language = language_manager.get_language(markup)
+            buffer = self.view.get_buffer()
+            buffer.set_language(language)
+            self.emit('markup-changed', markup)
 
     def switch_view(self, note_data):
         self.current_note_data = note_data
