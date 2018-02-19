@@ -40,6 +40,8 @@ class NotoEditor(Gtk.Box):
         'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
+    # markup type of currently selected text
+    markup_type = 'markdown'
     view = None
     current_note_data = None
     _current_file = None
@@ -136,6 +138,7 @@ class NotoEditor(Gtk.Box):
         self.emit('keywords-changed', self.current_note_data['keywords'])
 
     def set_markup(self, markup):
+        self.markup_type = markup
         language_manager = GtkSource.LanguageManager.get_default()
         language = language_manager.get_language(markup)
         buffer = self.view.get_buffer()
