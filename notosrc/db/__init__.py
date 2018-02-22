@@ -27,10 +27,10 @@ DB_URL = os.path.join(USER_DATA_DIR, 'noto.db')
 
 
 @contextmanager
-def connect():
+def connect(wait=5.0):
     """Provide a transactional scope around a series of operations.
     Returns a Connection object representing the db"""
-    connection = sqlite3.connect(DB_URL)
+    connection = sqlite3.connect(DB_URL, timeout=wait)
     connection.isolation_level = None
     try:
         yield connection

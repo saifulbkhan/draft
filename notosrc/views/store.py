@@ -13,7 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import threading
 from gettext import gettext as _
+
 from gi.repository import GLib, GObject, Gtk, Gio
 
 from notosrc import file, db
@@ -234,6 +236,23 @@ class NotoListStore(Gio.ListStore):
         parent_hashes = list(item.prop_parent_list)
         file.read_file_contents(hash_id, parent_hashes, buffer, load_file)
 
+    # TODO: Implement a proper update queue, so as to not rely on hacks
+    # such as this. A priority queue would be even better.
+    def _async_update_for_id(self, id, values):
+        """Update values for the given text id in database. This method, starts
+        a new thread which creates a new db connection everytime it is called."""
+
+        def update_target():
+            # the `wait` parameter specifies how long a connection must wait for
+            # the db lock to be lifted before performing any operations. 60 secs
+            # should be more than enough for most systems.
+            with db.connect(wait=60.0) as connection:
+                data.update_text(connection, id, values)
+
+        thread = threading.Thread(target=update_target)
+        thread.daemon = True
+        thread.start()
+
     def set_prop_for_position(self, position, prop, value):
         """Set property @prop for item at @position to @value
 
@@ -250,8 +269,7 @@ class NotoListStore(Gio.ListStore):
         setattr(item, 'prop_' + prop, value)
         # TODO: 'notify' view that a prop for an item has changed
 
-        with db.connect() as connection:
-            data.update_text(connection, id, item.to_dict())
+        self._async_update_for_id(id, item.to_dict())
 
     def set_keywords_for_position(self, position, keywords):
         """Set the keywords for the item at given position
