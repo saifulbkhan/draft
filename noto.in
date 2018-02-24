@@ -93,6 +93,7 @@ def set_resources():
 def run_application():
     """Runs the application and returns its exit code."""
     from notosrc.app import Application
+    from notosrc import db
     
     application = Application()
     signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -101,6 +102,8 @@ def run_application():
         ret = application.run(sys.argv)
     except SystemExit as e:
         ret = e.code
+    finally:
+        db.final_updater.activate()
 
     return ret
 

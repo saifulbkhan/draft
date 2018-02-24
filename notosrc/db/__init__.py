@@ -154,20 +154,25 @@ def get_relative_datetime(dt_str):
 class RequestQueue(OrderedDict):
     """A dict with queue like FIFO methods"""
     active = False
+    execution_fn = None
 
-    def __init__(self, execute_fn=None):
+    def __init__(self, immediate_activation=True):
         super().__init__()
-        self.execution_fn = execute_fn
+        self.immediate_activation = immediate_activation
 
     def enqueue(self, key, val):
-        """Put an item in queue with a unique key. If the queue was empty,
-        start working on requests in a separate thread."""
+        """Put an item in queue with a unique key. If the queue was empty and
+        should immeadiately be working on the requests, activate it."""
         self[key] = val
-        if not self.active:
-            self.active = True
-            thread = threading.Thread(target=self.do_work)
-            thread.daemon = True
-            thread.start()
+        if not self.active and self.immediate_activation:
+            self.activate()
+
+    def activate(self):
+        """Work on the contents of the queue, in a separate thread."""
+        self.active = True
+        thread = threading.Thread(target=self.do_work)
+        thread.daemon = True
+        thread.start()
 
     def dequeue(self):
         """Get the oldest item inserted into the queue."""
@@ -201,5 +206,5 @@ async_updater = RequestQueue()
 timed_updater = RequestQueue()
 time_period = 180
 
-# TODO: a queue of updates that will be executed when the app quits
-final_updater = RequestQueue()
+# a queue of updates that will be executed when the app quits
+final_updater = RequestQueue(immediate_activation=False)

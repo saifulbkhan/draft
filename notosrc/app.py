@@ -33,6 +33,8 @@ class Application(Gtk.Application):
                                  flags=Gio.ApplicationFlags.FLAGS_NONE)
         GLib.set_application_name("Noto")
         GLib.set_prgname('noto')
+        init_storage()
+        init_db(app_version)
         self._init_style()
         self._window = None
 
@@ -77,8 +79,6 @@ class Application(Gtk.Application):
     def do_startup(self):
         Gtk.Application.do_startup(self)
         Notify.init("Noto")
-        init_storage()
-        init_db(app_version)
         self.builder = Gtk.Builder()
         self._build_app_menu()
 
