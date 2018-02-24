@@ -15,8 +15,10 @@
 
 import os.path
 import sqlite3
+import threading
 from contextlib import contextmanager
 from datetime import datetime
+from collections import OrderedDict
 
 from gi.repository import GLib, Gio
 
@@ -27,10 +29,10 @@ DB_URL = os.path.join(USER_DATA_DIR, 'noto.db')
 
 
 @contextmanager
-def connect(wait=5.0):
+def connect():
     """Provide a transactional scope around a series of operations.
     Returns a Connection object representing the db"""
-    connection = sqlite3.connect(DB_URL, timeout=wait)
+    connection = sqlite3.connect(DB_URL)
     connection.isolation_level = None
     try:
         yield connection
@@ -147,3 +149,57 @@ def get_relative_datetime(dt_str):
         return (_("Yesterday at %s" % date_time.strftime('%I:%M %p')))
 
     return date_time.strftime('%d %b %Y')
+
+
+class RequestQueue(OrderedDict):
+    """A dict with queue like FIFO methods"""
+    active = False
+
+    def __init__(self, execute_fn=None):
+        super().__init__()
+        self.execution_fn = execute_fn
+
+    def enqueue(self, key, val):
+        """Put an item in queue with a unique key. If the queue was empty,
+        start working on requests in a separate thread."""
+        self[key] = val
+        if not self.active:
+            self.active = True
+            thread = threading.Thread(target=self.do_work)
+            thread.daemon = True
+            thread.start()
+
+    def dequeue(self):
+        """Get the oldest item inserted into the queue."""
+        key, val = None, None
+        if len(self):
+            key, val = self.popitem(last=False)
+
+        return key, val
+
+    def do_work(self):
+        """Loop over the queue and for each item perform `execution_fn`
+        operation."""
+        if self.execution_fn is None:
+            return
+
+        while True:
+            id, values = self.dequeue()
+            if not (id and values):
+                break
+
+            with connect() as connection:
+                self.execution_fn(connection, id, values)
+
+        self.active = False
+
+
+# a queue for regular updates that need to be performed immediately
+async_updater = RequestQueue()
+
+# TODO: a queue for updates which could be issued periodically
+timed_updater = RequestQueue()
+time_period = 180
+
+# TODO: a queue of updates that will be executed when the app quits
+final_updater = RequestQueue()
