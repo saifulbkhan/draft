@@ -273,6 +273,10 @@ class NotoListStore(Gio.ListStore):
 
         return item.prop_keywords
 
+    def queue_final_save(self, metadata):
+        db.final_updater.execution_fn = data.update_text
+        db.final_updater.enqueue(metadata['id'], metadata)
+
     def delete_item_at_postion(self, position):
         """Delete item at @position in model
 

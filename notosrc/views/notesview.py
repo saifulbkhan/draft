@@ -182,6 +182,7 @@ class NotoNotesList(Gtk.ListBox):
         editor.connect('markup-changed', self.set_markup_for_current_selection)
         editor.connect('word-goal-set', self.set_word_goal_for_current_selection)
         editor.connect('keywords-changed', self.set_keywords_for_current_selection)
+        editor.connect('view-changed', self.save_last_edit_data)
 
     def new_note_request(self):
         """Request for creation of a new note and append it to the list"""
@@ -256,6 +257,16 @@ class NotoNotesList(Gtk.ListBox):
         # this is probably not the best place to do it.
         self.editor.current_note_data['keywords'] = new_keywords
         self.editor.statusbar.update_note_data()
+
+    def save_last_edit_data(self, widget, metadata):
+        """Save last metdata that would be associated with the last edit session
+        of the text.
+
+        @self: NotoNotesList
+        @metadata: dict, contains metadata associated with a text
+        """
+        if metadata:
+            self._model.queue_final_save(metadata)
 
     def delete_selected_row(self):
         """Delete currently selected note in the list"""

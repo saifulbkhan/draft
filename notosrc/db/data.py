@@ -82,7 +82,7 @@ def update_text(conn, text_id, values):
              , markup = :markup
              , subtitle = :subtitle
              , word_goal = :word_goal
-             , last_edit_position = last_edit_position
+             , last_edit_position = :last_edit_position
          WHERE id = :id'''
     cursor = conn.cursor()
     cursor.execute(query, {"modified": values['last_modified'],

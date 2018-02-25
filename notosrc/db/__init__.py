@@ -156,8 +156,9 @@ class RequestQueue(OrderedDict):
     active = False
     execution_fn = None
 
-    def __init__(self, immediate_activation=True):
+    def __init__(self, async=True, immediate_activation=True):
         super().__init__()
+        self.async = async
         self.immediate_activation = immediate_activation
 
     def enqueue(self, key, val):
@@ -170,9 +171,12 @@ class RequestQueue(OrderedDict):
     def activate(self):
         """Work on the contents of the queue, in a separate thread."""
         self.active = True
-        thread = threading.Thread(target=self.do_work)
-        thread.daemon = True
-        thread.start()
+        if self.async:
+            thread = threading.Thread(target=self.do_work)
+            thread.daemon = True
+            thread.start()
+        else:
+            self.do_work()
 
     def dequeue(self):
         """Get the oldest item inserted into the queue."""
@@ -207,4 +211,4 @@ timed_updater = RequestQueue()
 time_period = 180
 
 # a queue of updates that will be executed when the app quits
-final_updater = RequestQueue(immediate_activation=False)
+final_updater = RequestQueue(async=False, immediate_activation=False)

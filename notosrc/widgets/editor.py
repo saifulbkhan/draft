@@ -23,6 +23,7 @@ gi.require_version('GtkSource', '3.0')
 from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, Pango
 
 from notosrc import file
+from notosrc import db
 from notosrc.widgets.statusbar import NotoStatusbar
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
@@ -37,7 +38,8 @@ class NotoEditor(Gtk.Box):
         'subtitle-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'markup-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'word-goal-set': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_INT,)),
-        'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+        'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
+        'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
     # markup type of currently selected text
@@ -112,6 +114,8 @@ class NotoEditor(Gtk.Box):
         self._update_title_and_subtitle()
         self.statusbar.update_word_count()
         self._set_insert_offset(buffer)
+        self._set_last_modified()
+        self.emit('view-changed', self.current_note_data)
 
     def get_text(self):
         buffer = self.view.get_buffer()
@@ -227,8 +231,11 @@ class NotoEditor(Gtk.Box):
         insert_iter = buffer.get_iter_at_mark(insert_mark)
         offset = insert_iter.get_offset()
 
-        # TODO: when queue updates are brought in, queue save operation to db
         self.current_note_data['last_edit_position'] = offset
+
+    def _set_last_modified(self):
+        datetime = db.get_datetime()
+        self.current_note_data['last_modified'] = datetime
 
     def _update_title_and_subtitle(self):
         content = self.get_text()
