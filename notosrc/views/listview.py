@@ -19,29 +19,29 @@ from gi.repository import Gtk, GLib, Pango, Gdk
 from notosrc.views.store import NotoListStore, TreeStore
 
 
-# TODO: Another class for note groups with TreeView as view
+# TODO: Another class for text groups with TreeView as view
 
-# TODO: Make this a stack for storing multiple NotoNotesList
-class NotesView(Gtk.Bin):
+# TODO: Make this a stack for storing multiple NotoTextsList
+class TextListView(Gtk.Bin):
     sidebar_width = 250
     def __repr__(self):
-        return '<NotesView>'
+        return '<TextListView>'
 
     def __init__(self, parent):
         Gtk.Bin.__init__(self)
         self.parent_window = parent
         self.builder = Gtk.Builder()
-        self.builder.add_from_resource('/org/gnome/Noto/notesview.ui')
+        self.builder.add_from_resource('/org/gnome/Noto/textlistview.ui')
         self._set_up_widgets()
 
     def _set_up_widgets(self):
         self.slider = self.builder.get_object('slider')
         self.slider.set_hexpand(False)
-        noteslist = self.builder.get_object('noteslist')
+        textslist = self.builder.get_object('textslist')
         listview = self.builder.get_object('listview')
 
         self.add(self.slider)
-        self.view = NotoNotesList(None)
+        self.view = NotoTextsList(None)
         listview.add(self.view)
 
         self.search_bar = self.builder.get_object('search_bar')
@@ -64,19 +64,19 @@ class NotesView(Gtk.Bin):
     def set_editor(self, editor):
         self.view.set_editor(editor)
 
-    def new_note_request(self):
-        self.view.new_note_request()
+    def new_text_request(self):
+        self.view.new_text_request()
 
 
-class NotoNotesList(Gtk.ListBox):
-    """The listbox containing all the notes in a note group"""
-    __gtype__name__ = 'NotoNotesList'
+class NotoTextsList(Gtk.ListBox):
+    """The listbox containing all the texts in a text group"""
+    __gtype__name__ = 'NotoTextsList'
 
     def __repr__(self):
-        return '<NotoNotesList>'
+        return '<NotoTextsList>'
 
     def __init__(self, parent_group):
-        """Initialize a new NotoNotesList for given @parent_group
+        """Initialize a new NotoTextsList for given @parent_group
 
         @parent_group: string, unique hash string for @parent_group
         """
@@ -88,9 +88,9 @@ class NotoNotesList(Gtk.ListBox):
         self.connect('row-selected', self._on_row_selected)
         self._model.connect('items-changed', self._on_items_changed)
 
-    def _create_row_widget(self, note_data, user_data):
-        """Create a row widget for @note_data"""
-        data_dict = note_data.to_dict()
+    def _create_row_widget(self, text_data, user_data):
+        """Create a row widget for @text_data"""
+        data_dict = text_data.to_dict()
         title = data_dict['title']
         subtitle = data_dict['subtitle']
 
@@ -172,8 +172,8 @@ class NotoNotesList(Gtk.ListBox):
     def set_editor(self, editor):
         """Set editor for @self
 
-        @self: NotoNotesList
-        @editor: NotoEditor, the editor to display selected notes and listen
+        @self: NotoTextsList
+        @editor: NotoEditor, the editor to display selected texts and listen
                  for changes that need to be conveyed to the backend
         """
         self.editor = editor
@@ -184,21 +184,21 @@ class NotoNotesList(Gtk.ListBox):
         editor.connect('keywords-changed', self.set_keywords_for_current_selection)
         editor.connect('view-changed', self.save_last_edit_data)
 
-    def new_note_request(self):
-        """Request for creation of a new note and append it to the list"""
+    def new_text_request(self):
+        """Request for creation of a new text and append it to the list"""
         self._model.new_text_request()
 
     def set_title_for_current_selection(self, widget, title):
-        """Set the title for currently selected note, as well as write this to
+        """Set the title for currently selected text, as well as write this to
         the db.
 
-        @self: NotoNotesList
+        @self: NotoTextsList
         @title: string, the title to be saved for current selection
         """
         row = self.get_selected_row()
         position = row.get_index()
         self._model.set_prop_for_position(position, 'title', title)
-        self.editor.current_note_data['title'] = title
+        self.editor.current_text_data['title'] = title
 
         box = row.get_child()
         self._set_title_label(box, title)
@@ -207,13 +207,13 @@ class NotoNotesList(Gtk.ListBox):
         """Set the subtitle for currently selected text, as well as write this
         to the db.
 
-        @self: NotoNotesList
+        @self: NotoTextsList
         @subtitle: string, the subtitle to be saved for current selection
         """
         row = self.get_selected_row()
         position = row.get_index()
         self._model.set_prop_for_position(position, 'subtitle', subtitle)
-        self.editor.current_note_data['subtitle'] = subtitle
+        self.editor.current_text_data['subtitle'] = subtitle
 
         box = row.get_child()
         self._append_subtitle_label(box, subtitle)
@@ -221,31 +221,31 @@ class NotoNotesList(Gtk.ListBox):
     def set_markup_for_current_selection(self, widget, markup):
         """Save the markup for currently selected text to the db.
 
-        @self: NotoNotesList
+        @self: NotoTextsList
         @markup: string, the markup to be saved for current selection
         """
         row = self.get_selected_row()
         position = row.get_index()
         self._model.set_prop_for_position(position, 'markup', markup)
-        self.editor.current_note_data['markup'] = markup
+        self.editor.current_text_data['markup'] = markup
 
     def set_word_goal_for_current_selection(self, widget, goal):
         """Save the word count goal for currently selected text to the db.
 
-        @self: NotoNotesList
+        @self: NotoTextsList
         @markup: int, the word count goal to be saved for current selection
         """
         row = self.get_selected_row()
         position = row.get_index()
         self._model.set_prop_for_position(position, 'word_goal', goal)
-        self.editor.current_note_data['word_goal'] = goal
+        self.editor.current_text_data['word_goal'] = goal
 
     def set_keywords_for_current_selection(self, widget, keywords):
-        """Ask store to make changes to the keywords of the currently selected note
+        """Ask store to make changes to the keywords of the currently selected text
         so that it can be written to db.
 
-        @self: NotoNotesList
-        @keywords: list, the list of string keywords which the selected note will be
+        @self: NotoTextsList
+        @keywords: list, the list of string keywords which the selected text will be
                tagged with.
         """
         row = self.get_selected_row()
@@ -255,21 +255,21 @@ class NotoNotesList(Gtk.ListBox):
         # since @new_keywords might have slightly different letter case keywords, we
         # should re-update editor keywords as well and then update statusbar, though
         # this is probably not the best place to do it.
-        self.editor.current_note_data['keywords'] = new_keywords
-        self.editor.statusbar.update_note_data()
+        self.editor.current_text_data['keywords'] = new_keywords
+        self.editor.statusbar.update_text_data()
 
     def save_last_edit_data(self, widget, metadata):
         """Save last metdata that would be associated with the last edit session
         of the text.
 
-        @self: NotoNotesList
+        @self: NotoTextsList
         @metadata: dict, contains metadata associated with a text
         """
         if metadata:
             self._model.queue_final_save(metadata)
 
     def delete_selected_row(self):
-        """Delete currently selected note in the list"""
+        """Delete currently selected text in the list"""
         position = self.get_selected_row().get_index()
         self._model.delete_item_at_postion(position)
 
@@ -317,8 +317,8 @@ class ListView(Gtk.TreeView):
                                     self.editor.switch_view,
                                     self.editor.load_file)
 
-    def new_note_request(self):
-        treeiter = self.model.new_note_request()
+    def new_text_request(self):
+        treeiter = self.model.new_text_request()
         self.selection.select_iter(treeiter)
 
     def set_title_for_current_selection(self, title):

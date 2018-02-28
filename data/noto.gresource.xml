@@ -4,7 +4,7 @@
     <file>application.css</file> 
     <file preprocess="xml-stripblanks">headerbar.ui</file>
     <file preprocess="xml-stripblanks">appmenu.ui</file>
-    <file preprocess="xml-stripblanks">notesview.ui</file>
+    <file preprocess="xml-stripblanks">textlistview.ui</file>
     <file preprocess="xml-stripblanks">contentview.ui</file>
     <file preprocess="xml-stripblanks">statusbar.ui</file>
   </gresource>

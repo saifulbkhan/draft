@@ -22,38 +22,38 @@ gi.require_version("GtkSource", "3.0")
 from gi.repository import GtkSource, Gio, GLib
 
 USER_DATA_DIR = join(GLib.get_user_data_dir(), 'noto')
-BASE_NOTE_DIR = join(USER_DATA_DIR, 'notes', 'local')
-TRASH_DIR = join(USER_DATA_DIR, 'notes', '.trash')
+BASE_TEXT_DIR = join(USER_DATA_DIR, 'texts', 'local')
+TRASH_DIR = join(USER_DATA_DIR, 'texts', '.trash')
 
 default_encoding = 'utf-8'
 
 
 def init_storage():
     try:
-        note_dir = os.path.join(USER_DATA_DIR, 'notes')
-        Gio.file_new_for_path(note_dir).make_directory()
+        text_dir = join(USER_DATA_DIR, 'texts')
+        Gio.file_new_for_path(text_dir).make_directory()
     except Exception:
-        # TODO: Failed to make storage directory for notes or already exists
+        # TODO: Failed to make storage directory for texts or already exists
         pass
 
     try:
-        note_local_dir = os.path.join(note_dir, 'local')
-        Gio.file_new_for_path(note_local_dir).make_directory()
+        text_local_dir = join(text_dir, 'local')
+        Gio.file_new_for_path(text_local_dir).make_directory()
     except Exception:
-        # TODO: Failed to make storage for local notes or already exists
+        # TODO: Failed to make storage for local texts or already exists
         pass
 
     try:
-        note_trash_dir = os.path.join(note_dir, '.trash')
-        Gio.file_new_for_path(note_trash_dir).make_directory()
+        text_trash_dir = join(text_dir, '.trash')
+        Gio.file_new_for_path(text_trash_dir).make_directory()
     except Exception as e:
-        # TODO: Failed to make directory for trashed notes or already exists
+        # TODO: Failed to make directory for trashed texts or already exists
        pass
 
 
 def read_file_contents(filename, parent_names, buffer, load_file_cb):
     parent_dir = sep.join(parent_names)
-    fpath = join(BASE_NOTE_DIR, parent_dir, filename)
+    fpath = join(BASE_TEXT_DIR, parent_dir, filename)
 
     def load_finish_cb(loader, res, user_data):
         gsf = user_data
@@ -111,7 +111,7 @@ def write_to_source_file_async(gsf, buffer):
 
 def create_dir(dirname, parent_names):
     parent_dir = sep.join(parent_names)
-    f_path = join(BASE_NOTE_DIR, parent_dir, filename)
+    f_path = join(BASE_TEXT_DIR, parent_dir, filename)
     try:
         return Gio.File.new_for_path(f_path).make_directory_with_parents()
     except Exception as e:
@@ -134,14 +134,14 @@ def move_from_src_to_dest(src_path, dest_path):
 def move_file(filename, src_parent_names, dest_parent_names):
     source_dir = sep.join(src_parent_names)
     dest_dir = sep.join(dest_parent_names)
-    src_path = join(BASE_NOTE_DIR, source_dir, filename)
-    dest_path = join(BASE_NOTE_DIR, dest_dir, filename)
+    src_path = join(BASE_TEXT_DIR, source_dir, filename)
+    dest_path = join(BASE_TEXT_DIR, dest_dir, filename)
     move_from_src_to_dest(src_path, dest_path)
 
 
 def trash_file(filename, parent_names, untrash=False):
     parent_dir = sep.join(parent_names)
-    src_path = join(BASE_NOTE_DIR, parent_dir, filename)
+    src_path = join(BASE_TEXT_DIR, parent_dir, filename)
     dest_path = join(TRASH_DIR, filename)
     if untrash:
         move_from_src_to_dest(dest_path, src_path)

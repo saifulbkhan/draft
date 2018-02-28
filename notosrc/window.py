@@ -16,7 +16,7 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
-from notosrc.views.notesview import NotesView
+from notosrc.views.listview import TextListView
 from notosrc.views.contentview import ContentView
 
 
@@ -43,7 +43,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     def _set_up_actions(self):
         action_entries = [
-            ('new_note', self._new_note_request),
+            ('new_text', self._new_text_request),
             ('new_notebook', self._new_notebook_request)
         ]
 
@@ -64,14 +64,14 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.connect('key-press-event', self._on_key_press)
 
     def _create_list_views(self):
-        self.notesview = NotesView(self)
-        self._topbox.pack_start(self.notesview, False, True, 0)
+        self.textlistview = TextListView(self)
+        self._topbox.pack_start(self.textlistview, False, True, 0)
 
     def _create_stack_views(self):
         self.contentview = ContentView(self)
         self._topbox.pack_start(self.contentview, False, True, 0)
         # TODO: make this switchable, when supporting side-by-side editing
-        self.notesview.set_editor(self.contentview.content_editor)
+        self.textlistview.set_editor(self.contentview.content_editor)
 
     def _on_key_press(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -82,10 +82,10 @@ class ApplicationWindow(Gtk.ApplicationWindow):
                 self.toggle_panel()
 
     def toggle_panel(self):
-        self.notesview.toggle_panel()
+        self.textlistview.toggle_panel()
 
-    def _new_note_request(self, action, param):
-        self.notesview.new_note_request()
+    def _new_text_request(self, action, param):
+        self.textlistview.new_text_request()
 
     def _new_notebook_request(self, action, param):
         pass
@@ -115,7 +115,7 @@ class _NotoHeaderBar(Gtk.Box):
         self._preview_button.connect('toggled', self._on_preview_toggled)
 
     def _on_search_toggled(self, widget):
-        self.parent.notesview.search_toggled()
+        self.parent.textlistview.search_toggled()
 
     def _on_preview_toggled(self, widget):
         self.parent.contentview.preview_toggled()

@@ -8,7 +8,7 @@
     <property name="transition_type">slide-left</property>
     <property name="reveal_child">True</property>
     <child>
-      <object class="GtkBox" id="noteslist">
+      <object class="GtkBox" id="textslist">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="orientation">vertical</property>
@@ -55,7 +55,7 @@
           </packing>
         </child>
         <style>
-          <class name="noto-noteslist"/>
+          <class name="noto-textslist"/>
         </style>
       </object>
     </child>

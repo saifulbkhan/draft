@@ -28,7 +28,7 @@ parsers_sources = [
 
 views_sources = [
   'views/contentview.py',
-  'views/notesview.py',
+  'views/listview.py',
   'views/store.py'
 ]
 

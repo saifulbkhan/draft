@@ -115,17 +115,17 @@ class NotoStatusbar(Gtk.Bin):
         word_count_string = ('{:,}'.format(word_count))
         self._word_count_label.set_label(word_count_string + ' ' + _("Words"))
 
-        goal = self._editor.current_note_data['word_goal']
+        goal = self._editor.current_text_data['word_goal']
         if goal and str(goal) != self._goal_set_entry.get_text():
             self._goal_set_entry.set_text(str(goal))
             self._goal_set_entry.activate()
         self._update_word_goal_state(bool(goal))
 
     @registered_for_update
-    def update_note_data(self):
-        """Updates the note specific information presented by @self, such
+    def update_text_data(self):
+        """Updates the text specific information presented by @self, such
         as tags"""
-        data_dict = self._editor.current_note_data
+        data_dict = self._editor.current_text_data
 
         tags = data_dict['keywords']
         self._refresh_tag_widget(tags)
@@ -193,14 +193,14 @@ class NotoStatusbar(Gtk.Bin):
         self._new_tag_entry.grab_focus()
 
     def _on_tag_added(self, widget, user_data=None):
-        """Handle addition of a tag to the note"""
+        """Handle addition of a tag to the text"""
         tag = self._new_tag_entry.get_text()
         if tag:
             self._editor.add_tag(tag)
             self._new_tag_entry.set_text('')
 
     def _on_tag_deleted(self, widget, label=None):
-        """Handle deletion of a tag from the note"""
+        """Handle deletion of a tag from the text"""
         tag = label.get_label()
         self._editor.delete_tag(tag)
 

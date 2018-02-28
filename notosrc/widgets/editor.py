@@ -45,7 +45,7 @@ class NotoEditor(Gtk.Box):
     # markup type of currently selected text
     markup_type = 'markdown'
     view = None
-    current_note_data = None
+    current_text_data = None
     _current_file = None
     _open_files = {}
 
@@ -102,7 +102,7 @@ class NotoEditor(Gtk.Box):
                 pass
 
     def _on_word_goal_set(self, widget, goal):
-        if self.current_note_data['word_goal'] != goal:
+        if self.current_text_data['word_goal'] != goal:
             self.emit('word-goal-set', goal)
 
     def _on_modified_changed(self, buffer):
@@ -115,7 +115,7 @@ class NotoEditor(Gtk.Box):
         self.statusbar.update_word_count()
         self._set_insert_offset(buffer)
         self._set_last_modified()
-        self.emit('view-changed', self.current_note_data)
+        self.emit('view-changed', self.current_text_data)
 
     def get_text(self):
         buffer = self.view.get_buffer()
@@ -125,21 +125,21 @@ class NotoEditor(Gtk.Box):
         return text
 
     def add_tag(self, tag):
-        lower_case_keywords = [x.lower() for x in self.current_note_data['keywords']]
+        lower_case_keywords = [x.lower() for x in self.current_text_data['keywords']]
         if tag.lower() in lower_case_keywords:
             return
 
-        self.current_note_data['keywords'].append(tag)
-        self.emit('keywords-changed', self.current_note_data['keywords'])
+        self.current_text_data['keywords'].append(tag)
+        self.emit('keywords-changed', self.current_text_data['keywords'])
 
     def delete_tag(self, tag):
-        lower_case_keywords = [x.lower() for x in self.current_note_data['keywords']]
+        lower_case_keywords = [x.lower() for x in self.current_text_data['keywords']]
         if tag.lower() not in lower_case_keywords:
             return
 
         index = lower_case_keywords.index(tag.lower())
-        self.current_note_data['keywords'].pop(index)
-        self.emit('keywords-changed', self.current_note_data['keywords'])
+        self.current_text_data['keywords'].pop(index)
+        self.emit('keywords-changed', self.current_text_data['keywords'])
 
     def set_markup(self, markup):
         self.markup_type = markup
@@ -147,13 +147,13 @@ class NotoEditor(Gtk.Box):
         language = language_manager.get_language(markup)
         buffer = self.view.get_buffer()
         buffer.set_language(language)
-        if self.current_note_data['markup'] != markup:
+        if self.current_text_data['markup'] != markup:
             self.emit('markup-changed', markup)
 
-    def switch_view(self, note_data):
-        self.current_note_data = note_data
+    def switch_view(self, text_data):
+        self.current_text_data = text_data
 
-        id = str(note_data['id'])
+        id = str(text_data['id'])
         scrollable = self.editor_stack.get_child_by_name(id)
         if scrollable:
             self.editor_stack.set_visible_child(scrollable)
@@ -219,7 +219,7 @@ class NotoEditor(Gtk.Box):
                                         buffer)
 
     def _get_insert_for_buffer(self, buffer):
-        last_edited_position = self.current_note_data['last_edit_position']
+        last_edited_position = self.current_text_data['last_edit_position']
         if last_edited_position:
             insert_iter = buffer.get_iter_at_offset(last_edited_position)
             buffer.place_cursor(insert_iter)
@@ -231,20 +231,20 @@ class NotoEditor(Gtk.Box):
         insert_iter = buffer.get_iter_at_mark(insert_mark)
         offset = insert_iter.get_offset()
 
-        self.current_note_data['last_edit_position'] = offset
+        self.current_text_data['last_edit_position'] = offset
 
     def _set_last_modified(self):
         datetime = db.get_datetime()
-        self.current_note_data['last_modified'] = datetime
+        self.current_text_data['last_modified'] = datetime
 
     def _update_title_and_subtitle(self):
         content = self.get_text()
         title, subtitle = self._get_title_and_subtitle_for_text(content)
 
-        if title != self.current_note_data['title']:
+        if title != self.current_text_data['title']:
             self.emit('title-changed', title)
 
-        if subtitle != self.current_note_data['subtitle']:
+        if subtitle != self.current_text_data['subtitle']:
             self.emit('subtitle-changed', subtitle)
 
     def _get_title_and_subtitle_for_text(self, text):
