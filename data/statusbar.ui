@@ -22,7 +22,7 @@
         </child>
         <style>
           <class name="flat"/>
-          <class name="noto-statusbar-button"/>
+          <class name="draft-statusbar-button"/>
         </style>
       </object>
       <packing>
@@ -44,7 +44,7 @@
         </child>
         <style>
           <class name="flat"/>
-          <class name="noto-statusbar-button"/>
+          <class name="draft-statusbar-button"/>
         </style>
       </object>
       <packing>
@@ -73,7 +73,7 @@
             <property name="margin_bottom">6</property>
             <property name="label" translatable="yes">Keywords</property>
             <style>
-              <class name="noto-menu-title"/>
+              <class name="draft-menu-title"/>
             </style>
           </object>
           <packing>
@@ -169,7 +169,7 @@
             <property name="margin_top">12</property>
             <property name="margin_bottom">6</property>
             <style>
-              <class name="noto-menu-title"/>
+              <class name="draft-menu-title"/>
             </style>
           </object>
           <packing>

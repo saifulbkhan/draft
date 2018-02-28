@@ -15,9 +15,9 @@
 
 from gi.repository import Gtk, GLib
 
-from notosrc.widgets.editor import NotoEditor
-from notosrc.widgets.preview import NotoPreview
-from notosrc.parsers.markup import render_markdown
+from draftsrc.widgets.editor import DraftEditor
+from draftsrc.widgets.preview import DraftPreview
+from draftsrc.parsers.markup import render_markdown
 
 
 # TODO: Make this a horizontal box to support side-by-side editing
@@ -29,7 +29,7 @@ class ContentView(Gtk.Bin):
         Gtk.Bin.__init__(self)
         self.parent_window = parent
         self.builder = Gtk.Builder()
-        self.builder.add_from_resource('/org/gnome/Noto/contentview.ui')
+        self.builder.add_from_resource('/org/gnome/Draft/contentview.ui')
         self._set_up_widgets()
 
     def _set_up_widgets(self):
@@ -37,10 +37,10 @@ class ContentView(Gtk.Bin):
         self.content_stack.set_hexpand(True)
         self.add(self.content_stack)
 
-        self.content_editor = NotoEditor(self.parent_window, self)
+        self.content_editor = DraftEditor(self.parent_window, self)
         self.content_stack.add_titled(self.content_editor, 'editor', 'Editor')
 
-        self.content_preview = NotoPreview(self.parent_window)
+        self.content_preview = DraftPreview(self.parent_window)
         self.content_stack.add_titled(self.content_preview, 'preview', 'Preview')
 
         self.content_stack.set_visible_child_name('editor')

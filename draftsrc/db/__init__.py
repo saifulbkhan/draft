@@ -22,10 +22,10 @@ from collections import OrderedDict
 
 from gi.repository import GLib, Gio
 
-from notosrc.file import USER_DATA_DIR, make_backup
-from notosrc.db.migrations import migrate_db
+from draftsrc.file import USER_DATA_DIR, make_backup
+from draftsrc.db.migrations import migrate_db
 
-DB_URL = os.path.join(USER_DATA_DIR, 'noto.db')
+DB_URL = os.path.join(USER_DATA_DIR, 'draft.db')
 
 
 @contextmanager

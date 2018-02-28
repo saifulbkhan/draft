@@ -3,7 +3,7 @@ configure_file(
   output: 'defs.py',
   configuration: conf,
   install: true,
-  install_dir: notosrcdir
+  install_dir: draftsrcdir
 )
 
 app_sources = [
@@ -38,8 +38,8 @@ widgets_sources = [
   'widgets/statusbar.py'
 ]
 
-install_data(app_sources, install_dir: notosrcdir)
-install_data(db_sources, install_dir: notosrcdir + '/db')
-install_data(parsers_sources, install_dir: notosrcdir + '/parsers')
-install_data(views_sources, install_dir: notosrcdir + '/views')
-install_data(widgets_sources, install_dir: notosrcdir + '/widgets')
+install_data(app_sources, install_dir: draftsrcdir)
+install_data(db_sources, install_dir: draftsrcdir + '/db')
+install_data(parsers_sources, install_dir: draftsrcdir + '/parsers')
+install_data(views_sources, install_dir: draftsrcdir + '/views')
+install_data(widgets_sources, install_dir: draftsrcdir + '/widgets')

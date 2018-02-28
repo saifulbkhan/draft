@@ -16,12 +16,12 @@
 from gettext import gettext as _
 
 from gi.repository import Gtk, GLib, Pango, Gdk
-from notosrc.views.store import NotoListStore, TreeStore
+from draftsrc.views.store import DraftListStore, TreeStore
 
 
 # TODO: Another class for text groups with TreeView as view
 
-# TODO: Make this a stack for storing multiple NotoTextsList
+# TODO: Make this a stack for storing multiple DraftTextsList
 class TextListView(Gtk.Bin):
     sidebar_width = 250
     def __repr__(self):
@@ -31,7 +31,7 @@ class TextListView(Gtk.Bin):
         Gtk.Bin.__init__(self)
         self.parent_window = parent
         self.builder = Gtk.Builder()
-        self.builder.add_from_resource('/org/gnome/Noto/textlistview.ui')
+        self.builder.add_from_resource('/org/gnome/Draft/textlistview.ui')
         self._set_up_widgets()
 
     def _set_up_widgets(self):
@@ -41,7 +41,7 @@ class TextListView(Gtk.Bin):
         listview = self.builder.get_object('listview')
 
         self.add(self.slider)
-        self.view = NotoTextsList(None)
+        self.view = DraftTextsList(None)
         listview.add(self.view)
 
         self.search_bar = self.builder.get_object('search_bar')
@@ -68,20 +68,20 @@ class TextListView(Gtk.Bin):
         self.view.new_text_request()
 
 
-class NotoTextsList(Gtk.ListBox):
+class DraftTextsList(Gtk.ListBox):
     """The listbox containing all the texts in a text group"""
-    __gtype__name__ = 'NotoTextsList'
+    __gtype__name__ = 'DraftTextsList'
 
     def __repr__(self):
-        return '<NotoTextsList>'
+        return '<DraftTextsList>'
 
     def __init__(self, parent_group):
-        """Initialize a new NotoTextsList for given @parent_group
+        """Initialize a new DraftTextsList for given @parent_group
 
         @parent_group: string, unique hash string for @parent_group
         """
         Gtk.ListBox.__init__(self)
-        self._model = NotoListStore(parent_group)
+        self._model = DraftListStore(parent_group)
 
         self.bind_model(self._model, self._create_row_widget, None)
         self.connect('key-press-event', self._on_key_press)
@@ -172,8 +172,8 @@ class NotoTextsList(Gtk.ListBox):
     def set_editor(self, editor):
         """Set editor for @self
 
-        @self: NotoTextsList
-        @editor: NotoEditor, the editor to display selected texts and listen
+        @self: DraftTextsList
+        @editor: DraftEditor, the editor to display selected texts and listen
                  for changes that need to be conveyed to the backend
         """
         self.editor = editor
@@ -192,7 +192,7 @@ class NotoTextsList(Gtk.ListBox):
         """Set the title for currently selected text, as well as write this to
         the db.
 
-        @self: NotoTextsList
+        @self: DraftTextsList
         @title: string, the title to be saved for current selection
         """
         row = self.get_selected_row()
@@ -207,7 +207,7 @@ class NotoTextsList(Gtk.ListBox):
         """Set the subtitle for currently selected text, as well as write this
         to the db.
 
-        @self: NotoTextsList
+        @self: DraftTextsList
         @subtitle: string, the subtitle to be saved for current selection
         """
         row = self.get_selected_row()
@@ -221,7 +221,7 @@ class NotoTextsList(Gtk.ListBox):
     def set_markup_for_current_selection(self, widget, markup):
         """Save the markup for currently selected text to the db.
 
-        @self: NotoTextsList
+        @self: DraftTextsList
         @markup: string, the markup to be saved for current selection
         """
         row = self.get_selected_row()
@@ -232,7 +232,7 @@ class NotoTextsList(Gtk.ListBox):
     def set_word_goal_for_current_selection(self, widget, goal):
         """Save the word count goal for currently selected text to the db.
 
-        @self: NotoTextsList
+        @self: DraftTextsList
         @markup: int, the word count goal to be saved for current selection
         """
         row = self.get_selected_row()
@@ -244,7 +244,7 @@ class NotoTextsList(Gtk.ListBox):
         """Ask store to make changes to the keywords of the currently selected text
         so that it can be written to db.
 
-        @self: NotoTextsList
+        @self: DraftTextsList
         @keywords: list, the list of string keywords which the selected text will be
                tagged with.
         """
@@ -262,7 +262,7 @@ class NotoTextsList(Gtk.ListBox):
         """Save last metdata that would be associated with the last edit session
         of the text.
 
-        @self: NotoTextsList
+        @self: DraftTextsList
         @metadata: dict, contains metadata associated with a text
         """
         if metadata:

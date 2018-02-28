@@ -22,11 +22,11 @@ gi.require_version('WkJsCore', '0.1')
 from gi.repository import Gtk, Gdk, WebKit2 as WebKit, WkJsCore
 
 
-class NotoPreview(Gtk.Box):
-    __gtype_name__ = 'NotoPreview'
+class DraftPreview(Gtk.Box):
+    __gtype_name__ = 'DraftPreview'
 
     def __repr__(self):
-        return '<NotoPreview>'
+        return '<DraftPreview>'
 
     def __init__(self, main_window):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
@@ -53,7 +53,7 @@ class NotoPreview(Gtk.Box):
         user_content_manager = WebKit.UserContentManager()
         home = environ.get('HOME')
         # This would only work on UNIX filesystems. Maybe fix this?
-        css_path = path.join(home, '.local/share/noto/styles/webview.css')
+        css_path = path.join(home, '.local/share/draft/styles/webview.css')
         with open(css_path) as f:
             css_str = f.read()
             user_stylesheet = WebKit.UserStyleSheet(

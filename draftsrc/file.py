@@ -21,7 +21,7 @@ import gi
 gi.require_version("GtkSource", "3.0")
 from gi.repository import GtkSource, Gio, GLib
 
-USER_DATA_DIR = join(GLib.get_user_data_dir(), 'noto')
+USER_DATA_DIR = join(GLib.get_user_data_dir(), 'draft')
 BASE_TEXT_DIR = join(USER_DATA_DIR, 'texts', 'local')
 TRASH_DIR = join(USER_DATA_DIR, 'texts', '.trash')
 

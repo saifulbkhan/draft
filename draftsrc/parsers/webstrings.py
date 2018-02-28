@@ -15,9 +15,9 @@
 
 import os.path
 
-from notosrc.defs import DATA_DIR
+from draftsrc.defs import DATA_DIR
 
-NOTO_DIR = 'file://' + os.path.join(DATA_DIR, 'noto')
+DRAFT_DIR = 'file://' + os.path.join(DATA_DIR, 'draft')
 
 head_string = '''
 <head>
@@ -36,7 +36,7 @@ head_string = '''
         src="%s/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
     </script>
 </head>
-''' % (NOTO_DIR)
+''' % (DRAFT_DIR)
 
 body_string = '''
 <body>

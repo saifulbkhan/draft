@@ -22,16 +22,16 @@ gi.require_version('GtkSource', '3.0')
 
 from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, Pango
 
-from notosrc import file
-from notosrc import db
-from notosrc.widgets.statusbar import NotoStatusbar
+from draftsrc import file
+from draftsrc import db
+from draftsrc.widgets.statusbar import DraftStatusbar
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
 GObject.type_ensure(GObject.GType(GtkSource.View))
 
 
-class NotoEditor(Gtk.Box):
-    __gtype_name__ = 'NotoEditor'
+class DraftEditor(Gtk.Box):
+    __gtype_name__ = 'DraftEditor'
 
     __gsignals__ = {
         'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
@@ -62,7 +62,7 @@ class NotoEditor(Gtk.Box):
         self.editor_stack = Gtk.Stack()
         self.pack_start(self.editor_stack, True, True, 0)
 
-        self.statusbar = NotoStatusbar(self)
+        self.statusbar = DraftStatusbar(self)
         self.pack_start(self.statusbar, False, False, 0)
 
         self.statusbar.connect('word-goal-set', self._on_word_goal_set)
@@ -80,7 +80,7 @@ class NotoEditor(Gtk.Box):
         self.view.set_top_margin(10)
         self.view.scroll_offset = 3
         self.view.overscroll_num_lines = 3
-        self.view.get_style_context().add_class('noto-editor')
+        self.view.get_style_context().add_class('draft-editor')
 
         self._prep_buffer()
 
@@ -170,7 +170,7 @@ class NotoEditor(Gtk.Box):
 
             return
 
-        view = NotoTextView()
+        view = DraftTextView()
         self._prep_view(view)
 
         scrollable = Gtk.ScrolledWindow(None, None)
@@ -265,12 +265,12 @@ class NotoEditor(Gtk.Box):
         return title, None
 
 
-class NotoTextView(GtkSource.View):
-    __gtype_name__ = 'NotoTextView'
+class DraftTextView(GtkSource.View):
+    __gtype_name__ = 'DraftTextView'
     scroll_duration = 150
 
     def __repr__(self):
-        return '<NotoTextView>'
+        return '<DraftTextView>'
 
     def __init__(self):
         GtkSource.View.__init__(self)

@@ -21,13 +21,13 @@ install_data(
 message('Installing mathjax')
 install_subdir(
   'mathjax',
-  install_dir: join_paths(datadir, 'noto')
+  install_dir: join_paths(datadir, 'draft')
 )
 
 message('Installing stylesheet')
 install_data(
   'webview.css',
-  install_dir: join_paths(datadir, 'noto/styles')
+  install_dir: join_paths(datadir, 'draft/styles')
 )
 
 # TODO: Making a desktop file

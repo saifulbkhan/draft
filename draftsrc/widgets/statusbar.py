@@ -29,10 +29,10 @@ def registered_for_update(fn):
     return fn
 
 
-class NotoStatusbar(Gtk.Bin):
+class DraftStatusbar(Gtk.Bin):
     """A status bar for providing tagging and some mimimal information"""
 
-    __gtype_name__ = 'NotoStatusbar'
+    __gtype_name__ = 'DraftStatusbar'
 
     __gsignals__ = {
         'word-goal-set': (GObject.SignalFlags.RUN_FIRST,
@@ -43,23 +43,23 @@ class NotoStatusbar(Gtk.Bin):
     _builder = Gtk.Builder()
 
     def __repr__(self):
-        return '<NotoStatusbar>'
+        return '<DraftStatusbar>'
 
     def __init__(self, editor):
-        """Init a new NotoStatusbar for @editor
+        """Init a new DraftStatusbar for @editor
 
-        @self: NotoStatusbar
-        @editor: NotoEditor, the editor which @self serves
+        @self: DraftStatusbar
+        @editor: DraftEditor, the editor which @self serves
         """
         Gtk.Bin.__init__(self)
         self._editor = editor
-        self._builder.add_from_resource('/org/gnome/Noto/statusbar.ui')
+        self._builder.add_from_resource('/org/gnome/Draft/statusbar.ui')
         self._set_up_widgets()
 
     def _set_up_widgets(self):
         """Set up widgets contained within statusbar"""
         self._main_button_box = self._builder.get_object('main_button_box')
-        self._main_button_box.get_style_context().add_class('noto-statusbar')
+        self._main_button_box.get_style_context().add_class('draft-statusbar')
         self.add(self._main_button_box)
 
         self._word_count_label = self._builder.get_object('word_count_label')
@@ -95,7 +95,7 @@ class NotoStatusbar(Gtk.Bin):
 
     def update_state(self):
         """Update the state of statusbar to represent the currently visible
-        text-view in parent NotoEditor.
+        text-view in parent DraftEditor.
         """
         for update_method in UPDATE_REGISTRY:
             update_method(self)
@@ -148,7 +148,7 @@ class NotoStatusbar(Gtk.Bin):
 
         if not tags:
             empty_label = Gtk.Label(_("Add a keyword …"))
-            empty_label.get_style_context().add_class('noto-placeholder-label')
+            empty_label.get_style_context().add_class('draft-placeholder-label')
             empty_label.set_visible(True)
             self._tag_labels.pack_start(empty_label, False, False, 0)
             self._tag_popover_list.set_visible(False)
@@ -158,7 +158,7 @@ class NotoStatusbar(Gtk.Bin):
             label = Gtk.Label()
             label.set_label(tag)
             label.get_style_context()\
-                 .add_class('noto-tag-label')
+                 .add_class('draft-tag-label')
             label.set_visible(True)
 
             self._tag_labels.pack_start(label, False, False, 0)
@@ -170,7 +170,7 @@ class NotoStatusbar(Gtk.Bin):
 
             button = Gtk.Button()
             button.get_style_context().add_class('image-button')
-            button.get_style_context().add_class('noto-label-del-button')
+            button.get_style_context().add_class('draft-label-del-button')
             image = Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.BUTTON)
             button.set_image(image)
             button.set_visible(True)

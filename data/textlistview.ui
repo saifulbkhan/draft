@@ -45,7 +45,7 @@
               <placeholder/>
             </child>
             <style>
-              <class name="noto-listview"/>
+              <class name="draft-listview"/>
             </style>
           </object>
           <packing>
@@ -55,7 +55,7 @@
           </packing>
         </child>
         <style>
-          <class name="noto-textslist"/>
+          <class name="draft-textslist"/>
         </style>
       </object>
     </child>

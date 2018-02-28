@@ -16,8 +16,8 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
-from notosrc.views.listview import TextListView
-from notosrc.views.contentview import ContentView
+from draftsrc.views.listview import TextListView
+from draftsrc.views.contentview import ContentView
 
 
 class ApplicationWindow(Gtk.ApplicationWindow):
@@ -29,14 +29,14 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
         Gtk.ApplicationWindow.__init__(self,
                                        application=app,
-                                       title="Noto")
+                                       title="Draft")
 
         self.set_default_size(800, 600)
 
         if Gdk.Screen.get_default().get_height() < 700:
             self.maximize()
 
-        self.set_icon_name("noto")
+        self.set_icon_name("draft")
         self._set_up_actions()
         self._set_up_widgets()
         self.show_all()
@@ -56,7 +56,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self._topbox = Gtk.Box()
         self.add(self._topbox)
 
-        titlebar = _NotoHeaderBar(self)
+        titlebar = _DraftHeaderBar(self)
         self.set_titlebar(titlebar)
         self._create_list_views()
         self._create_stack_views()
@@ -91,11 +91,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         pass
 
 
-class _NotoHeaderBar(Gtk.Box):
-    __gtype_name__ = 'NotoHeaderBar'
+class _DraftHeaderBar(Gtk.Box):
+    __gtype_name__ = 'DraftHeaderBar'
 
     def __repr__(self):
-        return '<NotoHeaderBar>'
+        return '<DraftHeaderBar>'
 
     def __init__(self, parent):
         Gtk.Box.__init__(self)
@@ -104,7 +104,7 @@ class _NotoHeaderBar(Gtk.Box):
 
     def _set_up_widgets(self):
         self._builder = Gtk.Builder()
-        self._builder.add_from_resource('/org/gnome/Noto/headerbar.ui')
+        self._builder.add_from_resource('/org/gnome/Draft/headerbar.ui')
 
         self._headerbar = self._builder.get_object('HeaderBar')
         self.pack_start(self._headerbar, True, True, 0)

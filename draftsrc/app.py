@@ -19,20 +19,20 @@ import gi
 gi.require_version('Notify', '0.7')
 from gi.repository import Gtk, GLib, Gio, Gdk, Notify
 
-from notosrc.window import ApplicationWindow
-from notosrc.defs import VERSION as app_version
-from notosrc.file import init_storage
-from notosrc.db import init_db
+from draftsrc.window import ApplicationWindow
+from draftsrc.defs import VERSION as app_version
+from draftsrc.file import init_storage
+from draftsrc.db import init_db
 
 class Application(Gtk.Application):
     def __repr__(self):
         return '<Application>'
 
     def __init__(self):
-        Gtk.Application.__init__(self, application_id='org.gnome.Noto',
+        Gtk.Application.__init__(self, application_id='org.gnome.Draft',
                                  flags=Gio.ApplicationFlags.FLAGS_NONE)
-        GLib.set_application_name("Noto")
-        GLib.set_prgname('noto')
+        GLib.set_application_name("Draft")
+        GLib.set_prgname('draft')
         init_storage()
         init_db(app_version)
         self._init_style()
@@ -40,7 +40,7 @@ class Application(Gtk.Application):
 
     def _init_style(self):
         css_provider_file = Gio.File.new_for_uri(
-            'resource:///org/gnome/Noto/application.css')
+            'resource:///org/gnome/Draft/application.css')
         css_provider = Gtk.CssProvider()
         css_provider.load_from_file(css_provider_file)
         screen = Gdk.Screen.get_default()
@@ -49,7 +49,7 @@ class Application(Gtk.Application):
             screen, css_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     def _build_app_menu(self):
-        self.builder.add_from_resource('/org/gnome/Noto/appmenu.ui')
+        self.builder.add_from_resource('/org/gnome/Draft/appmenu.ui')
         appmenu = self.builder.get_object('appmenu')
         self.set_app_menu(appmenu)
 
@@ -78,7 +78,7 @@ class Application(Gtk.Application):
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
-        Notify.init("Noto")
+        Notify.init("Draft")
         self.builder = Gtk.Builder()
         self._build_app_menu()
 

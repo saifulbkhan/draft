@@ -15,7 +15,7 @@
 
 from hashlib import sha256
 
-from notosrc import db
+from draftsrc import db
 
 
 def create_keyword(conn, keyword):

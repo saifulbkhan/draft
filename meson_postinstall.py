@@ -16,8 +16,8 @@ if not destdir:
     print("Compiling new Schemas")
     call(['glib-compile-schemas', path.join(datadir, 'glib-2.0/schemas')])
     print("Copying stylesheets to user's home directory")
-    call(['cp', path.join(datadir, 'noto/styles/webview.css'), path.join(homedir, '.local/share/noto/styles')])
+    call(['cp', path.join(datadir, 'draft/styles/webview.css'), path.join(homedir, '.local/share/draft/styles')])
 
 print('Compiling python bytecode...')
 moduledir = sysconfig.get_path('purelib', vars={'base': str(prefix)})
-compile_dir(destdir + path.join(moduledir, 'notosrc'), optimize=2)
+compile_dir(destdir + path.join(moduledir, 'draftsrc'), optimize=2)

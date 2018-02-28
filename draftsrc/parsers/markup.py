@@ -17,12 +17,12 @@ import re, os.path
 
 from gi.repository import GLib
 
-from notosrc.parsers.mistune import escape
-from notosrc.parsers.mistune import Markdown, InlineLexer, BlockLexer, Renderer
-from notosrc.parsers.webstrings import html_string
-from notosrc.defs import DATA_DIR
+from draftsrc.parsers.mistune import escape
+from draftsrc.parsers.mistune import Markdown, InlineLexer, BlockLexer, Renderer
+from draftsrc.parsers.webstrings import html_string
+from draftsrc.defs import DATA_DIR
 
-NOTO_DIR = 'file://' + os.path.join(DATA_DIR, 'noto')
+DRAFT_DIR = 'file://' + os.path.join(DATA_DIR, 'draft')
 
 class MathBlockLexer(BlockLexer):
     def __init__(self):
@@ -126,4 +126,4 @@ def render_markdown(markup, webview):
     content = markdown(markup)
     webview.set_editable(True)
     content = html_string % content
-    GLib.idle_add(webview.load_html, content, NOTO_DIR)
+    GLib.idle_add(webview.load_html, content, DRAFT_DIR)

@@ -13,7 +13,7 @@
       <placeholder/>
     </child>
     <style>
-      <class name="noto-content"/>
+      <class name="draft-content"/>
     </style>
   </object>
 </interface>

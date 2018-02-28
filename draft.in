@@ -80,21 +80,21 @@ def set_log_level(parser):
 
 def set_internationalization():
     """Set application internationalization"""
-    locale.bindtextdomain('noto', LOCALE_DIR)
-    locale.textdomain('noto')
-    gettext.bindtextdomain('noto', LOCALE_DIR)
-    gettext.textdomain('noto')
+    locale.bindtextdomain('draft', LOCALE_DIR)
+    locale.textdomain('draft')
+    gettext.bindtextdomain('draft', LOCALE_DIR)
+    gettext.textdomain('draft')
 
 def set_resources():
     """Sets application ressource file."""
-    resource = Gio.resource_load(os.path.join(DATA_DIR, 'noto.gresource'))
+    resource = Gio.resource_load(os.path.join(DATA_DIR, 'draft.gresource'))
     Gio.resources_register(resource)
 
 def run_application():
     """Runs the application and returns its exit code."""
-    from notosrc.app import Application
-    from notosrc import db
-    
+    from draftsrc.app import Application
+    from draftsrc import db
+
     application = Application()
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
@@ -108,7 +108,7 @@ def run_application():
     return ret
 
 def main():
-    """Set up the environment and run Noto"""
+    """Set up the environment and run Draft"""
     set_exception_hook()
     parser = set_up_parser()
     set_log_level(parser)

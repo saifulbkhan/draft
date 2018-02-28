@@ -1,38 +1,38 @@
 @define-color highlight_color mix(@theme_bg_color, @theme_fg_color, 0.2);
 @define-color title_color mix(@theme_bg_color, @theme_fg_color, 0.5);
 
-.noto-listview {
+.draft-listview {
     border-width: 0 1px 0 0;
 }
 
-.noto-editor {
+.draft-editor {
     font-family: Helvetica;
     font-size: 16px;
 }
 
-.noto-statusbar {
+.draft-statusbar {
     border-top-style: solid;
     border-top-width: 1px;
     border-color: @borders;
 }
 
-.noto-statusbar-button {
+.draft-statusbar-button {
     border-style: none;
     box-shadow: none;
     border-radius: 0%;
     transition: background-image 0.5s;
 }
 
-.noto-statusbar-button:hover {
+.draft-statusbar-button:hover {
     /* setting constant color gradient to remove button bezel */
     background-image: linear-gradient(0deg, @highlight_color, @highlight_color);
 }
 
-.noto-placeholder-label {
+.draft-placeholder-label {
     color: @theme_fg_color;
 }
 
-.noto-tag-label {
+.draft-tag-label {
     font-weight: bold;
     margin: 0 6px 0 0;
     padding: 3px 3px;
@@ -43,23 +43,23 @@
     background-image: linear-gradient(0deg, @theme_bg_color, @theme_bg_color);
 }
 
-.noto-label-del-button {
+.draft-label-del-button {
     /* setting constant color gradient to remove button bezel */
     background-image: linear-gradient(0deg, @theme_bg_color, @theme_bg_color);
     border-style: none;
     box-shadow: none;
 }
 
-.noto-label-del-button image {
+.draft-label-del-button image {
     opacity: 0.5;
     transition: opacity 0.5s;
 }
 
-.noto-label-del-button:hover image {
+.draft-label-del-button:hover image {
     opacity: 1.0;
 }
 
-.noto-menu-title {
+.draft-menu-title {
     color: @title_color;
     font-weight: bold;
     font-size: 0.8em;

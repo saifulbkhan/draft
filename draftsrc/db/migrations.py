@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from notosrc import db
+from draftsrc import db
 
 # A dict for storing db versions corresponding to the application version they
 # were meant to be used with; this should be updated every new realease.

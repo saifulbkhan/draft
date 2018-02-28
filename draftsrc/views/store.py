@@ -17,11 +17,11 @@ from gettext import gettext as _
 
 from gi.repository import GLib, GObject, Gtk, Gio
 
-from notosrc import file, db
-from notosrc.db import data
+from draftsrc import file, db
+from draftsrc.db import data
 
 
-class NotoListStore(Gio.ListStore):
+class DraftListStore(Gio.ListStore):
     """Model for a list of texts (only) from one particular text group"""
 
     class RowData(GObject.Object):
@@ -176,10 +176,10 @@ class NotoListStore(Gio.ListStore):
             }
 
     def __repr__(self):
-        return '<NotoListStore>'
+        return '<DraftListStore>'
 
     def __init__(self, parent_group):
-        """Initialises a new NotoListStore for the given parent group. If
+        """Initialises a new DraftListStore for the given parent group. If
         @parent_group is None, orphan texts (not part of any group) are queried.
 
         @parent_group: string, The unique hash string for the parent group
@@ -205,7 +205,7 @@ class NotoListStore(Gio.ListStore):
     def new_text_request(self):
         """Request for a new text
 
-        @self: NotoListStore model
+        @self: DraftListStore model
         """
         id = None
         with db.connect() as connection:
@@ -219,7 +219,7 @@ class NotoListStore(Gio.ListStore):
     def prepare_for_edit(self, position, switch_view, load_file):
         """Prepare text at @position in @self to be edited.
 
-        @self: NotoListStore model
+        @self: DraftListStore model
         @position: integer, position at which the item to be edited is located
                    in the model
         @switch_view: method, called to check if a new editor buffer is needed
@@ -238,7 +238,7 @@ class NotoListStore(Gio.ListStore):
     def set_prop_for_position(self, position, prop, value):
         """Set property @prop for item at @position to @value
 
-        @self: NotoListStore model
+        @self: DraftListStore model
         @position: integer, position at which item is located
         @prop: string, property to be set
         @value: obj, value to be assigned to @prop
@@ -257,7 +257,7 @@ class NotoListStore(Gio.ListStore):
     def set_keywords_for_position(self, position, keywords):
         """Set the keywords for the item at given position
 
-        @self: NotoListStore model
+        @self: DraftListStore model
         @position: integer, position at which  item is located
         @keywords: list, the collection of strings as keywords for the item
         """
@@ -280,7 +280,7 @@ class NotoListStore(Gio.ListStore):
     def delete_item_at_postion(self, position):
         """Delete item at @position in model
 
-        @self: NotoListStore model
+        @self: DraftListStore model
         @position: integer, position at which the item to be deleted is located
         """
         item = self.get_item(position)

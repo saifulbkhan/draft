@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<interface domain="noto">
+<interface domain="draft">
   <!-- interface-requires gtk+ 3.0 -->
   <menu id="appmenu">
     <section>
