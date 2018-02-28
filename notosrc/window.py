@@ -44,7 +44,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def _set_up_actions(self):
         action_entries = [
             ('new_text', self._new_text_request),
-            ('new_notebook', self._new_notebook_request)
+            ('new_group', self._new_group_request)
         ]
 
         for action, cb in action_entries:
@@ -87,7 +87,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def _new_text_request(self, action, param):
         self.textlistview.new_text_request()
 
-    def _new_notebook_request(self, action, param):
+    def _new_group_request(self, action, param):
         pass
 
 

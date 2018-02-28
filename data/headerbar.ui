@@ -32,8 +32,8 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="receives_default">False</property>
-            <property name="action_name">win.new_notebook</property>
-            <property name="text" translatable="yes">Notebook</property>
+            <property name="action_name">win.new_group</property>
+            <property name="text" translatable="yes">Group</property>
           </object>
           <packing>
             <property name="expand">False</property>

@@ -315,44 +315,44 @@ class TreeStore(Gtk.TreeStore):
         self._load_data()
 
     def _load_data(self):
-        # TODO: add notebooks
+        # TODO: add groups
         pass
 
-    def new_notebook_request(self):
+    def new_group_request(self):
         id = None
         with data.session_scope() as session:
-            notebook = Notebook(name=_("Untitled"))
-            session.add(notebook)
+            group = Group(name=_("Untitled"))
+            session.add(group)
             # premature commit
             session.commit()
-            id = notebook.id
+            id = group.id
         with data.session_scope() as session:
-            notebook = data.fetch_notebook_by_id(id, session)
-            notebook_row = self.row_for_notebook(notebook)
-            self.append(None, notebook_row)
+            group = data.fetch_group_by_id(id, session)
+            group_row = self.row_for_group(group)
+            self.append(None, group_row)
 
-    def row_for_notebook(self, notebook):
-        items = len(notebook.texts) + len(notebook.notebooks)
-        row = [notebook.name,
+    def row_for_group(self, group):
+        items = len(group.texts) + len(group.groups)
+        row = [group.name,
                str(items),
-               notebook.get_last_modified_relative_time(),
-               notebook.id,
-               notebook.hash_id,
-               bool(notebook.in_trash)]
+               group.get_last_modified_relative_time(),
+               group.id,
+               group.hash_id,
+               bool(group.in_trash)]
         return row
 
-    def rows_for_notebooks(self, notebooks):
+    def rows_for_groups(self, groups):
         rows = []
-        for notebook in notebooks:
-            row = self.row_for_notebook(notebook)
+        for group in groups:
+            row = self.row_for_group(group)
             rows.append(row)
         return rows
 
-    def get_parent_hash_list(self, entity, parent_id='notebook_id'):
+    def get_parent_hash_list(self, entity, parent_id='group_id'):
         hashes = []
         while getattr(entity, parent_id):
-            notebook_id = getattr(entity, parent_id)
-            entity = fetch_notebook_by_id(notebook_id)
+            group_id = getattr(entity, parent_id)
+            entity = fetch_group_by_id(group_id)
             hashes.append(entity.hash_id)
         hashes.reverse()
         return hashes
