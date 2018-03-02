@@ -313,7 +313,7 @@ def texts_not_in_groups(conn):
     return fetch_texts(conn, where_condition)
 
 
-def text_in_group(conn, group_id):
+def texts_in_group(conn, group_id):
     """Return an iterator of texts from the db, with given parent group"""
     where_condition = 'parent_id = :id'
     args = {"id": group_id}
