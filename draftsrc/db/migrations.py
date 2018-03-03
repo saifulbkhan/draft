@@ -59,7 +59,7 @@ migration_scripts = {
 
             /* update table `notebook` */
             CREATE TABLE 'group' (
-                id            TEXT    NOT NULL DEFAULT NULL PRIMARY KEY,
+                id            INTEGER NOT NULL DEFAULT NULL PRIMARY KEY,
                 name          TEXT    NOT NULL DEFAULT NULL,
                 created       TEXT    NOT NULL DEFAULT NULL,
                 last_modified TEXT    NOT NULL DEFAULT NULL,

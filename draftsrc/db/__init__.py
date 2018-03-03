@@ -89,7 +89,7 @@ def init_db(app_version):
                 # create table for storing text-group metadata
                 create_group_table = '''
                     CREATE TABLE 'group' (
-                        id            TEXT    NOT NULL DEFAULT NULL PRIMARY KEY,
+                        id            INTEGER NOT NULL DEFAULT NULL PRIMARY KEY,
                         name          TEXT    NOT NULL DEFAULT NULL,
                         created       TEXT    NOT NULL DEFAULT NULL,
                         last_modified TEXT    NOT NULL DEFAULT NULL,
@@ -105,7 +105,7 @@ def init_db(app_version):
                 # create table for storing text metadata
                 create_text_table = '''
                     CREATE TABLE text (
-                        id                 TEXT    NOT NULL DEFAULT NULL PRIMARY KEY,
+                        id                 INTEGER NOT NULL DEFAULT NULL PRIMARY KEY,
                         title              TEXT    NOT NULL DEFAULT NULL,
                         created            TEXT    NOT NULL DEFAULT NULL,
                         last_modified      TEXT    NOT NULL DEFAULT NULL,
