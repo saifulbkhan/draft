@@ -47,7 +47,7 @@ def create_group(conn, name, group_id=None):
     """Create a new text group and return its id"""
     datetime = db.get_datetime()
     query = '''
-        INSERT INTO group (created, last_modified, name, parent_id, in_trash)
+        INSERT INTO "group" (created, last_modified, name, parent_id, in_trash)
              VALUES (:created, :modified, :name, :parent_id, :in_trash)'''
     cursor = conn.cursor()
     cursor.execute(query, {"created": datetime,
@@ -123,7 +123,7 @@ def update_keywords_for_text(conn, text_id, keywords):
 def update_group(conn, group_id, values):
     """Update the values for given group id"""
     update_query = '''
-        UPDATE group
+        UPDATE "group"
            SET last_modified = :modified
              , name = :name
              , parent_id = :parent_id
@@ -143,7 +143,7 @@ def update_group(conn, group_id, values):
         # for given group, its subgroups and texts.
         def _trash_groups_and_texts(conn, group):
             trash_group_query = '''
-                UPDATE group
+                UPDATE "group"
                    SET in_trash = 1
                  WHERE id = :id'''
             cursor.execute(trash_group_query, {"id": group})
@@ -156,7 +156,7 @@ def update_group(conn, group_id, values):
 
             select_subgroups_query = '''
                 SELECT id
-                  FROM group
+                  FROM "group"
                  WHERE parent_id = :id'''
             for subgroup in cursor.execute(select_subgroups_query, {"id": group}):
                 _trash_groups_and_texts(conn, subgroup[0])
@@ -176,7 +176,7 @@ def delete_text(conn, text_id):
 def delete_group(conn, group_id):
     """Delete a text group from db"""
     query = '''
-        DELETE FROM group
+        DELETE FROM "group"
               WHERE id = :id'''
     cursor = conn.cursor()
     cursor.execute(query, {"id": group_id})
@@ -189,7 +189,7 @@ def delete_group(conn, group_id):
 
     select_query = '''
         SELECT id
-          FROM group
+          FROM "group"
          WHERE parent_id = :id'''
     for row in cursor.execute(query, {"id": group_id}):
         delete_group(conn, row[0])
@@ -242,7 +242,7 @@ def fetch_parents_for_text(conn, text_id):
     together can form a relative path to text dir"""
     query = '''
         SELECT id, created
-          FROM 'group'
+          FROM "group"
          WHERE id = (SELECT parent_id
                        FROM %s
                       WHERE id = :id)'''
@@ -338,7 +338,7 @@ def fetch_groups(conn, where='', order='', args={}):
              , last_modified
              , parent_id
              , in_trash
-          FROM group'''
+          FROM "group"'''
     if where:
         query += '\nWHERE %s' % where
     if order:
