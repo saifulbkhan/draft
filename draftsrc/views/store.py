@@ -296,63 +296,108 @@ class DraftListStore(Gio.ListStore):
             data.update_text(connection, id, item.to_dict())
 
 
-class TreeStore(Gtk.TreeStore):
+class Column(object):
+    NAME = 0
+    CREATED = 1
+    LAST_MODIFIED = 2
+    IN_TRASH = 3
+    ID = 4
+    PARENT_ID = 5
+
+
+class DraftTreeStore(Gtk.TreeStore):
+    """Model for storing metadata related to heirarchical group structures"""
 
     def __repr__(self):
-        return '<TreeStore>'
+        return '<DraftTreeStore>'
 
     def __init__(self):
         Gtk.TreeStore.__init__(
             self,
-            GObject.TYPE_STRING,        # title or name
-            GObject.TYPE_STRING,        # keywords or number of items
-            GObject.TYPE_STRING,        # last modified
-            GObject.TYPE_INT,           # id for the entity
-            GObject.TYPE_STRING,        # hash-id for file or folder name
+            GObject.TYPE_STRING,        # name of group
+            GObject.TYPE_STRING,        # date created
+            GObject.TYPE_STRING,        # date last modified
             GObject.TYPE_BOOLEAN,       # whether in trash or not
-            GObject.TYPE_PYOBJECT       # list of parent hashes
+            GObject.TYPE_INT,           # id of the group
+            GObject.TYPE_INT            # id of the parent group
         )
         self._load_data()
 
     def _load_data(self):
-        # TODO: add groups
-        pass
+        """Load group data into tree model"""
+        with db.connect() as connection:
+            for parent_group in data.groups_not_in_groups(connection):
+                self._append_group_and_children(connection, parent_group)
 
-    def new_group_request(self):
-        id = None
-        with data.session_scope() as session:
-            group = Group(name=_("Untitled"))
-            session.add(group)
-            # premature commit
-            session.commit()
-            id = group.id
-        with data.session_scope() as session:
-            group = data.fetch_group_by_id(id, session)
-            group_row = self.row_for_group(group)
-            self.append(None, group_row)
+    def _append_group_and_children(self, connection, group, treeiter=None):
+        """Recursively append to tree with rows for @group and its child
+        groups, with @treeiter node as parent
 
-    def row_for_group(self, group):
-        items = len(group.texts) + len(group.groups)
-        row = [group.name,
-               str(items),
-               group.get_last_modified_relative_time(),
-               group.id,
-               group.hash_id,
-               bool(group.in_trash)]
-        return row
+        @connection: sqlite3.connection object, the db connection to reuse
+        @group: dict, metadata for group to be recursively inserted
+        @treeiter: GtkTreeIter, node iterator where @group and children
+                   will be appended
+        """
+        current_iter = self._append_group(group, treeiter)
 
-    def rows_for_groups(self, groups):
-        rows = []
-        for group in groups:
-            row = self.row_for_group(group)
-            rows.append(row)
-        return rows
+        for child_group in data.groups_in_group(connection, group['id']):
+            self._append_group_and_children(connection, child_group, current_iter)
 
-    def get_parent_hash_list(self, entity, parent_id='group_id'):
-        hashes = []
-        while getattr(entity, parent_id):
-            group_id = getattr(entity, parent_id)
-            entity = fetch_group_by_id(group_id)
-            hashes.append(entity.hash_id)
-        hashes.reverse()
-        return hashes
+    def _append_group(self, group, treeiter=None):
+        """Append a single group at the given node
+
+        @group: dict, metadata representing group to be appended
+        @treeiter: GtkTreeIter, node iterator where @group will be appended
+        """
+        values = [group['name'],
+                  group['created'],
+                  group['last_modified'],
+                  group['in_trash'],
+                  group['id'],
+                  group['parent_id']]
+        current_iter = self.append(treeiter, values)
+        return current_iter
+
+    def dict_for_row(self, treeiter):
+        return {
+            'name': self[treeiter][Column.NAME],
+            'created': self[treeiter][Column.CREATED],
+            'last_modified': self[treeiter][Column.LAST_MODIFIED],
+            'in_trash': self[treeiter][Column.IN_TRASH],
+            'id': self[treeiter][Column.ID],
+            'parent_id': self[treeiter][Column.PARENT_ID]
+        }
+
+    def new_group_request(self, parent_iter=None):
+        """Create a new text group and append it to the @parent_iter node"""
+        parent_id = None
+        if parent_iter:
+            parent_id = self[parent_iter][Column.ID]
+
+        with db.connect() as connection:
+            group_id = data.create_group(connection, _("Untitled"), parent_id)
+            group = data.group_for_id(connection, group_id)
+            return self._append_group(group, parent_iter)
+
+    def set_prop_for_iter(self, treeiter, prop, value):
+        """Set the property @prop to @value for the row given by @treeiter"""
+        assert prop in ['name', 'last_modified', 'in_trash', 'parent_id']
+
+        if prop == 'name':
+            self[treeiter][Column.NAME] = value
+        elif prop == 'last_modified':
+            self[treeiter][Column.LAST_MODIFIED] = value
+        elif prop == 'in_trash':
+            self[treeiter][Column.IN_TRASH] = value
+        elif prop == 'parent_id':
+            self[treeiter][Column.PARENT_ID] = value
+
+        values = self.dict_for_row(treeiter)
+        group_id = values['id']
+        with db.connect() as connection:
+            data.update_group(connection, group_id, values)
+
+        if self[treeiter][Column.IN_TRASH]:
+            self.remove(treeiter)
+
+        # TODO: update model structure if parent id changed
