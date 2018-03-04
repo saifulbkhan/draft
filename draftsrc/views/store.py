@@ -186,12 +186,19 @@ class DraftListStore(Gio.ListStore):
         """
         Gio.ListStore.__init__(self, item_type=self.RowData.__gtype__)
         self._parent_group = parent_group
-        self._load_texts(parent_group)
 
-    def _load_texts(self, parent):
-        """Asks db to fetch the set of texts in @parent group"""
+    def _load_texts(self):
+        """Asks db to fetch the set of texts in @parent_group"""
+        self.remove_all()
         with db.connect() as connection:
-            for text in data.texts_not_in_groups(connection):
+            load_fn = data.texts_in_group
+            kwargs = {'conn': connection, 'group_id': self._parent_group['id']}
+
+            if not self._parent_group['id']:
+                load_fn = data.texts_not_in_groups
+                kwargs = {'conn': connection}
+
+            for text in data.load_fn(**kwargs):
                 row = self._row_data_for_text(text)
                 if not row.in_trash:
                     self.append(row)
