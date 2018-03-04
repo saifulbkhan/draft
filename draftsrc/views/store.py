@@ -307,11 +307,12 @@ class Column(object):
 
 class DraftTreeStore(Gtk.TreeStore):
     """Model for storing metadata related to heirarchical group structures"""
+    _top_level_iter = None
 
     def __repr__(self):
         return '<DraftTreeStore>'
 
-    def __init__(self):
+    def __init__(self, top_row_name):
         Gtk.TreeStore.__init__(
             self,
             GObject.TYPE_STRING,        # name of group
@@ -321,7 +322,19 @@ class DraftTreeStore(Gtk.TreeStore):
             GObject.TYPE_INT,           # id of the group
             GObject.TYPE_INT            # id of the parent group
         )
+        self._append_top_level_row(top_row_name)
         self._load_data()
+
+    def _append_top_level_row(self, top_row_name):
+        top_level_group = {
+            'name': top_row_name,
+            'created': None,
+            'last_modified': None,
+            'in_trash': None,
+            'id': None,
+            'parent_id': None
+        }
+        self._top_level_iter = self._append_group(top_level_group)
 
     def _load_data(self):
         """Load group data into tree model"""
@@ -338,6 +351,12 @@ class DraftTreeStore(Gtk.TreeStore):
         @treeiter: GtkTreeIter, node iterator where @group and children
                    will be appended
         """
+        if group['in_trash']:
+            return
+
+        if not treeiter:
+            treeiter = self._top_level_iter
+
         current_iter = self._append_group(group, treeiter)
 
         for child_group in data.groups_in_group(connection, group['id']):
@@ -358,7 +377,7 @@ class DraftTreeStore(Gtk.TreeStore):
         current_iter = self.append(treeiter, values)
         return current_iter
 
-    def dict_for_row(self, treeiter):
+    def _dict_for_row(self, treeiter):
         return {
             'name': self[treeiter][Column.NAME],
             'created': self[treeiter][Column.CREATED],
@@ -368,10 +387,19 @@ class DraftTreeStore(Gtk.TreeStore):
             'parent_id': self[treeiter][Column.PARENT_ID]
         }
 
+    def _iter_is_top_level(self, treeiter):
+        path = self.get_path(treeiter)
+        top_level_path = self.get_path(self._top_level_iter)
+
+        if path == top_level_path:
+            return True
+
+        return False
+
     def new_group_request(self, parent_iter=None):
         """Create a new text group and append it to the @parent_iter node"""
         parent_id = None
-        if parent_iter:
+        if not self._iter_is_top_level(parent_iter):
             parent_id = self[parent_iter][Column.ID]
 
         with db.connect() as connection:
@@ -381,6 +409,9 @@ class DraftTreeStore(Gtk.TreeStore):
 
     def set_prop_for_iter(self, treeiter, prop, value):
         """Set the property @prop to @value for the row given by @treeiter"""
+        if self._iter_is_top_level(treeiter):
+            return
+
         assert prop in ['name', 'last_modified', 'in_trash', 'parent_id']
 
         if prop == 'name':
@@ -392,7 +423,7 @@ class DraftTreeStore(Gtk.TreeStore):
         elif prop == 'parent_id':
             self[treeiter][Column.PARENT_ID] = value
 
-        values = self.dict_for_row(treeiter)
+        values = self._dict_for_row(treeiter)
         group_id = values['id']
         with db.connect() as connection:
             data.update_group(connection, group_id, values)
