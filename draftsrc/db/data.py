@@ -373,5 +373,5 @@ def group_for_id(conn, group_id):
     """Return the group for given db id"""
     where_condition = 'id = :id'
     args = {"id": group_id}
-    gen = fetch_texts(conn, where_condition, args=args)
+    gen = fetch_groups(conn, where_condition, args=args)
     return next(gen)
