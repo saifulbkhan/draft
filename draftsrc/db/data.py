@@ -253,7 +253,7 @@ def fetch_parents_for_text(conn, text_id):
     while res:
         # parent strings are hashes of their creation date
         parents.append(sha256(res[1].encode()).hexdigest())
-        res = cursor.execute(query % 'group', {"id": res[0]}).fetchone()
+        res = cursor.execute(query % '"group"', {"id": res[0]}).fetchone()
 
     parents.reverse()
     return parents

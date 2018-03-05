@@ -16,12 +16,15 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
-from draftsrc.views.listview import TextListView
+from draftsrc.views.listview import TextListView, GroupTreeView
 from draftsrc.views.contentview import ContentView
 
 
 class ApplicationWindow(Gtk.ApplicationWindow):
     __gtype_name__ = 'ApplicationWindow'
+
+    group_panel_hidden = False
+    text_panel_hidden = False
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -58,12 +61,14 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
         titlebar = _DraftHeaderBar(self)
         self.set_titlebar(titlebar)
-        self._create_list_views()
+        self._create_panel_views()
         self._create_stack_views()
 
         self.connect('key-press-event', self._on_key_press)
 
-    def _create_list_views(self):
+    def _create_panel_views(self):
+        self.grouptreeview = GroupTreeView(self)
+        self._topbox.pack_start(self.grouptreeview, False, True, 0)
         self.textlistview = TextListView(self)
         self._topbox.pack_start(self.textlistview, False, True, 0)
 
@@ -74,21 +79,40 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.textlistview.set_editor(self.contentview.content_editor)
 
     def _on_key_press(self, widget, event):
-        modifiers = Gtk.accelerator_get_default_mod_mask()
-        event_and_modifiers = (event.state & modifiers)
+        modifier = Gtk.accelerator_get_default_mod_mask()
+        modifier = (event.state & modifier)
 
-        if not event_and_modifiers:
+        if modifier:
+            control_mask = Gdk.ModifierType.CONTROL_MASK
+            shift_mask = Gdk.ModifierType.SHIFT_MASK
+
+            if event.keyval == Gdk.KEY_F9 and modifier == control_mask:
+                self.toggle_group_panel()
+        else:
             if event.keyval == Gdk.KEY_F9:
-                self.toggle_panel()
+                self.toggle_both_panels()
 
-    def toggle_panel(self):
+    def toggle_group_panel(self):
+        self.group_panel_hidden = not self.group_panel_hidden
+        self.grouptreeview.toggle_panel()
+
+        if self.text_panel_hidden and not self.group_panel_hidden:
+            self.text_panel_hidden = False
+            self.textlistview.toggle_panel()
+
+    def toggle_both_panels(self):
+        self.text_panel_hidden = not self.text_panel_hidden
         self.textlistview.toggle_panel()
+
+        if self.text_panel_hidden and not self.group_panel_hidden:
+            self.group_panel_hidden = True
+            self.grouptreeview.toggle_panel()
 
     def _new_text_request(self, action, param):
         self.textlistview.new_text_request()
 
     def _new_group_request(self, action, param):
-        pass
+        self.grouptreeview.new_group_request()
 
 
 class _DraftHeaderBar(Gtk.Box):

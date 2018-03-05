@@ -15,11 +15,145 @@
 
 from gettext import gettext as _
 
-from gi.repository import Gtk, GLib, Pango, Gdk
-from draftsrc.views.store import DraftListStore, TreeStore
+from gi.repository import Gtk, GLib, Pango, Gdk, GObject
+
+from draftsrc.views.store import DraftListStore, DraftTreeStore, Column
 
 
-# TODO: Another class for text groups with TreeView as view
+class GroupTreeView(Gtk.Bin):
+    """A container bounding a GtkTreeView that allows for slider based hiding
+    and resizing"""
+
+    def __repr__(self):
+        return '<GroupTreeView>'
+
+    def __init__(self, parent):
+        Gtk.Bin.__init__(self)
+        self.parent_window = parent
+        self.builder = Gtk.Builder()
+        self.builder.add_from_resource('/org/gnome/Draft/grouptreeview.ui')
+        self._set_up_widgets()
+
+    def _set_up_widgets(self):
+        self.slider = self.builder.get_object('slider')
+        self.slider.set_hexpand(False)
+        scrolled = self.builder.get_object('scrolled')
+
+        self.add(self.slider)
+        self.view = DraftGroupsView()
+        scrolled.add(self.view)
+
+        self._popover = self.builder.get_object('popover')
+        self._popover_title = self.builder.get_object('popover_title')
+        self._name_entry = self.builder.get_object('text_entry')
+        self._action_button = self.builder.get_object('action_button')
+
+        self.view.connect('group-selected', self._on_group_selected)
+
+    def _on_group_selected(self, widget, group):
+        """Handler for `group-selected` signal from DraftsTreeView. Calls on
+        TextListView to reload its model with texts from selected group"""
+        self.parent_window.textlistview.set_model_for_group(group)
+
+    def toggle_panel(self):
+        """Toggle the reveal status of slider's child"""
+        if self.slider.get_reveal_child():
+            self.slider.set_reveal_child(False)
+        else:
+            self.slider.set_reveal_child(True)
+
+    def new_group_request(self):
+        """Cater to the request for new group creation. Pops up an entry to set
+        the name of the new group as well"""
+        rect = self.view.new_group_request()
+
+        self._action_button.set_label('Add')
+        self._action_button.connect('clicked', self._on_name_set)
+        self._name_entry.connect('activate', self._on_name_set)
+
+        self._popover_title.set_label('Group Name')
+        self._popover.set_pointing_to(rect)
+        self._popover.popup()
+
+    def _on_name_set(self, widget):
+        """Handler for activation of group naming entry or click of action
+        button"""
+        name = self._name_entry.get_text()
+        self.view.set_name_for_current_selection(name)
+        self._popover.popdown()
+
+
+class DraftGroupsView(Gtk.TreeView):
+    """The view presenting all the text groups in user's collection"""
+    __gtype_name__ = 'DraftGroupsView'
+
+    __gsignals__ = {
+        'group-selected': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+    }
+
+    def __repr__(self):
+        return '<DraftGroupsView>'
+
+    def __init__(self):
+        Gtk.TreeView.__init__(self, DraftTreeStore(top_row_name='Local'))
+
+        self.selection = self.get_selection()
+        self.selection.connect('changed', self._on_selection_changed)
+
+        self._populate()
+        self.set_headers_visible(False)
+        self.connect('key-press-event', self._on_key_press)
+
+    def _on_key_press(self, widget, event):
+        """Handle key presses within the widget"""
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            # Delete row and file with (Del)
+            if event.keyval == Gdk.KEY_Delete:
+                self.delete_selected_row()
+
+    def _populate(self):
+        """Set up cell renderer and column for the tree view and expand the
+        top level row"""
+        renderer = Gtk.CellRendererText(ellipsize=Pango.EllipsizeMode.END)
+        renderer.set_fixed_size(-1, 28)
+        column = Gtk.TreeViewColumn('title', renderer, text=Column.NAME)
+        self.title = column
+        self.append_column(column)
+        self.title.set_expand(True)
+        self.expand_row(Gtk.TreePath.new_from_string('0'), False)
+
+    def _on_selection_changed(self, selection):
+        """Handle selection change and subsequently emit `group-selected` signal"""
+        model, treeiter = self.selection.get_selected()
+        path = model.get_path(treeiter)
+        self.expand_row(path, False)
+        group = model.get_group_for_iter(treeiter)
+        self.emit('group-selected', group)
+
+    def new_group_request(self):
+        """Instruct model to create a new group and then return the GdkRectangle
+        associated with the new cell created for this entry"""
+        model, treeiter = self.selection.get_selected()
+        new_iter = model.new_group_request(treeiter)
+        self.selection.select_iter(new_iter)
+
+        path = model.get_path(new_iter)
+        rect = self.get_cell_area(path, self.title)
+        return rect
+
+    def set_name_for_current_selection(self, name):
+        """Change name for the group under current selection"""
+        model, treeiter = self.selection.get_selected()
+        model.set_prop_for_iter(treeiter, 'name', name)
+
+    def delete_selected_row(self):
+        """Delete the group under selection"""
+        model, treeiter = self.selection.get_selected()
+        model.set_prop_for_iter(treeiter, 'in_trash', True)
+
 
 # TODO: Make this a stack for storing multiple DraftTextsList
 class TextListView(Gtk.Bin):
@@ -41,7 +175,7 @@ class TextListView(Gtk.Bin):
         listview = self.builder.get_object('listview')
 
         self.add(self.slider)
-        self.view = DraftTextsList(None)
+        self.view = DraftTextsList()
         listview.add(self.view)
 
         self.search_bar = self.builder.get_object('search_bar')
@@ -61,6 +195,9 @@ class TextListView(Gtk.Bin):
             self.search_bar.set_search_mode(True)
             self.search_entry.grab_focus()
 
+    def set_model_for_group(self, group):
+        self.view.set_model(group)
+
     def set_editor(self, editor):
         self.view.set_editor(editor)
 
@@ -75,18 +212,14 @@ class DraftTextsList(Gtk.ListBox):
     def __repr__(self):
         return '<DraftTextsList>'
 
-    def __init__(self, parent_group):
+    def __init__(self):
         """Initialize a new DraftTextsList for given @parent_group
 
         @parent_group: string, unique hash string for @parent_group
         """
         Gtk.ListBox.__init__(self)
-        self._model = DraftListStore(parent_group)
-
-        self.bind_model(self._model, self._create_row_widget, None)
         self.connect('key-press-event', self._on_key_press)
         self.connect('row-selected', self._on_row_selected)
-        self._model.connect('items-changed', self._on_items_changed)
 
     def _create_row_widget(self, text_data, user_data):
         """Create a row widget for @text_data"""
@@ -168,6 +301,11 @@ class DraftTextsList(Gtk.ListBox):
         """Handler for model's `items-changed` signal"""
         row = self.get_row_at_index(position)
         self.select_row(row)
+
+    def set_model(self, parent_group):
+        self._model = DraftListStore(parent_group)
+        self.bind_model(self._model, self._create_row_widget, None)
+        self._model.connect('items-changed', self._on_items_changed)
 
     def set_editor(self, editor):
         """Set editor for @self
@@ -272,59 +410,3 @@ class DraftTextsList(Gtk.ListBox):
         """Delete currently selected text in the list"""
         position = self.get_selected_row().get_index()
         self._model.delete_item_at_postion(position)
-
-
-class ListView(Gtk.TreeView):
-
-    def __repr__(self):
-        return '<ListView>'
-
-    def __init__(self, window):
-        Gtk.TreeView.__init__(self, TreeStore())
-        self.model = self.get_model()
-        self.main_window = window
-        self.editor = None
-
-        self.selection = self.get_selection()
-        self.selection.connect('changed', self._on_selection_changed)
-
-        self._populate()
-        self.set_headers_visible(False)
-        self.connect('key-press-event', self._on_key_press)
-
-    def _on_key_press(self, widget, event):
-        modifiers = Gtk.accelerator_get_default_mod_mask()
-        event_and_modifiers = (event.state & modifiers)
-
-        if not event_and_modifiers:
-            # Delete row and file with (Del)
-            if event.keyval == Gdk.KEY_Delete:
-                self.delete_selected_row()
-
-    def _populate(self):
-        for i, title in enumerate(["title"]):
-            renderer = Gtk.CellRendererText(size_points=12,
-                                            ellipsize=Pango.EllipsizeMode.END)
-            renderer.set_fixed_size(-1, 36)
-            column = Gtk.TreeViewColumn(title, renderer, text=i)
-            setattr(self, title, column)
-            self.append_column(column)
-        self.title.set_expand(True)
-
-    def _on_selection_changed(self, selection):
-        model, treeiter = selection.get_selected()
-        self.model.prepare_for_edit(treeiter,
-                                    self.editor.switch_view,
-                                    self.editor.load_file)
-
-    def new_text_request(self):
-        treeiter = self.model.new_text_request()
-        self.selection.select_iter(treeiter)
-
-    def set_title_for_current_selection(self, title):
-        model, treeiter = self.selection.get_selected()
-        self.model.set_title_for_iter(treeiter, title)
-
-    def delete_selected_row(self):
-        model, treeiter = self.selection.get_selected()
-        self.model.delete_row_for_iter(treeiter)

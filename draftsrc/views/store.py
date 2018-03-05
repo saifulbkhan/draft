@@ -186,6 +186,7 @@ class DraftListStore(Gio.ListStore):
         """
         Gio.ListStore.__init__(self, item_type=self.RowData.__gtype__)
         self._parent_group = parent_group
+        self._load_texts()
 
     def _load_texts(self):
         """Asks db to fetch the set of texts in @parent_group"""
@@ -198,7 +199,7 @@ class DraftListStore(Gio.ListStore):
                 load_fn = data.texts_not_in_groups
                 kwargs = {'conn': connection}
 
-            for text in data.load_fn(**kwargs):
+            for text in load_fn(**kwargs):
                 row = self._row_data_for_text(text)
                 if not row.in_trash:
                     self.append(row)
@@ -218,7 +219,7 @@ class DraftListStore(Gio.ListStore):
         with db.connect() as connection:
             text_id = data.create_text(connection,
                                        _("Untitled"),
-                                       self._parent_group)
+                                       self._parent_group['id'])
             text = data.text_for_id(connection, text_id)
             text_row = self._row_data_for_text(text)
             return self.append(text_row)
@@ -327,20 +328,13 @@ class DraftTreeStore(Gtk.TreeStore):
             GObject.TYPE_STRING,        # date last modified
             GObject.TYPE_BOOLEAN,       # whether in trash or not
             GObject.TYPE_INT,           # id of the group
-            GObject.TYPE_INT            # id of the parent group
+            GObject.TYPE_PYOBJECT       # id of the parent group, can be null
         )
         self._append_top_level_row(top_row_name)
         self._load_data()
 
     def _append_top_level_row(self, top_row_name):
-        top_level_group = {
-            'name': top_row_name,
-            'created': None,
-            'last_modified': None,
-            'in_trash': None,
-            'id': None,
-            'parent_id': None
-        }
+        top_level_group = self._dict_for_top_level_row(top_row_name)
         self._top_level_iter = self._append_group(top_level_group)
 
     def _load_data(self):
@@ -375,14 +369,35 @@ class DraftTreeStore(Gtk.TreeStore):
         @group: dict, metadata representing group to be appended
         @treeiter: GtkTreeIter, node iterator where @group will be appended
         """
-        values = [group['name'],
-                  group['created'],
-                  group['last_modified'],
-                  group['in_trash'],
-                  group['id'],
-                  group['parent_id']]
+        values = [
+            group['name'],
+            group['created'],
+            group['last_modified'],
+            group['in_trash'],
+            group['id'],
+            group['parent_id']
+        ]
         current_iter = self.append(treeiter, values)
         return current_iter
+
+    def get_group_for_iter(self, treeiter):
+        """For the given @treeiter return a valid dict with metadata values"""
+        if self._iter_is_top_level(treeiter):
+            return self._dict_for_top_level_row()
+
+        return self._dict_for_row(treeiter)
+
+    def _dict_for_top_level_row(self, row_name=None):
+        if not row_name:
+            row_name = self[self._top_level_iter][Column.NAME]
+        return {
+            'name': row_name,
+            'created': None,
+            'last_modified': None,
+            'in_trash': None,
+            'id': None,
+            'parent_id': None
+        }
 
     def _dict_for_row(self, treeiter):
         return {
