@@ -421,7 +421,7 @@ class DraftTreeStore(Gtk.TreeStore):
     def new_group_request(self, parent_iter=None):
         """Create a new text group and append it to the @parent_iter node"""
         parent_id = None
-        if not self._iter_is_top_level(parent_iter):
+        if parent_iter and not self._iter_is_top_level(parent_iter):
             parent_id = self[parent_iter][Column.ID]
 
         with db.connect() as connection:
@@ -454,3 +454,14 @@ class DraftTreeStore(Gtk.TreeStore):
             self.remove(treeiter)
 
         # TODO: update model structure if parent id changed
+
+    def permanently_delete_group_at_iter(self, treeiter):
+        """Remove the row @treeiter from model and delete the group for this
+        entry from the DB as well"""
+        values = self._dict_for_row(treeiter)
+        group_id = values['id']
+        print(group_id)
+        with db.connect() as connection:
+            data.delete_group(connection, group_id)
+
+        self.remove(treeiter)

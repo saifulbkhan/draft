@@ -72,10 +72,18 @@ class GroupTreeView(Gtk.Bin):
         self._action_button.set_label('Add')
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
+        self._name_entry.connect('changed', self._on_name_entry_changed)
 
         self._popover_title.set_label('Group Name')
         self._popover.set_pointing_to(rect)
         self._popover.popup()
+
+    def _on_name_entry_changed(self, widget):
+        """Adjust the sensitivity of action button depending on the content of
+        text entry"""
+        text = self._name_entry.get_text()
+        activate = bool(text.strip())
+        self._action_button.set_sensitive(activate)
 
     def _on_name_set(self, widget):
         """Handler for activation of group naming entry or click of action
@@ -87,10 +95,11 @@ class GroupTreeView(Gtk.Bin):
         set that as the name of the group"""
         name = self._name_entry.get_text()
         if not name.strip():
-            name = _("Untitled")
-        self.view.set_name_for_current_selection(name)
-        self._name_entry.set_text('')
+            self.view.delete_selected_row(permanent=True)
+        else:
+            self.view.set_name_for_current_selection(name.strip())
         self.view.set_faded_selection(False)
+        self._name_entry.set_text('')
 
 
 class DraftGroupsView(Gtk.TreeView):
@@ -133,11 +142,21 @@ class DraftGroupsView(Gtk.TreeView):
         self.title = column
         self.append_column(column)
         self.title.set_expand(True)
-        self.expand_row(Gtk.TreePath.new_from_string('0'), False)
+        root_path = self._root_path()
+        self.expand_row(root_path, False)
+
+    def _root_path(self):
+        """Get the GtkTreePath for root entry of a treeview"""
+        return Gtk.TreePath.new_from_string('0')
 
     def _on_selection_changed(self, selection):
         """Handle selection change and subsequently emit `group-selected` signal"""
         model, treeiter = self.selection.get_selected()
+        if not (model and treeiter):
+            root_path = self._root_path()
+            self.selection.select_path(root_path)
+            return
+
         path = model.get_path(treeiter)
         self.expand_row(path, False)
         group = model.get_group_for_iter(treeiter)
@@ -170,10 +189,13 @@ class DraftGroupsView(Gtk.TreeView):
         model, treeiter = self.selection.get_selected()
         model.set_prop_for_iter(treeiter, 'name', name)
 
-    def delete_selected_row(self):
+    def delete_selected_row(self, permanent=False):
         """Delete the group under selection"""
         model, treeiter = self.selection.get_selected()
-        model.set_prop_for_iter(treeiter, 'in_trash', True)
+        if not permanent:
+            model.set_prop_for_iter(treeiter, 'in_trash', True)
+        else:
+            model.permanently_delete_group_at_iter(treeiter)
 
 
 # TODO: Make this a stack for storing multiple DraftTextsList
