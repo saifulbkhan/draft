@@ -175,6 +175,8 @@ class DraftGroupsView(Gtk.TreeView):
         associated with the new cell created for this entry"""
         model, treeiter = self.selection.get_selected()
         new_iter = model.create_decoy_group(treeiter)
+
+        self.expand_row(model.get_path(treeiter), False)
         self.selection.select_iter(new_iter)
 
         path = model.get_path(new_iter)
@@ -188,7 +190,9 @@ class DraftGroupsView(Gtk.TreeView):
         if name:
             new_iter = model.finalize_group_creation(treeiter, name)
         else:
+            parent = model.iter_parent(treeiter)
             model.remove(treeiter)
+            self.selection.select_iter(parent)
 
     def set_name_for_current_selection(self, name):
         """Change name for the group under current selection"""
