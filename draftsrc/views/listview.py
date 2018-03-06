@@ -49,6 +49,7 @@ class GroupTreeView(Gtk.Bin):
         self._action_button = self.builder.get_object('action_button')
 
         self.view.connect('group-selected', self._on_group_selected)
+        self._popover.connect('closed', self._on_popover_closed)
 
     def _on_group_selected(self, widget, group):
         """Handler for `group-selected` signal from DraftsTreeView. Calls on
@@ -66,6 +67,7 @@ class GroupTreeView(Gtk.Bin):
         """Cater to the request for new group creation. Pops up an entry to set
         the name of the new group as well"""
         rect = self.view.new_group_request()
+        self.view.set_faded_selection(True)
 
         self._action_button.set_label('Add')
         self._action_button.connect('clicked', self._on_name_set)
@@ -78,9 +80,17 @@ class GroupTreeView(Gtk.Bin):
     def _on_name_set(self, widget):
         """Handler for activation of group naming entry or click of action
         button"""
-        name = self._name_entry.get_text()
-        self.view.set_name_for_current_selection(name)
         self._popover.popdown()
+
+    def _on_popover_closed(self, widget):
+        """When the naming popover closes, get the string from text entry and
+        set that as the name of the group"""
+        name = self._name_entry.get_text()
+        if not name.strip():
+            name = _("Untitled")
+        self.view.set_name_for_current_selection(name)
+        self._name_entry.set_text('')
+        self.view.set_faded_selection(False)
 
 
 class DraftGroupsView(Gtk.TreeView):
@@ -132,6 +142,17 @@ class DraftGroupsView(Gtk.TreeView):
         self.expand_row(path, False)
         group = model.get_group_for_iter(treeiter)
         self.emit('group-selected', group)
+
+    def set_faded_selection(self, faded):
+        """Applies or removes the `draft-faded-selection` class to TreeView,
+        useful when trying to visually denote the selected row as partially
+        present"""
+        faded_class = 'draft-faded-selection'
+        ctx = self.get_style_context()
+        if faded:
+            ctx.add_class(faded_class)
+        elif ctx.has_class(faded_class):
+            ctx.remove_class(faded_class)
 
     def new_group_request(self):
         """Instruct model to create a new group and then return the GdkRectangle

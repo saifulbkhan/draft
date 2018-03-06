@@ -425,7 +425,7 @@ class DraftTreeStore(Gtk.TreeStore):
             parent_id = self[parent_iter][Column.ID]
 
         with db.connect() as connection:
-            group_id = data.create_group(connection, _("Untitled"), parent_id)
+            group_id = data.create_group(connection, _("New Group"), parent_id)
             group = data.group_for_id(connection, group_id)
             return self._append_group(group, parent_iter)
 
