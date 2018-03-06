@@ -94,10 +94,7 @@ class GroupTreeView(Gtk.Bin):
         """When the naming popover closes, get the string from text entry and
         set that as the name of the group"""
         name = self._name_entry.get_text()
-        if not name.strip():
-            self.view.delete_selected_row(permanent=True)
-        else:
-            self.view.set_name_for_current_selection(name.strip())
+        self.view.finalize_name_for_new_group(name.strip())
         self.view.set_faded_selection(False)
         self._name_entry.set_text('')
 
@@ -177,12 +174,21 @@ class DraftGroupsView(Gtk.TreeView):
         """Instruct model to create a new group and then return the GdkRectangle
         associated with the new cell created for this entry"""
         model, treeiter = self.selection.get_selected()
-        new_iter = model.new_group_request(treeiter)
+        new_iter = model.create_decoy_group(treeiter)
         self.selection.select_iter(new_iter)
 
         path = model.get_path(new_iter)
         rect = self.get_cell_area(path, self.title)
         return rect
+
+    def finalize_name_for_new_group(self, name):
+        """Give the selected group a name and then finalize its creation and
+        if name is not a non-whitespace string, discard the row altogether"""
+        model, treeiter = self.selection.get_selected()
+        if name:
+            new_iter = model.finalize_group_creation(treeiter, name)
+        else:
+            model.remove(treeiter)
 
     def set_name_for_current_selection(self, name):
         """Change name for the group under current selection"""

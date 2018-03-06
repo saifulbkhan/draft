@@ -380,6 +380,13 @@ class DraftTreeStore(Gtk.TreeStore):
         current_iter = self.append(treeiter, values)
         return current_iter
 
+    def _update_group(self, treeiter, group):
+        """Update the row at @treeiter with values from @group"""
+        cols = ['name', 'created', 'last_modified', 'in_trash', 'id', 'parent_id']
+        for col in cols:
+            col_id = col.upper()
+            self[treeiter][getattr(Column, col_id)] = group[col]
+
     def get_group_for_iter(self, treeiter):
         """For the given @treeiter return a valid dict with metadata values"""
         if self._iter_is_top_level(treeiter):
@@ -409,6 +416,16 @@ class DraftTreeStore(Gtk.TreeStore):
             'parent_id': self[treeiter][Column.PARENT_ID]
         }
 
+    def _dict_for_decoy_group(self, parent_id):
+        return {
+            'name': _("New Group"),
+            'created': None,
+            'last_modified': None,
+            'in_trash': False,
+            'id': None,
+            'parent_id': parent_id
+        }
+
     def _iter_is_top_level(self, treeiter):
         path = self.get_path(treeiter)
         top_level_path = self.get_path(self._top_level_iter)
@@ -418,16 +435,22 @@ class DraftTreeStore(Gtk.TreeStore):
 
         return False
 
-    def new_group_request(self, parent_iter=None):
+    def create_decoy_group(self, parent_iter=None):
         """Create a new text group and append it to the @parent_iter node"""
         parent_id = None
         if parent_iter and not self._iter_is_top_level(parent_iter):
             parent_id = self[parent_iter][Column.ID]
 
+        group = self._dict_for_decoy_group(parent_id)
+        return self._append_group(group, parent_iter)
+
+    def finalize_group_creation(self, treeiter, name):
+        """Finalize creation of the decoy group at @treeiter with the new @name"""
+        parent_id = self[treeiter][Column.PARENT_ID]
         with db.connect() as connection:
-            group_id = data.create_group(connection, _("New Group"), parent_id)
+            group_id = data.create_group(connection, name, parent_id)
             group = data.group_for_id(connection, group_id)
-            return self._append_group(group, parent_iter)
+            return self._update_group(treeiter, group)
 
     def set_prop_for_iter(self, treeiter, prop, value):
         """Set the property @prop to @value for the row given by @treeiter"""
@@ -460,7 +483,6 @@ class DraftTreeStore(Gtk.TreeStore):
         entry from the DB as well"""
         values = self._dict_for_row(treeiter)
         group_id = values['id']
-        print(group_id)
         with db.connect() as connection:
             data.delete_group(connection, group_id)
 
