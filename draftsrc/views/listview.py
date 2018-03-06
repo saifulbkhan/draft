@@ -112,6 +112,8 @@ class DraftGroupsView(Gtk.TreeView):
 
     def __init__(self):
         Gtk.TreeView.__init__(self, DraftTreeStore(top_row_name='Local'))
+        ctx = self.get_style_context()
+        ctx.add_class('draft-treeview')
 
         self.selection = self.get_selection()
         self.selection.connect('changed', self._on_selection_changed)
