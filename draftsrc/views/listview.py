@@ -23,6 +23,7 @@ from draftsrc.views.store import DraftListStore, DraftTreeStore, Column
 class GroupTreeView(Gtk.Bin):
     """A container bounding a GtkTreeView that allows for slider based hiding
     and resizing"""
+    _creation_state = False
 
     def __repr__(self):
         return '<GroupTreeView>'
@@ -49,6 +50,10 @@ class GroupTreeView(Gtk.Bin):
         self._action_button = self.builder.get_object('action_button')
 
         self.view.connect('group-selected', self._on_group_selected)
+        self.view.connect('rename-requested', self._on_group_rename_requested)
+        self._action_button.connect('clicked', self._on_name_set)
+        self._name_entry.connect('activate', self._on_name_set)
+        self._name_entry.connect('changed', self._on_name_entry_changed)
         self._popover.connect('closed', self._on_popover_closed)
 
     def _on_group_selected(self, widget, group):
@@ -69,11 +74,8 @@ class GroupTreeView(Gtk.Bin):
         rect = self.view.new_group_request()
         self.view.set_faded_selection(True)
 
-        self._action_button.set_label('Add')
-        self._action_button.connect('clicked', self._on_name_set)
-        self._name_entry.connect('activate', self._on_name_set)
-        self._name_entry.connect('changed', self._on_name_entry_changed)
-
+        self._creation_state = True
+        self._action_button.set_label('Create')
         self._popover_title.set_label('Group Name')
         self._popover.set_pointing_to(rect)
         self._popover.popup()
@@ -87,16 +89,33 @@ class GroupTreeView(Gtk.Bin):
 
     def _on_name_set(self, widget):
         """Handler for activation of group naming entry or click of action
-        button"""
+        button. Obtains the string from text entry and set that as the name of
+        the group"""
+        name = self._name_entry.get_text().strip()
+        if not name:
+            return
+
+        if self._creation_state:
+            self.view.finalize_name_for_new_group(name)
+        else:
+            self.view.set_name_for_current_selection(name.strip())
+
         self._popover.popdown()
 
     def _on_popover_closed(self, widget):
-        """When the naming popover closes, get the string from text entry and
-        set that as the name of the group"""
-        name = self._name_entry.get_text()
-        self.view.finalize_name_for_new_group(name.strip())
-        self.view.set_faded_selection(False)
+        """When the naming popover closes, discard new group if it has not been
+        finalized, set creation state to `False` and set name entry to blank"""
         self._name_entry.set_text('')
+        self.view.discard_new_group()
+        self.view.set_faded_selection(False)
+        self._creation_state = False
+
+    def _on_group_rename_requested(self, widget, rect):
+        """Handle request for group rename, set button and popover title"""
+        self._action_button.set_label('Rename')
+        self._popover_title.set_label('Rename Group')
+        self._popover.set_pointing_to(rect)
+        self._popover.popup()
 
 
 class DraftGroupsView(Gtk.TreeView):
@@ -104,7 +123,8 @@ class DraftGroupsView(Gtk.TreeView):
     __gtype_name__ = 'DraftGroupsView'
 
     __gsignals__ = {
-        'group-selected': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+        'group-selected': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
+        'rename-requested': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
     def __repr__(self):
@@ -131,6 +151,11 @@ class DraftGroupsView(Gtk.TreeView):
             # Delete row and file with (Del)
             if event.keyval == Gdk.KEY_Delete:
                 self.delete_selected_row()
+            elif event.keyval == Gdk.KEY_F2:
+                model, treeiter = self.selection.get_selected()
+                path = model.get_path(treeiter)
+                rect = self.get_cell_area(path, self.title)
+                self.emit('rename-requested', rect)
 
     def _populate(self):
         """Set up cell renderer and column for the tree view and expand the
@@ -189,12 +214,23 @@ class DraftGroupsView(Gtk.TreeView):
         """Give the selected group a name and then finalize its creation and
         if name is not a non-whitespace string, discard the row altogether"""
         model, treeiter = self.selection.get_selected()
-        if name:
-            new_iter = model.finalize_group_creation(treeiter, name)
-        else:
-            parent = model.iter_parent(treeiter)
-            model.remove(treeiter)
-            self.selection.select_iter(parent)
+
+        # check group has not yet been created
+        assert not model[treeiter][Column.CREATED]
+
+        model.finalize_group_creation(treeiter, name)
+
+    def discard_new_group(self):
+        """Discard a currently selected group only if it is a decoy"""
+        model, treeiter = self.selection.get_selected()
+
+        # if group has been created do nothing
+        if model[treeiter][Column.CREATED]:
+            return
+
+        parent = model.iter_parent(treeiter)
+        model.remove(treeiter)
+        self.selection.select_iter(parent)
 
     def set_name_for_current_selection(self, name):
         """Change name for the group under current selection"""
