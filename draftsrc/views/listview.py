@@ -49,12 +49,19 @@ class GroupTreeView(Gtk.Bin):
         self._name_entry = self.builder.get_object('text_entry')
         self._action_button = self.builder.get_object('action_button')
 
+        self._popover_menu = self.builder.get_object('popover_menu')
+        self._rename_button = self.builder.get_object('rename_button')
+        self._delete_button = self.builder.get_object('delete_button')
+
         self.view.connect('group-selected', self._on_group_selected)
         self.view.connect('rename-requested', self._on_group_rename_requested)
+        self.view.connect('menu-requested', self._on_group_menu_requested)
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
         self._name_entry.connect('changed', self._on_name_entry_changed)
         self._popover.connect('closed', self._on_popover_closed)
+        self._rename_button.connect('clicked', self._on_rename_clicked)
+        self._delete_button.connect('clicked', self._on_delete_clicked)
 
     def _on_group_selected(self, widget, group):
         """Handler for `group-selected` signal from DraftsTreeView. Calls on
@@ -110,12 +117,37 @@ class GroupTreeView(Gtk.Bin):
         self.view.set_faded_selection(False)
         self._creation_state = False
 
-    def _on_group_rename_requested(self, widget, rect):
+    def _on_group_rename_requested(self, widget):
         """Handle request for group rename, set button and popover title"""
+        rect = self.view.get_selected_rect()
         self._action_button.set_label('Rename')
         self._popover_title.set_label('Rename Group')
         self._popover.set_pointing_to(rect)
         self._popover.popup()
+
+    def _on_group_menu_requested(self, widget):
+        """Cater to context menu request for a group. Ignore if the selection
+        is the root container."""
+
+        def popup_menu():
+            if self.view.get_selected_path().to_string() == '0':
+                return
+
+            rect = self.view.get_selected_rect()
+            self._popover_menu.set_pointing_to(rect)
+            self._popover_menu.popup()
+
+        # have to queue this in main loop, so that correct GdkRectangle is
+        # selected before making menu point to it.
+        GLib.idle_add(popup_menu)
+
+    def _on_rename_clicked(self, widget):
+        self.view.emit('rename-requested')
+        self._popover_menu.popdown()
+
+    def _on_delete_clicked(self, widget):
+        self.view.delete_selected_row()
+        self._popover_menu.popdown()
 
 
 class DraftGroupsView(Gtk.TreeView):
@@ -124,7 +156,8 @@ class DraftGroupsView(Gtk.TreeView):
 
     __gsignals__ = {
         'group-selected': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
-        'rename-requested': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+        'rename-requested': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'menu-requested': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def __repr__(self):
@@ -141,21 +174,25 @@ class DraftGroupsView(Gtk.TreeView):
         self._populate()
         self.set_headers_visible(False)
         self.connect('key-press-event', self._on_key_press)
+        self.connect('button-press-event', self._on_button_press)
 
     def _on_key_press(self, widget, event):
-        """Handle key presses within the widget"""
+        """Handle key presses within the widget. Ignore some events that are not
+        meant for root iter."""
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
+        path_string = self.get_selected_path().to_string()
 
         if not event_and_modifiers:
-            # Delete row and file with (Del)
-            if event.keyval == Gdk.KEY_Delete:
+            if event.keyval == Gdk.KEY_Delete and path_string != '0':
                 self.delete_selected_row()
-            elif event.keyval == Gdk.KEY_F2:
-                model, treeiter = self.selection.get_selected()
-                path = model.get_path(treeiter)
-                rect = self.get_cell_area(path, self.title)
-                self.emit('rename-requested', rect)
+            elif event.keyval == Gdk.KEY_F2 and path_string != '0':
+                self.emit('rename-requested')
+
+    def _on_button_press(self, widget, event):
+        """Handle key presses within the widget"""
+        if event.triggers_context_menu():
+            self.emit('menu-requested')
 
     def _populate(self):
         """Set up cell renderer and column for the tree view and expand the
@@ -186,6 +223,14 @@ class DraftGroupsView(Gtk.TreeView):
         group = model.get_group_for_iter(treeiter)
         self.emit('group-selected', group)
 
+    def get_selected_path(self):
+        model, treeiter = self.selection.get_selected()
+        return model.get_path(treeiter)
+
+    def get_selected_rect(self):
+        path = self.get_selected_path()
+        return self.get_cell_area(path, self.title)
+
     def set_faded_selection(self, faded):
         """Applies or removes the `draft-faded-selection` class to TreeView,
         useful when trying to visually denote the selected row as partially
@@ -206,9 +251,7 @@ class DraftGroupsView(Gtk.TreeView):
         self.expand_row(model.get_path(treeiter), False)
         self.selection.select_iter(new_iter)
 
-        path = model.get_path(new_iter)
-        rect = self.get_cell_area(path, self.title)
-        return rect
+        return self._get_selected_rect()
 
     def finalize_name_for_new_group(self, name):
         """Give the selected group a name and then finalize its creation and
