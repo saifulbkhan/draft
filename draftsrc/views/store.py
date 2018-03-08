@@ -453,7 +453,10 @@ class DraftTreeStore(Gtk.TreeStore):
             return self._update_group(treeiter, group)
 
     def set_prop_for_iter(self, treeiter, prop, value):
-        """Set the property @prop to @value for the row given by @treeiter"""
+        """Set the property @prop to @value for the row given by @treeiter. This
+        method does not make changes to the model if the parent id is changed.
+        Instead, use `move_to_group` method which along with making necessary
+        changed, will also automatically call this method for update to db."""
         if self._iter_is_top_level(treeiter):
             return
 
@@ -476,7 +479,36 @@ class DraftTreeStore(Gtk.TreeStore):
         if self[treeiter][Column.IN_TRASH]:
             self.remove(treeiter)
 
-        # TODO: update model structure if parent id changed
+    def move_to_group(self, child_iter, parent_iter):
+        """Move group at @child_iter to group @parent_iter and set this parent
+        in db as well"""
+        if self.is_ancestor(child_iter, parent_iter):
+            return None
+
+        new_parent_id = self[parent_iter][Column.ID]
+        if self._iter_is_top_level(parent_iter):
+            new_parent_id = None
+
+        self.set_prop_for_iter(child_iter, 'parent_id', new_parent_id)
+        treeiter = self._recursive_move_group(child_iter, parent_iter)
+        self.remove(child_iter)
+        return treeiter
+
+    def _recursive_move_group(self, child_iter, parent_iter):
+        """Recursively move one group to another in the model. Note the group
+        being moved must still be removed from the model to avoid duplication.
+        Also, the changes are not reflected in the database. Therefore the
+        `move_to_group` should be used instead of this; this is basically a
+        helper function."""
+        group = self.get_group_for_iter(child_iter)
+        treeiter = self._append_group(group, parent_iter)
+        if self.iter_has_child(child_iter):
+            grand_child_iter = self.iter_children(child_iter)
+            while grand_child_iter is not None:
+                self._recursive_move_group(grand_child_iter, treeiter)
+                grand_child_iter = self.iter_next(grand_child_iter)
+
+        return treeiter
 
     def permanently_delete_group_at_iter(self, treeiter):
         """Remove the row @treeiter from model and delete the group for this
