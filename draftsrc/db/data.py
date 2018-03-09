@@ -122,6 +122,7 @@ def update_keywords_for_text(conn, text_id, keywords):
 
 def update_group(conn, group_id, values):
     """Update the values for given group id"""
+    datetime = db.get_datetime()
     update_query = '''
         UPDATE "group"
            SET last_modified = :modified
@@ -130,7 +131,7 @@ def update_group(conn, group_id, values):
              , in_trash = :in_trash
          WHERE id = :group_id'''
     cursor = conn.cursor()
-    cursor.execute(update_query, {"modified": values['last_modified'],
+    cursor.execute(update_query, {"modified": datetime,
                                   "name": values['name'],
                                   "parent_id": values['parent_id'],
                                   "in_trash": values['in_trash'],

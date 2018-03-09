@@ -275,10 +275,16 @@ class DraftListStore(Gio.ListStore):
             text = data.text_for_id(connection, id)
             text_file_name = text['hash_id']
             text_file_parents = text['parents']
-            group = data.group_for_id(connection, parent)
-            group_dir_name = group['hash_id']
-            group_dir_parents = group['parents']
-            group_dir_parents.append(group_dir_name)
+            group_dir_parents = []
+            if parent is not None:
+                group = data.group_for_id(connection, parent)
+                group_dir_name = group['hash_id']
+                group_dir_parents = group['parents']
+                group_dir_parents.append(group_dir_name)
+
+                # update group just to update its last modified status
+                data.update_group(connection, parent, group)
+
             file.move_file(text_file_name, text_file_parents, group_dir_parents)
 
             data.update_text(connection, id, item.to_dict())
@@ -512,6 +518,12 @@ class DraftTreeStore(Gtk.TreeStore):
                 file.move_file(group_dir_name,
                                group_dir_parents,
                                new_parent_dir_parents)
+
+                # make updates to both the old and new groups to update
+                # their last modified status
+                old_parent_group = data.group_for_id(connection, old_parent)
+                data.update_group(connection, old_parent, old_parent_group)
+                data.update_group(connection, new_parent, new_parent_group)
 
             if trashed:
                 group = data.group_for_id(connection, group_id)
