@@ -237,6 +237,10 @@ def fetch_keywords_for_text(conn, text_id):
     return keywords
 
 
+def hash_for_creation_datetime(datetime):
+    return sha256(datetime.encode()).hexdigest()
+
+
 def fetch_parents_for_text(conn, text_id):
     """Returns a list of hash strings for parent groups that joined
     together can form a relative path to text dir"""
@@ -252,7 +256,7 @@ def fetch_parents_for_text(conn, text_id):
     res = cursor.execute(query % 'text', {"id": text_id}).fetchone()
     while res:
         # parent strings are hashes of their creation date
-        parents.append(sha256(res[1].encode()).hexdigest())
+        parents.append(hash_for_creation_datetime(res[1]))
         res = cursor.execute(query % '"group"', {"id": res[0]}).fetchone()
 
     parents.reverse()
@@ -296,7 +300,7 @@ def fetch_texts(conn, where='', order='', args={}):
 
         # create hash_id for text; hope they are not created at the same time
         # on milliseconds scale!
-        values['hash_id'] = sha256(values['created'].encode()).hexdigest()
+        values['hash_id'] = hash_for_creation_datetime(values['created'])
 
         # create a list of parents
         values['parents'] = fetch_parents_for_text(conn, values['id'])
@@ -328,6 +332,28 @@ def text_for_id(conn, text_id):
     return next(gen)
 
 
+def fetch_parents_for_group(conn, group_id):
+    """Returns a list of hash strings for parent groups that joined
+    together can form a relative path to group dir"""
+    query = '''
+        SELECT id, created
+          FROM "group"
+         WHERE id = (SELECT parent_id
+                       FROM "group"
+                      WHERE id = :id)'''
+
+    cursor = conn.cursor()
+    parents = []
+    res = cursor.execute(query, {"id": group_id}).fetchone()
+    while res:
+        # parent strings are hashes of their creation date
+        parents.append(hash_for_creation_datetime(res[1]))
+        res = cursor.execute(query, {"id": res[0]}).fetchone()
+
+    parents.reverse()
+    return parents
+
+
 def fetch_groups(conn, where='', order='', args={}):
     """Return an iterator of text groups from the db, satisfying optional
     constraints"""
@@ -354,6 +380,13 @@ def fetch_groups(conn, where='', order='', args={}):
             'parent_id': row[4],
             'in_trash': row[5]
         }
+
+        # create hash_id for group
+        values['hash_id'] = hash_for_creation_datetime(values['created'])
+
+        # create a list of parents
+        values['parents'] = fetch_parents_for_group(conn, values['id'])
+
         yield values
 
 
