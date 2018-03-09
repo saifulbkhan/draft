@@ -111,7 +111,7 @@ def write_to_source_file_async(gsf, buffer):
 
 def create_dir(dirname, parent_names):
     parent_dir = sep.join(parent_names)
-    f_path = join(BASE_TEXT_DIR, parent_dir, filename)
+    f_path = join(BASE_TEXT_DIR, parent_dir, dirname)
     try:
         return Gio.File.new_for_path(f_path).make_directory_with_parents()
     except Exception as e:
