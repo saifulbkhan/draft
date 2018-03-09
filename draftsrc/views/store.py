@@ -253,6 +253,8 @@ class DraftListStore(Gio.ListStore):
         """
         if prop == 'keywords':
             return self.set_keywords_for_position(position, value)
+        elif prop == 'parent_id':
+            return self.set_parent_for_position(position, value)
 
         item = self.get_item(position)
         id = item.prop_db_id
@@ -261,6 +263,27 @@ class DraftListStore(Gio.ListStore):
 
         db.async_updater.execution_fn = data.update_text
         db.async_updater.enqueue(id, item.to_dict())
+
+    def set_parent_for_position(self, position, parent):
+        """Set the parent id for text at given position and move the text to
+        the corresponding folder"""
+        item = self.get_item(position)
+        item.prop_parent_id = parent
+        id = item.prop_db_id
+
+        with db.connect() as connection:
+            text = data.text_for_id(connection, id)
+            text_file_name = text['hash_id']
+            text_file_parents = text['parents']
+            group = data.group_for_id(connection, parent)
+            group_dir_name = group['hash_id']
+            group_dir_parents = group['parents']
+            group_dir_parents.append(group_dir_name)
+            file.move_file(text_file_name, text_file_parents, group_dir_parents)
+
+            data.update_text(connection, id, item.to_dict())
+
+        return item.prop_db_id
 
     def set_keywords_for_position(self, position, keywords):
         """Set the keywords for the item at given position
