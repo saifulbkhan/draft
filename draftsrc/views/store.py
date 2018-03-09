@@ -89,7 +89,7 @@ class DraftListStore(Gio.ListStore):
         def prop_in_trash(self, value):
             self.in_trash = value
 
-        @GObject.Property(type=int)
+        @GObject.Property(type=GObject.TYPE_PYOBJECT)
         def prop_parent_id(self):
             return self.parent_id
 
@@ -450,6 +450,7 @@ class DraftTreeStore(Gtk.TreeStore):
         with db.connect() as connection:
             group_id = data.create_group(connection, name, parent_id)
             group = data.group_for_id(connection, group_id)
+            file.create_dir(group['hash_id'], group['parents'])
             return self._update_group(treeiter, group)
 
     def set_prop_for_iter(self, treeiter, prop, value):
@@ -462,21 +463,42 @@ class DraftTreeStore(Gtk.TreeStore):
 
         assert prop in ['name', 'last_modified', 'in_trash', 'parent_id']
 
+        old_parent = self[treeiter][Column.PARENT_ID]
+        new_parent = self[treeiter][Column.PARENT_ID]
+        trashed = False
         if prop == 'name':
             self[treeiter][Column.NAME] = value
         elif prop == 'last_modified':
             self[treeiter][Column.LAST_MODIFIED] = value
         elif prop == 'in_trash':
-            self[treeiter][Column.IN_TRASH] = value
+            self[treeiter][Column.IN_TRASH] = trashed = value
         elif prop == 'parent_id':
-            self[treeiter][Column.PARENT_ID] = value
+            self[treeiter][Column.PARENT_ID] = new_parent = value
 
         values = self._dict_for_row(treeiter)
         group_id = values['id']
         with db.connect() as connection:
+            if old_parent != new_parent:
+                group = data.group_for_id(connection, group_id)
+                group_dir_name = group['hash_id']
+                group_dir_parents = group['parents']
+                new_parent_group = data.group_for_id(connection, new_parent)
+                new_parent_dir_name = new_parent_group['hash_id']
+                new_parent_dir_parents = new_parent_group['parents']
+                new_parent_dir_parents.append(new_parent_dir_name)
+                file.move_file(group_dir_name,
+                               group_dir_parents,
+                               new_parent_dir_parents)
+
+            if trashed:
+                group = data.group_for_id(connection, group_id)
+                group_dir_name = group['hash_id']
+                group_dir_parents = group['parents']
+                file.trash_file(group_dir_name, group_dir_parents)
+
             data.update_group(connection, group_id, values)
 
-        if self[treeiter][Column.IN_TRASH]:
+        if trashed:
             self.remove(treeiter)
 
     def move_to_group(self, child_iter, parent_iter):
