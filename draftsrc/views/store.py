@@ -460,7 +460,7 @@ class DraftTreeStore(Gtk.TreeStore):
             row_name = self[self._top_level_iter][Column.NAME]
         return {
             'name': row_name,
-            'created': None,
+            'created': db.get_datetime(),
             'last_modified': None,
             'in_trash': None,
             'id': None,
