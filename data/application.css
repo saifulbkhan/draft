@@ -66,11 +66,8 @@
     font-size: 0.8em;
 }
 
-.draft-treeview {
-    background: transparent;
-}
-
 .draft-treeview:hover {
+    background: transparent;
     background-color: alpha(@theme_fg_color, 0.05);
 }
 
@@ -84,4 +81,9 @@
     border-width: 1px 0;
     border-style: solid;
     border-color: @theme_selected_bg_color;
+}
+
+.draft-drag-icon {
+    background: @content_view_bg;
+    border: 1px solid @borders;
 }
