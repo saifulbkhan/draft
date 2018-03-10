@@ -543,19 +543,25 @@ class DraftTreeStore(Gtk.TreeStore):
                 group = data.group_for_id(connection, group_id)
                 group_dir_name = group['hash_id']
                 group_dir_parents = group['parents']
-                new_parent_group = data.group_for_id(connection, new_parent)
-                new_parent_dir_name = new_parent_group['hash_id']
-                new_parent_dir_parents = new_parent_group['parents']
-                new_parent_dir_parents.append(new_parent_dir_name)
+
+                new_parent_dir_parents = []
+                if new_parent:
+                    new_parent_group = data.group_for_id(connection, new_parent)
+                    new_parent_dir_name = new_parent_group['hash_id']
+                    new_parent_dir_parents = new_parent_group['parents']
+                    new_parent_dir_parents.append(new_parent_dir_name)
+
+                    # update the new parent's last modified status
+                    data.update_group(connection, new_parent, new_parent_group)
+
+                if old_parent:
+                    # update the old parent's last modified status
+                    old_parent_group = data.group_for_id(connection, old_parent)
+                    data.update_group(connection, old_parent, old_parent_group)
+
                 file.move_file(group_dir_name,
                                group_dir_parents,
                                new_parent_dir_parents)
-
-                # make updates to both the old and new groups to update
-                # their last modified status
-                old_parent_group = data.group_for_id(connection, old_parent)
-                data.update_group(connection, old_parent, old_parent_group)
-                data.update_group(connection, new_parent, new_parent_group)
 
             if trashed:
                 group = data.group_for_id(connection, group_id)
