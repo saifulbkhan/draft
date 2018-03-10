@@ -332,6 +332,38 @@ class DraftListStore(Gio.ListStore):
         with db.connect() as connection:
             data.update_text(connection, id, item.to_dict())
 
+    def get_data_for_position(self, position):
+        item = self.get_item(position)
+        return item.to_dict()
+
+    def get_position_for_id(self, text_id):
+        length = self.get_n_items()
+        for i in range(length):
+            item = self.get_item(i)
+            if item.prop_db_id == text_id:
+                return i
+
+        return None
+
+    def get_latest_modified_position(self):
+        length = self.get_n_items()
+
+        # move to utils
+        from datetime import datetime
+        latest_modified = None
+        latest_position = None
+
+        for i in range(length):
+            item = self.get_item(i)
+            text_data = item.to_dict()
+            text_last_modified = datetime.strptime(text_data['last_modified'],
+                                                   '%Y-%m-%dT%H:%M:%S.%f')
+            if not latest_modified or text_last_modified > latest_modified:
+                latest_modified = text_last_modified
+                latest_position = i
+
+        return latest_position
+
 
 class Column(object):
     NAME = 0
