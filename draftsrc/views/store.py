@@ -289,6 +289,8 @@ class DraftListStore(Gio.ListStore):
 
             data.update_text(connection, id, item.to_dict())
 
+        if parent != self._parent_group:
+            self.remove(position)
         return item.prop_db_id
 
     def set_keywords_for_position(self, position, keywords):

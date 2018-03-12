@@ -64,7 +64,7 @@ class GroupTreeView(Gtk.Bin):
         self._delete_button = self.builder.get_object('delete_button')
 
         self.view.connect('group-selected', self._on_group_selected)
-        self.view.connect('text-dropped', self._on_text_dropped)
+        self.view.connect('texts-dropped', self._on_texts_dropped)
         self.view.connect('rename-requested', self._on_group_rename_requested)
         self.view.connect('menu-requested', self._on_group_menu_requested)
         self._action_button.connect('clicked', self._on_name_set)
@@ -79,12 +79,10 @@ class GroupTreeView(Gtk.Bin):
         TextListView to reload its model with texts from selected group"""
         self.parent_window.textlistview.set_model_for_group(group)
 
-    def _on_text_dropped(self, widget, text_position, new_parent_id):
-        """Handle view's `text-dropped` signal. Note that the subsequent method
-        depends on certain assurances from the textlistview panel having the
-        same model as the one when dragging began."""
-        self.parent_window.textlistview.set_group_for_text(text_position,
-                                                           new_parent_id)
+    def _on_texts_dropped(self, widget, text_ids, new_parent_id):
+        """Handle view's `texts-dropped` signal"""
+        self.parent_window.textlistview.set_group_for_texts(text_ids,
+                                                            new_parent_id)
 
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""
@@ -114,6 +112,9 @@ class GroupTreeView(Gtk.Bin):
         text = self._name_entry.get_text()
         activate = bool(text.strip())
         self._action_button.set_sensitive(activate)
+
+    def escape_selection_mode(self):
+        pass
 
     def _on_name_set(self, widget):
         """Handler for activation of group naming entry or click of action
@@ -176,9 +177,9 @@ class DraftGroupsView(Gtk.TreeView):
     __gtype_name__ = 'DraftGroupsView'
 
     __gsignals__ = {
-        'text-dropped': (GObject.SignalFlags.RUN_FIRST,
-                         None,
-                         (GObject.TYPE_PYOBJECT, GObject.TYPE_PYOBJECT)),
+        'texts-dropped': (GObject.SignalFlags.RUN_FIRST,
+                          None,
+                          (GObject.TYPE_PYOBJECT, GObject.TYPE_PYOBJECT)),
         'group-selected': (GObject.SignalFlags.RUN_FIRST,
                            None,
                            (GObject.TYPE_PYOBJECT,)),
@@ -267,10 +268,6 @@ class DraftGroupsView(Gtk.TreeView):
         if new_parent_iter is None:
             return
 
-        # TODO:move to utils
-        def int_from_bytes(xbytes):
-            return int.from_bytes(xbytes, 'big')
-
         if info == GROUP_MOVE_INFO:
             datum = sel.get_data()
             path_string = datum.decode()
@@ -280,9 +277,9 @@ class DraftGroupsView(Gtk.TreeView):
             if treeiter:
                 self.selection.select_iter(treeiter)
         elif info == TEXT_MOVE_INFO:
-            datum = sel.get_data()
-            text_position = int_from_bytes(datum)
-            self.emit('text-dropped', text_position, new_parent_id)
+            data = sel.get_data()
+            text_ids = list(data)
+            self.emit('texts-dropped', text_ids, new_parent_id)
 
     def _populate(self):
         """Set up cell renderer and column for the tree view and expand the
@@ -453,8 +450,11 @@ class TextListView(Gtk.Bin):
     def new_text_request(self):
         self.view.new_text_request()
 
-    def set_group_for_text(self, text_position, group_id):
-        self.view.set_group_for_position(text_position, group_id)
+    def set_group_for_texts(self, text_ids, group_id):
+        self.view.set_group_for_ids(text_ids, group_id)
+
+    def escape_selection_mode(self):
+        self.view.set_multi_selection_mode(False)
 
     def _on_text_moved_to_group(self, widget, group_id):
         self.parent_window.grouptreeview.selection_request(group_id)
@@ -470,7 +470,7 @@ class DraftTextsList(Gtk.ListBox):
                                 (GObject.TYPE_PYOBJECT,))
     }
 
-    _text_being_moved = None
+    _texts_being_moved = []
 
     def __repr__(self):
         return '<DraftTextsList>'
@@ -482,7 +482,9 @@ class DraftTextsList(Gtk.ListBox):
         """
         Gtk.ListBox.__init__(self)
         self.connect('key-press-event', self._on_key_press)
-        self.connect('row-selected', self._on_row_selected)
+        self.connect('button-press-event', self._on_button_press)
+        self._row_selected_handler_id = self.connect('row-selected',
+                                                     self._on_row_selected)
 
     def _create_row_widget(self, text_data, user_data):
         """Create a row widget for @text_data"""
@@ -558,6 +560,19 @@ class DraftTextsList(Gtk.ListBox):
             if event.keyval == Gdk.KEY_Delete:
                 self.delete_selected_row()
 
+    def _on_button_press(self, widget, event):
+        """Handler for signal `button-press-event`"""
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        modifiers = (event.state & modifiers)
+
+        if modifiers:
+            control_mask = Gdk.ModifierType.CONTROL_MASK
+            shift_mask = Gdk.ModifierType.SHIFT_MASK
+
+            if (event.button == Gdk.BUTTON_PRIMARY
+                    and (modifiers == control_mask or modifiers == shift_mask)):
+                self.set_multi_selection_mode(True)
+
     def _on_row_selected(self, widget, row):
         """Handler for signal `row-selected`"""
         if not row:
@@ -598,27 +613,29 @@ class DraftTextsList(Gtk.ListBox):
 
     def _drag_data_get(self, widget, drag_context, selection, info, time):
         """Supply selection data with the db id of the row being dragged"""
-        row = self.get_selected_row()
-        position = row.get_index()
+        rows = self.get_selected_rows()
+        positions = [row.get_index() for row in rows]
+        text_data_list = [self._model.get_data_for_position(position)
+                          for position in positions]
+        ids = [text_data['id'] for text_data in text_data_list]
 
-        #TODO: move to utils
-        def int_to_bytes(x):
-            return x.to_bytes((x.bit_length() + 7) // 8, 'big')
-
-        selection.set(selection.get_target(), -1, int_to_bytes(position))
-        text_data = self._model.get_data_for_position(position)
-        self._text_being_moved = text_data['id']
+        selection.set(selection.get_target(), -1, bytearray(ids))
+        self._texts_being_moved = ids
 
     def set_model(self, parent_group):
         self._model = DraftListStore(parent_group)
         self.bind_model(self._model, self._create_row_widget, None)
         self._model.connect('items-changed', self._on_items_changed)
-        if self._text_being_moved:
-            position = self._model.get_position_for_id(self._text_being_moved)
-            if position is not None:
-                row = self.get_row_at_index(position)
-                self.select_row(row)
-            self._text_being_moved = None
+        if self._texts_being_moved:
+            if len(self._texts_being_moved) > 1:
+                self.set_multi_selection_mode(True)
+            positions = [self._model.get_position_for_id(text_id)
+                         for text_id in self._texts_being_moved]
+            if positions:
+                for position in positions:
+                    row = self.get_row_at_index(position)
+                    self.select_row(row)
+            self._texts_being_moved = []
         else:
             position = self._model.get_latest_modified_position()
             if position is not None:
@@ -640,19 +657,39 @@ class DraftTextsList(Gtk.ListBox):
         editor.connect('keywords-changed', self.set_keywords_for_current_selection)
         editor.connect('view-changed', self.save_last_edit_data)
 
+    def set_multi_selection_mode(self, multi_mode):
+        """Set or unset multiple selection mode for the ListView"""
+        if multi_mode:
+            if hasattr(self, 'editor'):
+                self.editor.set_sensitive(False)
+            self.handler_block(self._row_selected_handler_id)
+            self.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
+        else:
+            if hasattr(self, 'editor'):
+                self.editor.set_sensitive(True)
+            self.handler_unblock(self._row_selected_handler_id)
+            self.set_selection_mode(Gtk.SelectionMode.SINGLE)
+
+            position = self._model.get_latest_modified_position()
+            if position is not None:
+                row = self.get_row_at_index(position)
+                self.select_row(row)
+
     def new_text_request(self):
         """Request for creation of a new text and append it to the list"""
         self._model.new_text_request()
 
-    def set_group_for_position(self, position, group_id):
-        """Send text at @position to the group with id @group_id. Assuming this
-        is not the same group as the text is currently in, it will be removed
+    def set_group_for_ids(self, text_ids, group):
+        """Send texts with @text_ids to the group with id @group. Assuming this
+        is not the same group as the texts is currently in, it will be removed
         from the selected model."""
-        text_id = self._model.set_prop_for_position(position,
-                                                    'parent_id',
-                                                    group_id)
-        self._model.remove(position)
-        self.emit('text-moved-to-group', group_id)
+        for text_id in text_ids:
+            pos = self._model.get_position_for_id(text_id)
+            if pos is not None:
+                text_id = self._model.set_prop_for_position(pos,
+                                                            'parent_id',
+                                                            group)
+        self.emit('text-moved-to-group', group)
 
     def set_title_for_current_selection(self, widget, title):
         """Set the title for currently selected text, as well as write this to

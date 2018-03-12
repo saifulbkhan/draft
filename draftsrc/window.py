@@ -91,6 +91,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         else:
             if event.keyval == Gdk.KEY_F9:
                 self.toggle_both_panels()
+            elif event.keyval == Gdk.KEY_Escape:
+                self._escape_selection_modes()
 
     def toggle_group_panel(self):
         self.group_panel_hidden = not self.group_panel_hidden
@@ -113,6 +115,10 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     def _new_group_request(self, action, param):
         self.grouptreeview.new_group_request()
+
+    def _escape_selection_modes(self):
+        self.textlistview.escape_selection_mode()
+        self.grouptreeview.escape_selection_mode()
 
 
 class _DraftHeaderBar(Gtk.Box):
