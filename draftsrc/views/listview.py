@@ -454,7 +454,8 @@ class TextListView(Gtk.Bin):
         self.view.set_group_for_ids(text_ids, group_id)
 
     def escape_selection_mode(self):
-        self.view.set_multi_selection_mode(False)
+        if self.view.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
+            self.view.set_multi_selection_mode(False, escape=True)
 
     def _on_text_moved_to_group(self, widget, group_id):
         self.parent_window.grouptreeview.selection_request(group_id)
@@ -471,6 +472,7 @@ class DraftTextsList(Gtk.ListBox):
     }
 
     _texts_being_moved = []
+    _multi_row_selection_stack = []
 
     def __repr__(self):
         return '<DraftTextsList>'
@@ -483,8 +485,10 @@ class DraftTextsList(Gtk.ListBox):
         Gtk.ListBox.__init__(self)
         self.connect('key-press-event', self._on_key_press)
         self.connect('button-press-event', self._on_button_press)
+        self.connect('button-release-event', self._on_button_release)
         self._row_selected_handler_id = self.connect('row-selected',
                                                      self._on_row_selected)
+        self.set_selection_mode(Gtk.SelectionMode.BROWSE)
 
     def _create_row_widget(self, text_data, user_data):
         """Create a row widget for @text_data"""
@@ -560,22 +564,72 @@ class DraftTextsList(Gtk.ListBox):
             if event.keyval == Gdk.KEY_Delete:
                 self.delete_selected_row()
 
+    def _row_at_event_coordinates(self, event):
+        device = event.device
+        win = device.get_window_at_position()[0]
+        x, y, width, height = win.get_geometry()
+        return self.get_row_at_y(y)
+
     def _on_button_press(self, widget, event):
         """Handler for signal `button-press-event`"""
         modifiers = Gtk.accelerator_get_default_mod_mask()
         modifiers = (event.state & modifiers)
+
 
         if modifiers:
             control_mask = Gdk.ModifierType.CONTROL_MASK
             shift_mask = Gdk.ModifierType.SHIFT_MASK
 
             if (event.button == Gdk.BUTTON_PRIMARY
-                    and (modifiers == control_mask or modifiers == shift_mask)):
+                    and modifiers == control_mask):
                 self.set_multi_selection_mode(True)
+                row = self._row_at_event_coordinates(event)
+                if row.is_selected() and len(self.get_selected_rows()) > 1:
+                    self.unselect_row(row)
+                    row.set_selectable(False)
+                    if row in self._multi_row_selection_stack:
+                        self._multi_row_selection_stack.remove(row)
+                else:
+                    row.set_selectable(True)
+            elif (event.button == Gdk.BUTTON_PRIMARY
+                    and modifiers == shift_mask):
+                self.set_multi_selection_mode(True)
+                row = self._row_at_event_coordinates(event)
+                row_end = row.get_index()
+                row.set_selectable(True)
+
+                if not self._multi_row_selection_stack:
+                    selected_row = self.get_selected_row()
+                    self._multi_row_selection_stack.append(selected_row)
+
+                row = self._multi_row_selection_stack[-1]
+                row_start = row.get_index()
+                if row_start > row_end:
+                    row_end = row_start + row_end
+                    row_start = row_end - row_start
+                    row_end = row_end - row_start
+                for i in range(row_start, row_end):
+                    row = self.get_row_at_index(i)
+                    row.set_selectable(True)
+                    self.select_row(row)
+
+    def _on_button_release(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        modifiers = (event.state & modifiers)
+
+        if not modifiers:
+            if event.button == Gdk.BUTTON_PRIMARY:
+                row = self._row_at_event_coordinates(event)
+                row.set_selectable(True)
+                self.set_multi_selection_mode(False)
 
     def _on_row_selected(self, widget, row):
         """Handler for signal `row-selected`"""
         if not row:
+            return
+
+        if self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
+            self._multi_row_selection_stack.append(row)
             return
 
         position = row.get_index()
@@ -657,23 +711,23 @@ class DraftTextsList(Gtk.ListBox):
         editor.connect('keywords-changed', self.set_keywords_for_current_selection)
         editor.connect('view-changed', self.save_last_edit_data)
 
-    def set_multi_selection_mode(self, multi_mode):
+    def set_multi_selection_mode(self, multi_mode, escape=False):
         """Set or unset multiple selection mode for the ListView"""
         if multi_mode:
             if hasattr(self, 'editor'):
                 self.editor.set_sensitive(False)
-            self.handler_block(self._row_selected_handler_id)
             self.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
         else:
             if hasattr(self, 'editor'):
                 self.editor.set_sensitive(True)
-            self.handler_unblock(self._row_selected_handler_id)
-            self.set_selection_mode(Gtk.SelectionMode.SINGLE)
+            self.set_selection_mode(Gtk.SelectionMode.BROWSE)
+            self._multi_row_selection_stack.clear()
 
-            position = self._model.get_latest_modified_position()
-            if position is not None:
-                row = self.get_row_at_index(position)
-                self.select_row(row)
+            if escape:
+                position = self._model.get_latest_modified_position()
+                if position is not None:
+                    row = self.get_row_at_index(position)
+                    self.select_row(row)
 
     def new_text_request(self):
         """Request for creation of a new text and append it to the list"""
