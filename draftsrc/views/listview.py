@@ -645,13 +645,19 @@ class DraftTextsList(Gtk.ListBox):
     def _drag_begin(self, widget, drag_context):
         """When drag action begins this function does several things:
         1. find the row for @widget,
-        2. unselect it (if selected)
-        3. add a frame style for opaque background and borders
-        4. create a cairo surface for the row
-        5. set it as icon for the drag context
-        6. remove the frame style
-        7. set the row as selected"""
+        2. estimate the number of rows being moved
+        3. unselect it (if selected)
+        4. add a frame style for opaque background and borders
+        5. create a cairo surface for row (if single), a text surface otherwise
+        6. set it as icon for the drag context
+        7. remove the frame style
+        8. set the row as selected"""
         row = widget.get_ancestor(Gtk.ListBoxRow.__gtype__)
+        num_selected = len(self.get_selected_rows())
+        if (not row.is_selected()
+                and self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE):
+            num_selected += 1
+
         self.unselect_row(row)
         style_context = row.get_style_context()
         style_context.add_class('draft-drag-icon')
@@ -659,8 +665,47 @@ class DraftTextsList(Gtk.ListBox):
         surface = cairo.ImageSurface(cairo.FORMAT_ARGB32,
                                      allocation.width,
                                      allocation.height)
+
         context = cairo.Context(surface)
-        row.draw(context)
+        if num_selected > 1:
+            style_ctx = self.get_style_context()
+            font = style_ctx.get_font(style_ctx.get_state())
+            border_success, border_color = style_ctx.lookup_color('borders')
+            bg_success, bg_color = style_ctx.lookup_color('content_view_bg')
+            fg_success, fg_color = style_ctx.lookup_color('theme_fg_color')
+            if border_success and bg_success and fg_success:
+                offset = 10
+                font_size = int((font.get_size() / Pango.SCALE) * 96 / 72)
+                context.set_font_size(font_size)
+                font_family = font.get_family()
+                context.select_font_face(font_family,
+                                         cairo.FontSlant.NORMAL,
+                                         cairo.FontWeight.BOLD)
+                text = _(" items selected")
+                text = str(num_selected) + text
+                extents = context.text_extents(text)
+                context.set_source_rgba(border_color.red,
+                                        border_color.green,
+                                        border_color.blue)
+                context.rectangle(0, 0,
+                                  extents.width + (offset * 2),
+                                  extents.height + (offset * 2))
+                context.fill()
+                context.set_source_rgb(bg_color.red,
+                                       bg_color.green,
+                                       bg_color.blue)
+                context.rectangle(1, 1,
+                                  (extents.width + (offset * 2)) - 2,
+                                  (extents.height + (offset * 2)) - 2)
+                context.fill()
+                context.set_source_rgba(fg_color.red,
+                                        fg_color.green,
+                                        fg_color.blue)
+                context.move_to(offset, offset + extents.height)
+                context.show_text(text)
+        else:
+            row.draw(context)
+
         Gtk.drag_set_icon_surface(drag_context, surface)
         style_context.remove_class('draft-drag-icon')
         self.select_row(row)
