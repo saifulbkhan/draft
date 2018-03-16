@@ -84,37 +84,12 @@ class GroupTreeView(Gtk.Bin):
         self.parent_window.textlistview.set_group_for_texts(text_ids,
                                                             new_parent_id)
 
-    def toggle_panel(self):
-        """Toggle the reveal status of slider's child"""
-        if self.slider.get_reveal_child():
-            self.slider.set_reveal_child(False)
-        else:
-            self.slider.set_reveal_child(True)
-
-    def new_group_request(self):
-        """Cater to the request for new group creation. Pops up an entry to set
-        the name of the new group as well"""
-        rect = self.view.new_group_request()
-        self.view.set_faded_selection(True)
-
-        self._creation_state = True
-        self._action_button.set_label('Create')
-        self._popover_title.set_label('Group Name')
-        self._popover.set_pointing_to(rect)
-        self._popover.popup()
-
-    def selection_request(self, group_id):
-        self.view.select_for_id(group_id)
-
     def _on_name_entry_changed(self, widget):
         """Adjust the sensitivity of action button depending on the content of
         text entry"""
         text = self._name_entry.get_text()
         activate = bool(text.strip())
         self._action_button.set_sensitive(activate)
-
-    def escape_selection_mode(self):
-        pass
 
     def _on_name_set(self, widget):
         """Handler for activation of group naming entry or click of action
@@ -170,6 +145,31 @@ class GroupTreeView(Gtk.Bin):
     def _on_delete_clicked(self, widget):
         self.view.delete_selected_row()
         self._popover_menu.popdown()
+
+    def toggle_panel(self):
+        """Toggle the reveal status of slider's child"""
+        if self.slider.get_reveal_child():
+            self.slider.set_reveal_child(False)
+        else:
+            self.slider.set_reveal_child(True)
+
+    def new_group_request(self):
+        """Cater to the request for new group creation. Pops up an entry to set
+        the name of the new group as well"""
+        rect = self.view.new_group_request()
+        self.view.set_faded_selection(True)
+
+        self._creation_state = True
+        self._action_button.set_label('Create')
+        self._popover_title.set_label('Group Name')
+        self._popover.set_pointing_to(rect)
+        self._popover.popup()
+
+    def selection_request(self, group_id):
+        self.view.select_for_id(group_id)
+
+    def escape_selection_mode(self):
+        pass
 
 
 class DraftGroupsView(Gtk.TreeView):
@@ -228,6 +228,24 @@ class DraftGroupsView(Gtk.TreeView):
         """Handle key presses within the widget"""
         if event.triggers_context_menu():
             self.emit('menu-requested')
+
+    def _on_selection_changed(self, selection):
+        """Handle selection change and subsequently emit `group-selected` signal"""
+        model, treeiter = self.selection.get_selected()
+
+        # if this is only a group creation entry (decoy), do nothing
+        if model and treeiter and not model[treeiter][Column.CREATED]:
+            return
+
+        if not (model and treeiter):
+            root_path = self._root_path()
+            self.selection.select_path(root_path)
+            return
+
+        path = model.get_path(treeiter)
+        self.expand_row(path, False)
+        group = model.get_group_for_iter(treeiter)
+        self.emit('group-selected', group)
 
     def do_drag_motion(self, context, x, y, time):
         """Override the default drag motion method and highlight with
@@ -296,24 +314,6 @@ class DraftGroupsView(Gtk.TreeView):
     def _root_path(self):
         """Get the GtkTreePath for root entry of a treeview"""
         return Gtk.TreePath.new_from_string('0')
-
-    def _on_selection_changed(self, selection):
-        """Handle selection change and subsequently emit `group-selected` signal"""
-        model, treeiter = self.selection.get_selected()
-
-        # if this is only a group creation entry (decoy), do nothing
-        if model and treeiter and not model[treeiter][Column.CREATED]:
-            return
-
-        if not (model and treeiter):
-            root_path = self._root_path()
-            self.selection.select_path(root_path)
-            return
-
-        path = model.get_path(treeiter)
-        self.expand_row(path, False)
-        group = model.get_group_for_iter(treeiter)
-        self.emit('group-selected', group)
 
     def get_selected_path(self):
         model, treeiter = self.selection.get_selected()
