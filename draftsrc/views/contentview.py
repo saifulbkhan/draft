@@ -112,10 +112,10 @@ class _DraftEmptyView(Gtk.Bin):
         self.add(util_box)
 
     def update_labels(self, empty_collection=False):
-        title_text = _("This group has no texts")
-        info_text = _("Create a subgroup for finer structure or create a text to start writing")
+        title_text = _("No Texts in this Group")
+        info_text = _("Create a subgroup or add a text and start writing")
         if empty_collection:
-            title_text = _("Your collection is empty")
+            title_text = _("Your Collection is Empty")
             info_text = _("Create a group to organize your work or create a text to start writing")
 
         self.title_label.set_label(title_text)

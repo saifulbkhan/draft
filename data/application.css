@@ -91,3 +91,16 @@
     background: @content_view_bg;
     border: 1px solid @borders;
 }
+
+.draft-empty-state-label {
+    color: @title_color;
+}
+
+.draft-empty-state-title {
+    font-weight: bold;
+    font-size: 1.2em;
+}
+
+.draft-empty-state-info {
+    font-size: 0.8em;
+}
