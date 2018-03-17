@@ -33,6 +33,7 @@ TEXT_MOVE_TARGET = Gtk.TargetEntry.new("text-position",
 class GroupTreeView(Gtk.Bin):
     """A container bounding a GtkTreeView that allows for slider based hiding
     and resizing"""
+    _panel_visible = True
     _creation_state = False
 
     def __repr__(self):
@@ -67,6 +68,9 @@ class GroupTreeView(Gtk.Bin):
         self.view.connect('texts-dropped', self._on_texts_dropped)
         self.view.connect('rename-requested', self._on_group_rename_requested)
         self.view.connect('menu-requested', self._on_group_menu_requested)
+        self.view.connect('group-created', self._on_group_created)
+        self.view.connect('group-deleted', self._on_group_deleted)
+
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
         self._name_entry.connect('changed', self._on_name_entry_changed)
@@ -77,6 +81,7 @@ class GroupTreeView(Gtk.Bin):
     def _on_group_selected(self, widget, group):
         """Handler for `group-selected` signal from DraftsTreeView. Calls on
         TextListView to reload its model with texts from selected group"""
+        self.parent_window.update_content_view_and_headerbar()
         self.parent_window.textlistview.set_model_for_group(group)
 
     def _on_texts_dropped(self, widget, text_ids, new_parent_id):
@@ -122,6 +127,14 @@ class GroupTreeView(Gtk.Bin):
         self._popover.set_pointing_to(rect)
         self._popover.popup()
 
+    def _on_group_created(self, widget):
+        """Handle view's `group-created` signal"""
+        self.parent_window.update_content_view_and_headerbar()
+
+    def _on_group_deleted(self, widget):
+        """Handle view's `group-deleted` signal"""
+        self.parent_window.update_content_view_and_headerbar()
+
     def _on_group_menu_requested(self, widget):
         """Cater to context menu request for a group. Ignore if the selection
         is the root container."""
@@ -148,14 +161,26 @@ class GroupTreeView(Gtk.Bin):
 
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""
-        if self.slider.get_reveal_child():
-            self.slider.set_reveal_child(False)
+        if self._panel_visible:
+            self.hide_panel()
         else:
-            self.slider.set_reveal_child(True)
+            self.reveal_panel()
+
+    def hide_panel(self):
+        """Hide the slider's child"""
+        self.slider.set_reveal_child(False)
+        self._panel_visible = False
+
+    def reveal_panel(self):
+        """Reveal the slider's child"""
+        self.slider.set_reveal_child(True)
+        self._panel_visible = True
 
     def new_group_request(self):
         """Cater to the request for new group creation. Pops up an entry to set
         the name of the new group as well"""
+        self.reveal_panel()
+
         rect = self.view.new_group_request()
         self.view.set_faded_selection(True)
 
@@ -171,6 +196,22 @@ class GroupTreeView(Gtk.Bin):
     def escape_selection_mode(self):
         pass
 
+    def collection_is_empty(self):
+        """Check if there are any groups or texts present in the collection"""
+        num_groups, num_texts = self.view.count_top_level_groups_and_texts()
+        if num_groups or num_texts:
+            return False
+
+        return True
+
+    def selected_group_has_no_texts(self):
+        """Check if selected group has any texts"""
+        num_groups, num_texts = self.view.count_groups_and_texts_for_selection()
+        if num_texts:
+            return False
+
+        return True
+
 
 class DraftGroupsView(Gtk.TreeView):
     """The view presenting all the text groups in user's collection"""
@@ -184,7 +225,9 @@ class DraftGroupsView(Gtk.TreeView):
                            None,
                            (GObject.TYPE_PYOBJECT,)),
         'rename-requested': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'menu-requested': (GObject.SignalFlags.RUN_FIRST, None, ())
+        'menu-requested': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'group-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'group-deleted': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     def __repr__(self):
@@ -353,7 +396,9 @@ class DraftGroupsView(Gtk.TreeView):
         # check group has not yet been created
         assert not model[treeiter][Column.CREATED]
 
-        model.finalize_group_creation(treeiter, name)
+        group = model.finalize_group_creation(treeiter, name)
+        self.emit('group-selected', group)
+        self.emit('group-created')
 
     def discard_new_group(self):
         """Discard a currently selected group only if it is a decoy"""
@@ -383,6 +428,8 @@ class DraftGroupsView(Gtk.TreeView):
         else:
             model.permanently_delete_group_at_iter(treeiter)
 
+        self.emit('group-deleted')
+
     def select_for_id(self, group_id):
         model = self.get_model()
         if group_id is None:
@@ -399,10 +446,31 @@ class DraftGroupsView(Gtk.TreeView):
 
         model.foreach(select_if_group_id_matches, None)
 
+    def count_top_level_groups_and_texts(self):
+        """Count the number of groups and texts in the root node"""
+        model = self.get_model()
+        treeiter = model.get_iter(self._root_path())
+        num_groups = model.count_groups_for_iter(treeiter)
+        num_texts = model.count_texts_for_iter(treeiter)
+        return num_groups, num_texts
+
+    def count_groups_and_texts_for_selection(self):
+        """Count the number of groups and texts in the currently selected group"""
+        model, treeiter = self.selection.get_selected()
+        if treeiter is None:
+            treeiter = model.get_iter(self._root_path())
+            self.selection.select_iter(treeiter)
+        num_groups = model.count_groups_for_iter(treeiter)
+        num_texts = model.count_texts_for_iter(treeiter)
+        return num_groups, num_texts
+
 
 # TODO: Make this a stack for storing multiple DraftTextsList
 class TextListView(Gtk.Bin):
+
+    _panel_visible = True
     sidebar_width = 250
+
     def __repr__(self):
         return '<TextListView>'
 
@@ -425,13 +493,26 @@ class TextListView(Gtk.Bin):
 
         self.search_bar = self.builder.get_object('search_bar')
         self.search_entry = self.builder.get_object('search_entry')
+
         self.view.connect('text-moved-to-group', self._on_text_moved_to_group)
+        self.view.connect('text-deleted', self._on_text_deleted)
+        self.view.connect('text-created', self._on_text_created)
 
     def toggle_panel(self):
-        if self.slider.get_reveal_child():
-            self.slider.set_reveal_child(False)
+        if self._panel_visible:
+            self.hide_panel()
         else:
-            self.slider.set_reveal_child(True)
+            self.reveal_panel()
+
+    def hide_panel(self):
+        """Hide the slider's child"""
+        self.slider.set_reveal_child(False)
+        self._panel_visible = False
+
+    def reveal_panel(self):
+        """Reveal the slider's child"""
+        self.slider.set_reveal_child(True)
+        self._panel_visible = True
 
     def search_toggled(self):
         if self.search_bar.get_search_mode():
@@ -460,6 +541,12 @@ class TextListView(Gtk.Bin):
     def _on_text_moved_to_group(self, widget, group_id):
         self.parent_window.grouptreeview.selection_request(group_id)
 
+    def _on_text_deleted(self, widget):
+        self.parent_window.update_content_view_and_headerbar()
+
+    def _on_text_created(self, widget):
+        self.parent_window.update_content_view_and_headerbar()
+
 
 class DraftTextsList(Gtk.ListBox):
     """The listbox containing all the texts in a text group"""
@@ -468,7 +555,9 @@ class DraftTextsList(Gtk.ListBox):
     __gsignals__ = {
         'text-moved-to-group': (GObject.SignalFlags.RUN_FIRST,
                                 None,
-                                (GObject.TYPE_PYOBJECT,))
+                                (GObject.TYPE_PYOBJECT,)),
+        'text-deleted': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'text-created': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     _texts_being_moved = []
@@ -640,7 +729,7 @@ class DraftTextsList(Gtk.ListBox):
     def _on_items_changed(self, model, position, removed, added):
         """Handler for model's `items-changed` signal"""
         row = self.get_row_at_index(position)
-        self.select_row(row)
+        GLib.idle_add(self.select_row, row)
 
     def _drag_begin(self, widget, drag_context):
         """When drag action begins this function does several things:
@@ -777,6 +866,7 @@ class DraftTextsList(Gtk.ListBox):
     def new_text_request(self):
         """Request for creation of a new text and append it to the list"""
         self._model.new_text_request()
+        self.emit('text-created')
 
     def set_group_for_ids(self, text_ids, group):
         """Send texts with @text_ids to the group with id @group. Assuming this
@@ -874,3 +964,4 @@ class DraftTextsList(Gtk.ListBox):
         """Delete currently selected text in the list"""
         position = self.get_selected_row().get_index()
         self._model.delete_item_at_postion(position)
+        self.emit('text-deleted')

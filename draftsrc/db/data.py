@@ -403,9 +403,60 @@ def groups_in_group(conn, group_id):
     args = {"id": group_id}
     return fetch_groups(conn, where_condition, args=args)
 
+
 def group_for_id(conn, group_id):
     """Return the group for given db id"""
     where_condition = 'id = :id'
     args = {"id": group_id}
     gen = fetch_groups(conn, where_condition, args=args)
     return next(gen)
+
+
+def count_texts(conn, group_id=None):
+    """Return the number of texts in the given @group, that are not trashed"""
+    base_query = '''
+        SELECT COUNT(id)
+          FROM text
+    '''
+
+    if group_id is None:
+        where_clause = '''
+            WHERE parent_id IS NULL
+              AND in_trash = 0
+        '''
+        cursor = conn.cursor()
+        res = cursor.execute(base_query + where_clause)
+        return res.fetchone()[0]
+    else:
+        where_clause = '''
+             WHERE parent_id = :group_id
+               AND in_trash = 0
+        '''
+        cursor = conn.cursor()
+        res = cursor.execute(base_query + where_clause, {'group_id': group_id})
+        return res.fetchone()[0]
+
+
+def count_groups(conn, group_id=None):
+    """Return the number of groups in the given @group, that are not trashed"""
+    base_query = '''
+        SELECT COUNT(id)
+          FROM "group"
+    '''
+
+    if group_id is None:
+        where_clause = '''
+            WHERE parent_id IS NULL
+              AND in_trash = 0
+        '''
+        cursor = conn.cursor()
+        res = cursor.execute(base_query + where_clause)
+        return res.fetchone()[0]
+    else:
+        where_clause = '''
+             WHERE parent_id = :group_id
+               AND in_trash = 0
+        '''
+        cursor = conn.cursor()
+        res = cursor.execute(base_query + where_clause, {'group_id': group_id})
+        return res.fetchone()[0]

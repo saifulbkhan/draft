@@ -514,7 +514,8 @@ class DraftTreeStore(Gtk.TreeStore):
             group_id = data.create_group(connection, name, parent_id)
             group = data.group_for_id(connection, group_id)
             file.create_dir(group['hash_id'], group['parents'])
-            return self._update_group(treeiter, group)
+            self._update_group(treeiter, group)
+            return group
 
     def set_prop_for_iter(self, treeiter, prop, value):
         """Set the property @prop to @value for the row given by @treeiter. This
@@ -616,3 +617,19 @@ class DraftTreeStore(Gtk.TreeStore):
             data.delete_group(connection, group_id)
 
         self.remove(treeiter)
+
+    def count_groups_for_iter(self, treeiter):
+        """Count the number of groups contained within group at @treeiter"""
+        group = self.get_group_for_iter(treeiter)
+        group_id = group['id']
+
+        with db.connect() as connection:
+            return data.count_groups(connection, group_id)
+
+    def count_texts_for_iter(self, treeiter):
+        """Count the number of texts contained within group at @treeiter"""
+        group = self.get_group_for_iter(treeiter)
+        group_id = group['id']
+
+        with db.connect() as connection:
+            return data.count_texts(connection, group_id)

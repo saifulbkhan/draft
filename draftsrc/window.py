@@ -25,6 +25,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     group_panel_hidden = False
     text_panel_hidden = False
+    lock_group_panel = False
+    lock_text_panel = False
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -56,59 +58,27 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.add_action(simple_action)
 
     def _set_up_widgets(self):
+        titlebar = _DraftHeaderBar(self)
+        self.set_titlebar(titlebar)
+
         self._topbox = Gtk.Box()
         self.add(self._topbox)
 
-        titlebar = _DraftHeaderBar(self)
-        self.set_titlebar(titlebar)
-        self._create_panel_views()
-        self._create_stack_views()
-
+        self._set_up_panel_views()
+        self._set_up_content_view()
         self.connect('key-press-event', self._on_key_press)
 
-    def _create_panel_views(self):
+    def _set_up_panel_views(self):
         self.grouptreeview = GroupTreeView(self)
         self._topbox.pack_start(self.grouptreeview, False, True, 0)
         self.textlistview = TextListView(self)
         self._topbox.pack_start(self.textlistview, False, True, 0)
 
-    def _create_stack_views(self):
+    def _set_up_content_view(self):
         self.contentview = ContentView(self)
         self._topbox.pack_start(self.contentview, False, True, 0)
         # TODO: make this switchable, when supporting side-by-side editing
         self.textlistview.set_editor(self.contentview.content_editor)
-
-    def _on_key_press(self, widget, event):
-        modifier = Gtk.accelerator_get_default_mod_mask()
-        modifier = (event.state & modifier)
-
-        if modifier:
-            control_mask = Gdk.ModifierType.CONTROL_MASK
-            shift_mask = Gdk.ModifierType.SHIFT_MASK
-
-            if event.keyval == Gdk.KEY_F9 and modifier == control_mask:
-                self.toggle_group_panel()
-        else:
-            if event.keyval == Gdk.KEY_F9:
-                self.toggle_both_panels()
-            elif event.keyval == Gdk.KEY_Escape:
-                self._escape_selection_modes()
-
-    def toggle_group_panel(self):
-        self.group_panel_hidden = not self.group_panel_hidden
-        self.grouptreeview.toggle_panel()
-
-        if self.text_panel_hidden and not self.group_panel_hidden:
-            self.text_panel_hidden = False
-            self.textlistview.toggle_panel()
-
-    def toggle_both_panels(self):
-        self.text_panel_hidden = not self.text_panel_hidden
-        self.textlistview.toggle_panel()
-
-        if self.text_panel_hidden and not self.group_panel_hidden:
-            self.group_panel_hidden = True
-            self.grouptreeview.toggle_panel()
 
     def _new_text_request(self, action, param):
         self.textlistview.new_text_request()
@@ -119,6 +89,90 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def _escape_selection_modes(self):
         self.textlistview.escape_selection_mode()
         self.grouptreeview.escape_selection_mode()
+
+    def _on_key_press(self, widget, event):
+        modifier = Gtk.accelerator_get_default_mod_mask()
+        modifier = (event.state & modifier)
+
+        if modifier:
+            control_mask = Gdk.ModifierType.CONTROL_MASK
+            shift_mask = Gdk.ModifierType.SHIFT_MASK
+
+            if (event.keyval == Gdk.KEY_F9
+                    and modifier == control_mask
+                    and not self.lock_group_panel):
+                if self.group_panel_hidden:
+                    self.reveal_group_panel()
+                    if not self.lock_text_panel:
+                        self.reveal_text_panel()
+                else:
+                    self.hide_group_panel()
+        else:
+            if (event.keyval == Gdk.KEY_F9
+                    and not self.lock_text_panel
+                    and not self.lock_group_panel):
+                if self.text_panel_hidden:
+                    self.reveal_text_panel()
+                else:
+                    self.hide_text_panel()
+                    self.hide_group_panel()
+            elif event.keyval == Gdk.KEY_Escape:
+                self._escape_selection_modes()
+
+    def hide_group_panel(self):
+        self.grouptreeview.hide_panel()
+        self.group_panel_hidden = True
+
+    def reveal_group_panel(self):
+        self.grouptreeview.reveal_panel()
+        self.group_panel_hidden = False
+
+    def hide_text_panel(self):
+        self.textlistview.hide_panel()
+        self.text_panel_hidden = True
+
+    def reveal_text_panel(self):
+        self.textlistview.reveal_panel()
+        self.text_panel_hidden = False
+
+    def update_content_view_and_headerbar(self):
+        if self.grouptreeview.collection_is_empty():
+            self.contentview.set_empty_collection_state()
+            self.hide_headerbar_elements()
+            self.hide_group_panel()
+            self.hide_text_panel()
+            self.lock_group_panel = True
+            self.lock_text_panel = True
+        elif self.grouptreeview.selected_group_has_no_texts():
+            self.contentview.set_empty_group_state()
+            self.show_headerbar_elements()
+            self.partial_headerbar_interaction()
+            self.hide_text_panel()
+            self.lock_group_panel = False
+            self.lock_text_panel = True
+        else:
+            self.contentview.set_last_content_state()
+            self.show_headerbar_elements()
+            self.complete_headerbar_interaction()
+            self.reveal_text_panel()
+            self.lock_group_panel = False
+            self.lock_text_panel = False
+
+    def hide_headerbar_elements(self):
+        headerbar = self.get_titlebar()
+        headerbar.set_elements_visible(False)
+
+    def show_headerbar_elements(self):
+        headerbar = self.get_titlebar()
+        headerbar.set_elements_visible(True)
+
+    def partial_headerbar_interaction(self):
+        headerbar = self.get_titlebar()
+        headerbar.set_preview_button_sensitive(False)
+
+    def complete_headerbar_interaction(self):
+        headerbar = self.get_titlebar()
+        headerbar.set_preview_button_sensitive(True)
 
 
 class _DraftHeaderBar(Gtk.Box):
@@ -143,9 +197,18 @@ class _DraftHeaderBar(Gtk.Box):
         self._search_button.connect('toggled', self._on_search_toggled)
         self._preview_button = self._builder.get_object('preview_button')
         self._preview_button.connect('toggled', self._on_preview_toggled)
+        self._new_button = self._builder.get_object('new_button')
 
     def _on_search_toggled(self, widget):
         self.parent.textlistview.search_toggled()
 
     def _on_preview_toggled(self, widget):
         self.parent.contentview.preview_toggled()
+
+    def set_elements_visible(self, visible):
+        self._new_button.set_visible(visible)
+        self._search_button.set_visible(visible)
+        self._preview_button.set_visible(visible)
+
+    def set_preview_button_sensitive(self, sensitive):
+        self._preview_button.set_sensitive(sensitive)
