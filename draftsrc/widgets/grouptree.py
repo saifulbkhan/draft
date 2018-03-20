@@ -17,7 +17,7 @@ from gettext import gettext as _
 
 from gi.repository import Gtk, Pango, Gdk, GObject
 
-from draftsrc.views.store import DraftTreeStore, Column
+from draftsrc.models.grouptreestore import DraftGroupTreeStore, Column
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 from draftsrc.widgets import GROUP_MOVE_INFO, GROUP_MOVE_TARGET
 
@@ -43,7 +43,7 @@ class DraftGroupTree(Gtk.TreeView):
         return '<DraftGroupsView>'
 
     def __init__(self):
-        Gtk.TreeView.__init__(self, DraftTreeStore(top_row_name='Local'))
+        Gtk.TreeView.__init__(self, DraftGroupTreeStore(top_row_name='Local'))
         ctx = self.get_style_context()
         ctx.add_class('draft-treeview')
 

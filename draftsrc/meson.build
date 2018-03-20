@@ -19,6 +19,11 @@ db_sources = [
   'db/migrations.py'
 ]
 
+models_sources = [
+  'models/grouptreestore.py',
+  'models/textliststore.py'
+]
+
 parsers_sources = [
   'parsers/__init__.py',
   'parsers/markup.py',
@@ -28,8 +33,7 @@ parsers_sources = [
 
 views_sources = [
   'views/contentview.py',
-  'views/panelview.py',
-  'views/store.py'
+  'views/panelview.py'
 ]
 
 widgets_sources = [
@@ -43,6 +47,7 @@ widgets_sources = [
 
 install_data(app_sources, install_dir: draftsrcdir)
 install_data(db_sources, install_dir: draftsrcdir + '/db')
+install_data(models_sources, install_dir: draftsrcdir + '/models')
 install_data(parsers_sources, install_dir: draftsrcdir + '/parsers')
 install_data(views_sources, install_dir: draftsrcdir + '/views')
 install_data(widgets_sources, install_dir: draftsrcdir + '/widgets')
