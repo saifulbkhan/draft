@@ -41,102 +41,6 @@ class DraftTextListStore(Gio.ListStore):
         word_goal = None
         last_edit_position = None
 
-        @GObject.Property(type=str)
-        def prop_title(self):
-            return self.title
-
-        @prop_title.setter
-        def prop_title(self, value):
-            self.title = value
-
-        @GObject.Property(type=GObject.TYPE_PYOBJECT)
-        def prop_keywords(self):
-            return self.keywords
-
-        @prop_keywords.setter
-        def prop_keywords(self, value):
-            self.keywords = value
-
-        @GObject.Property(type=str)
-        def prop_last_modified(self):
-            return self.last_modified
-
-        @prop_last_modified.setter
-        def prop_last_modified(self, value):
-            self.last_modified = value
-
-        @GObject.Property(type=int)
-        def prop_db_id(self):
-            return self.db_id
-
-        @prop_db_id.setter
-        def prop_db_id(self, value):
-            self.db_id = value
-
-        @GObject.Property(type=str)
-        def prop_hash_id(self):
-            return self.hash_id
-
-        @prop_hash_id.setter
-        def prop_hash_id(self, value):
-            self.hash_id = value
-
-        @GObject.Property(type=bool, default=False)
-        def prop_in_trash(self):
-            return self.in_trash
-
-        @prop_in_trash.setter
-        def prop_in_trash(self, value):
-            self.in_trash = value
-
-        @GObject.Property(type=GObject.TYPE_PYOBJECT)
-        def prop_parent_id(self):
-            return self.parent_id
-
-        @prop_parent_id.setter
-        def prop_parent_id(self, value):
-            self.parent_id = value
-
-        @GObject.Property(type=GObject.TYPE_PYOBJECT)
-        def prop_parent_list(self):
-            return self.parent_list
-
-        @prop_parent_list.setter
-        def prop_parent_list(self, value):
-            self.parent_list = value
-
-        @GObject.Property(type=str)
-        def prop_markup(self):
-            return self.markup
-
-        @prop_markup.setter
-        def prop_markup(self, value):
-            self.markup = value
-
-        @GObject.Property(type=str)
-        def prop_subtitle(self):
-            return self.subtitle
-
-        @prop_subtitle.setter
-        def prop_subtitle(self, value):
-            self.subtitle = value
-
-        @GObject.Property(type=int)
-        def prop_word_goal(self):
-            return self.word_goal
-
-        @prop_word_goal.setter
-        def prop_word_goal(self, value):
-            self.word_goal = value
-
-        @GObject.Property(type=int)
-        def prop_last_edit_position(self):
-            return self.last_edit_position
-
-        @prop_last_edit_position.setter
-        def prop_last_edit_position(self, value):
-            self.last_edit_position = value
-
         def from_dict(self, data_dict):
             self.title = data_dict['title']
             self.keywords = data_dict['keywords']
@@ -234,13 +138,13 @@ class DraftTextListStore(Gio.ListStore):
         @load_file: method, passed on to `file.read_file_contents` function
         """
         item = self.get_item(position)
-        id = item.prop_db_id
+        id = item.db_id
         buffer = switch_view(item.to_dict())
         if not buffer:
             return
 
-        hash_id = item.prop_hash_id
-        parent_hashes = list(item.prop_parent_list)
+        hash_id = item.hash_id
+        parent_hashes = list(item.parent_list)
         file.read_file_contents(hash_id, parent_hashes, buffer, load_file)
 
     def set_prop_for_position(self, position, prop, value):
@@ -257,8 +161,8 @@ class DraftTextListStore(Gio.ListStore):
             return self.set_parent_for_position(position, value)
 
         item = self.get_item(position)
-        id = item.prop_db_id
-        setattr(item, 'prop_' + prop, value)
+        id = item.db_id
+        setattr(item, prop, value)
         # TODO: 'notify' view that a prop for an item has changed
 
         db.async_updater.execution_fn = data.update_text
@@ -268,8 +172,8 @@ class DraftTextListStore(Gio.ListStore):
         """Set the parent id for text at given position and move the text to
         the corresponding folder"""
         item = self.get_item(position)
-        item.prop_parent_id = parent
-        id = item.prop_db_id
+        item.parent_id = parent
+        id = item.db_id
 
         with db.connect() as connection:
             text = data.text_for_id(connection, id)
@@ -291,7 +195,7 @@ class DraftTextListStore(Gio.ListStore):
 
         if parent != self._parent_group:
             self.remove(position)
-        return item.prop_db_id
+        return item.db_id
 
     def set_keywords_for_position(self, position, keywords):
         """Set the keywords for the item at given position
@@ -301,16 +205,16 @@ class DraftTextListStore(Gio.ListStore):
         @keywords: list, the collection of strings as keywords for the item
         """
         item = self.get_item(position)
-        item.prop_keywords = keywords
-        id = item.prop_db_id
+        item.keywords = keywords
+        id = item.db_id
 
         with db.connect() as connection:
             data.update_text(connection, id, item.to_dict())
 
             # update keywords after, they have been updated in db
-            item.prop_keywords = data.fetch_keywords_for_text(connection, id)
+            item.keywords = data.fetch_keywords_for_text(connection, id)
 
-        return item.prop_keywords
+        return item.keywords
 
     def queue_final_save(self, metadata):
         db.final_updater.execution_fn = data.update_text
@@ -323,10 +227,10 @@ class DraftTextListStore(Gio.ListStore):
         @position: integer, position at which the item to be deleted is located
         """
         item = self.get_item(position)
-        id = item.prop_db_id
-        hash_id = item.prop_hash_id
-        parent_hashes = item.prop_parent_list
-        item.prop_in_trash = True
+        id = item.db_id
+        hash_id = item.hash_id
+        parent_hashes = item.parent_list
+        item.in_trash = True
 
         self.remove(position)
         file.trash_file(hash_id, parent_hashes)
@@ -342,7 +246,7 @@ class DraftTextListStore(Gio.ListStore):
         length = self.get_n_items()
         for i in range(length):
             item = self.get_item(i)
-            if item.prop_db_id == text_id:
+            if item.db_id == text_id:
                 return i
 
         return None
