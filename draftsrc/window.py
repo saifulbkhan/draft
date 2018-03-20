@@ -16,7 +16,7 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
-from draftsrc.views.listview import TextListView, GroupTreeView
+from draftsrc.views.panelview import DraftTextListView, DraftCollectionView
 from draftsrc.views.contentview import ContentView
 
 
@@ -69,9 +69,9 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.connect('key-press-event', self._on_key_press)
 
     def _set_up_panel_views(self):
-        self.grouptreeview = GroupTreeView(self)
+        self.grouptreeview = DraftCollectionView(self)
         self._topbox.pack_start(self.grouptreeview, False, True, 0)
-        self.textlistview = TextListView(self)
+        self.textlistview = DraftTextListView(self)
         self._topbox.pack_start(self.textlistview, False, True, 0)
 
     def _set_up_content_view(self):

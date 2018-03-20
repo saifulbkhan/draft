@@ -28,14 +28,17 @@ parsers_sources = [
 
 views_sources = [
   'views/contentview.py',
-  'views/listview.py',
+  'views/panelview.py',
   'views/store.py'
 ]
 
 widgets_sources = [
   'widgets/editor.py',
+  'widgets/grouptree.py',
+  'widgets/__init__.py',
   'widgets/preview.py',
-  'widgets/statusbar.py'
+  'widgets/statusbar.py',
+  'widgets/textlist.py'
 ]
 
 install_data(app_sources, install_dir: draftsrcdir)
