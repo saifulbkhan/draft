@@ -18,7 +18,7 @@ from gettext import gettext as _
 
 from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
-from draftsrc.models.textliststore import DraftTextListStore
+from draftsrc.models.textliststore import DraftTextListStore, TextListType
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 
 
@@ -285,7 +285,8 @@ class DraftTextList(Gtk.ListBox):
         self._texts_being_moved = ids
 
     def set_model(self, parent_group):
-        self._model = DraftTextListStore(parent_group)
+        self._model = DraftTextListStore(list_type=TextListType.GROUP_TEXTS,
+                                         parent_group=parent_group)
         self.bind_model(self._model, self._create_row_widget, None)
         self._model.connect('items-changed', self._on_items_changed)
         if self._texts_being_moved:

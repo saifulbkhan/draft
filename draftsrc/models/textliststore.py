@@ -21,6 +21,14 @@ from draftsrc import file, db
 from draftsrc.db import data
 
 
+class TextListType(object):
+    GROUP_TEXTS = 0
+    TAGGED_TEXTS = 1
+    ALL_TEXTS = 2
+    RECENT_TEXTS = 3
+    TRASHED_TEXTS = 4
+
+
 class DraftTextListStore(Gio.ListStore):
     """Model for a list of texts (only) from one particular text group"""
 
@@ -82,30 +90,59 @@ class DraftTextListStore(Gio.ListStore):
     def __repr__(self):
         return '<DraftListStore>'
 
-    def __init__(self, parent_group):
-        """Initialises a new DraftListStore for the given parent group. If
-        @parent_group is None, orphan texts (not part of any group) are queried.
+    def __init__(self, list_type, parent_group=None, tag=None):
+        """Initialises a new DraftListStore of given type. For some types extra
+        information like the parent group or tag need to be provided as well.
 
-        @parent_group: string, The unique hash string for the parent group
+        @parent_group: dict, storing parent group details
+        @tag: dict, sotring details of tag
         """
         Gio.ListStore.__init__(self, item_type=self.RowData.__gtype__)
-        self._parent_group = parent_group
+        self._list_type = list_type
+
+        if self._list_type == TextListType.GROUP_TEXTS:
+            assert parent_group is not None
+            self._parent_group = parent_group
+        elif self._list_type == TextListType.TAGGED_TEXTS:
+            assert tag is not None
+            self._tag = tag
+
         self._load_texts()
 
     def _load_texts(self):
         """Asks db to fetch the set of texts in @parent_group"""
         self.remove_all()
         with db.connect() as connection:
-            load_fn = data.texts_in_group
-            kwargs = {'conn': connection, 'group_id': self._parent_group['id']}
-
-            if not self._parent_group['id']:
-                load_fn = data.texts_not_in_groups
+            load_fn = None
+            kwargs = {}
+            if self._list_type == TextListType.GROUP_TEXTS:
+                if self._parent_group['id']:
+                    load_fn = data.texts_in_group
+                    kwargs = {
+                        'conn': connection,
+                        'group_id': self._parent_group['id']
+                    }
+                else:
+                    load_fn = data.texts_not_in_groups
+                    kwargs = {'conn': connection}
+            elif self._list_type == TextListType.TAGGED_TEXTS:
+                load_fn = data.texts_with_tag
+                kwargs = {
+                    'conn': connection,
+                    'tag_label': self._tag['label']
+                }
+            elif self._list_type == TextListType.RECENT_TEXTS:
+                load_fn = data.texts_recently_modified
+                kwargs = {'conn', connection}
+            else:
+                load_fn = data.fetch_texts
                 kwargs = {'conn': connection}
 
             for text in load_fn(**kwargs):
                 row = self._row_data_for_text(text)
-                if not row.in_trash:
+                if self._list_type == TextListType.TRASHED_TEXTS:
+                    self.append(row)
+                elif not row.in_trash:
                     self.append(row)
 
     def _row_data_for_text(self, text_metadata):
@@ -119,7 +156,9 @@ class DraftTextListStore(Gio.ListStore):
 
         @self: DraftListStore model
         """
-        id = None
+        if self._parent_group is None:
+            return
+
         with db.connect() as connection:
             text_id = data.create_text(connection,
                                        _("Untitled"),
@@ -193,7 +232,7 @@ class DraftTextListStore(Gio.ListStore):
 
             data.update_text(connection, id, item.to_dict())
 
-        if parent != self._parent_group:
+        if self._parent_group and parent != self._parent_group:
             self.remove(position)
         return item.db_id
 

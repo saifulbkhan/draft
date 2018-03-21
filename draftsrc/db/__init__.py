@@ -140,6 +140,13 @@ def get_datetime():
     return datetime.now().isoformat(timespec='milliseconds')
 
 
+def get_datetime_last_n_days(last_n_days):
+    dt = datetime.now()
+    last_day = dt.day - last_n_days
+    dt.replace(day=last_day)
+    return dt.isoformat(timespec='milliseconds')
+
+
 def get_relative_datetime(dt_str):
     date_time =  datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f')
     one_day = timedelta(days=1)

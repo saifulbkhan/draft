@@ -333,6 +333,27 @@ def text_for_id(conn, text_id):
     return next(gen)
 
 
+def texts_with_tag(conn, tag_label):
+    """Return the texts tagged with @tag_label"""
+    where_condition = '''
+        id IN (SELECT text_id
+                 FROM text_tags
+                WHERE tag_keyword = :tag_label)
+    '''
+    args = {'tag_label': tag_label}
+    return fetch_texts(conn, where_condition, args=args)
+
+
+def texts_recently_modified(conn, last_n_days=7):
+    """Return texts that were modified within @last_n_days. If @last_n_days is
+    not provided, returns texts modified last week."""
+    n_days_ago = db.get_datetime_last_n_days(last_n_days)
+    where_condition = 'last_modified >= :n_days_ago'
+    order_condition = 'last_modified DESC'
+    args = {'n_days_ago': n_days_ago}
+    return fetch_texts(conn, where_condition, order_condition, args)
+
+
 def fetch_parents_for_group(conn, group_id):
     """Returns a list of hash strings for parent groups that joined
     together can form a relative path to group dir"""
