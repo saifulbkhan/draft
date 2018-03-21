@@ -29,7 +29,7 @@ class DraftTextListStore(Gio.ListStore):
         __gtype_name__ = 'RowData'
 
         title = ''
-        keywords = []
+        tags = []
         last_modified = ''
         db_id = None
         hash_id = ''
@@ -43,7 +43,7 @@ class DraftTextListStore(Gio.ListStore):
 
         def from_dict(self, data_dict):
             self.title = data_dict['title']
-            self.keywords = data_dict['keywords']
+            self.tags = data_dict['tags']
             self.last_modified = data_dict['last_modified']
             self.db_id = data_dict['id']
             self.hash_id = data_dict['hash_id']
@@ -66,7 +66,7 @@ class DraftTextListStore(Gio.ListStore):
         def to_dict(self):
             return {
                 'title': self.title,
-                'keywords': self.keywords,
+                'tags': self.tags,
                 'last_modified': self.last_modified,
                 'id': self.db_id,
                 'hash_id': self.hash_id,
@@ -155,8 +155,8 @@ class DraftTextListStore(Gio.ListStore):
         @prop: string, property to be set
         @value: obj, value to be assigned to @prop
         """
-        if prop == 'keywords':
-            return self.set_keywords_for_position(position, value)
+        if prop == 'tags':
+            return self.set_tags_for_position(position, value)
         elif prop == 'parent_id':
             return self.set_parent_for_position(position, value)
 
@@ -197,24 +197,24 @@ class DraftTextListStore(Gio.ListStore):
             self.remove(position)
         return item.db_id
 
-    def set_keywords_for_position(self, position, keywords):
-        """Set the keywords for the item at given position
+    def set_tags_for_position(self, position, tags):
+        """Set the tags for the item at given position
 
         @self: DraftListStore model
         @position: integer, position at which  item is located
-        @keywords: list, the collection of strings as keywords for the item
+        @tags: list, the collection of strings as tags for the item
         """
         item = self.get_item(position)
-        item.keywords = keywords
+        item.tags = tags
         id = item.db_id
 
         with db.connect() as connection:
             data.update_text(connection, id, item.to_dict())
 
-            # update keywords after, they have been updated in db
-            item.keywords = data.fetch_keywords_for_text(connection, id)
+            # update tags after, they have been updated in db
+            item.tags = data.fetch_tags_for_text(connection, id)
 
-        return item.keywords
+        return item.tags
 
     def queue_final_save(self, metadata):
         db.final_updater.execution_fn = data.update_text

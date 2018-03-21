@@ -18,13 +18,13 @@ from hashlib import sha256
 from draftsrc import db
 
 
-def create_keyword(conn, keyword):
-    """Create a new keyword"""
+def create_tag(conn, label):
+    """Create a new label"""
     query = '''
         INSERT INTO tag (keyword)
-             VALUES (:keyword)'''
+             VALUES (:label)'''
     cursor = conn.cursor()
-    cursor.execute(query, {'keyword': keyword})
+    cursor.execute(query, {'label': label})
 
 
 def create_text(conn, name, group_id=None):
@@ -95,28 +95,28 @@ def update_text(conn, text_id, values):
                            "last_edit_position": values['last_edit_position'],
                            "id": text_id})
 
-    update_keywords_for_text(conn, text_id, values['keywords'])
+    update_tags_for_text(conn, text_id, values['tags'])
 
 
-def update_keywords_for_text(conn, text_id, keywords):
-    """Update the keywords on given text"""
+def update_tags_for_text(conn, text_id, labels):
+    """Update the tags on given text"""
     values = []
-    for k in keywords:
-        keyword = fetch_keyword(conn, k)
-        values.append({"text_id": text_id, "tag_keyword": keyword})
+    for l in labels:
+        label = fetch_label(conn, l)
+        values.append({"text_id": text_id, "tag_label": label})
 
     cursor = conn.cursor()
 
-    # remove old keywords if any
+    # remove old tags if any
     delete_query = '''
         DELETE FROM text_tags
               WHERE text_id = :id'''
     cursor.execute(delete_query, {"id": text_id})
 
-    # add new keywords if any
+    # add new tags if any
     insert_query = '''
         INSERT INTO text_tags (text_id, tag_keyword)
-             VALUES (:text_id, :tag_keyword)'''
+             VALUES (:text_id, :tag_label)'''
     cursor.executemany(insert_query, values)
 
 
@@ -197,7 +197,7 @@ def delete_group(conn, group_id):
 
 
 def delete_orphan_tags(conn):
-    """Delete keywords not associated with  any text"""
+    """Delete tags not associated with  any text"""
     orphan_tags_query = '''
         DELETE FROM tag
               WHERE keyword NOT IN (SELECT tag_keyword
@@ -206,36 +206,36 @@ def delete_orphan_tags(conn):
     cursor.execute(orphan_tags_query)
 
 
-def fetch_keyword(conn, keyword):
-    """Fetch equivalent of the given keyword if exists, create new otherwise"""
-    # TODO: support case-insensitive matching for Unicode characters in keyword.
+def fetch_label(conn, label):
+    """Fetch equivalent of the given label if exists, create new otherwise"""
+    # TODO: support case-insensitive matching for Unicode characters in label.
     # sqlite `LIKE` operator only does case-insensitive matching for ASCII
     # characters. To do case-insensitive matching for Unicode as well, maybe
     # use ICU plugin for sqlite or filter another way.
     query = '''
         SELECT keyword
           FROM tag
-         WHERE keyword LIKE :keyword'''
+         WHERE keyword LIKE :label'''
     cursor = conn.cursor()
-    cursor.execute(query, {"keyword": keyword})
+    cursor.execute(query, {"label": label})
 
     res = cursor.fetchone()
     if res:
         return res[0]
 
-    create_keyword(conn, keyword)
-    return keyword
+    create_tag(conn, label)
+    return label
 
 
-def fetch_keywords_for_text(conn, text_id):
-    """Return a list of keywords tagged to given text"""
+def fetch_tags_for_text(conn, text_id):
+    """Return a list of tags tagged to given text"""
     query = '''
         SELECT tag_keyword
           FROM text_tags
          WHERE text_id = :id'''
     cursor = conn.cursor()
-    keywords = [k[0] for k in cursor.execute(query, {"id": text_id})]
-    return keywords
+    tags = [k[0] for k in cursor.execute(query, {"id": text_id})]
+    return tags
 
 
 def hash_for_creation_datetime(datetime):
@@ -306,8 +306,8 @@ def fetch_texts(conn, where='', order='', args={}):
         # create a list of parents
         values['parents'] = fetch_parents_for_text(conn, values['id'])
 
-        # obtain a list of keywords
-        values['keywords'] = fetch_keywords_for_text(conn, values['id'])
+        # obtain a list of tags
+        values['tags'] = fetch_tags_for_text(conn, values['id'])
 
         yield values
 

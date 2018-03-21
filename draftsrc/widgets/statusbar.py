@@ -127,7 +127,7 @@ class DraftStatusbar(Gtk.Bin):
         as tags"""
         data_dict = self._editor.current_text_data
 
-        tags = data_dict['keywords']
+        tags = data_dict['tags']
         self._refresh_tag_widget(tags)
 
         # TODO: Update other information
@@ -147,7 +147,7 @@ class DraftStatusbar(Gtk.Bin):
         _clear_container(self._tag_labels)
 
         if not tags:
-            empty_label = Gtk.Label(_("Add a keyword …"))
+            empty_label = Gtk.Label(_("Add a tag …"))
             empty_label.get_style_context().add_class('draft-placeholder-label')
             empty_label.set_visible(True)
             self._tag_labels.pack_start(empty_label, False, False, 0)

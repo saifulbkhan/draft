@@ -316,7 +316,7 @@ class DraftTextList(Gtk.ListBox):
         editor.connect('subtitle-changed', self.set_subtitle_for_current_selection)
         editor.connect('markup-changed', self.set_markup_for_current_selection)
         editor.connect('word-goal-set', self.set_word_goal_for_current_selection)
-        editor.connect('keywords-changed', self.set_keywords_for_current_selection)
+        editor.connect('tags-changed', self.set_tags_for_current_selection)
         editor.connect('view-changed', self.save_last_edit_data)
 
     def set_multi_selection_mode(self, multi_mode, escape=False):
@@ -406,22 +406,22 @@ class DraftTextList(Gtk.ListBox):
         self._model.set_prop_for_position(position, 'word_goal', goal)
         self.editor.current_text_data['word_goal'] = goal
 
-    def set_keywords_for_current_selection(self, widget, keywords):
-        """Ask store to make changes to the keywords of the currently selected text
+    def set_tags_for_current_selection(self, widget, tags):
+        """Ask store to make changes to the tags of the currently selected text
         so that it can be written to db.
 
         @self: DraftTextsList
-        @keywords: list, the list of string keywords which the selected text will be
+        @tags: list, the list of string tags which the selected text will be
                tagged with.
         """
         row = self.get_selected_row()
         position = row.get_index()
-        new_keywords = self._model.set_keywords_for_position(position, keywords)
+        new_tags = self._model.set_tags_for_position(position, tags)
 
-        # since @new_keywords might have slightly different letter case keywords, we
-        # should re-update editor keywords as well and then update statusbar, though
+        # since @new_tags might have slightly different letter case tags, we
+        # should re-update editor tags as well and then update statusbar, though
         # this is probably not the best place to do it.
-        self.editor.current_text_data['keywords'] = new_keywords
+        self.editor.current_text_data['tags'] = new_tags
         self.editor.statusbar.update_text_data()
 
     def save_last_edit_data(self, widget, metadata):

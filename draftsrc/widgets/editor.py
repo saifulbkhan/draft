@@ -38,7 +38,7 @@ class DraftEditor(Gtk.Box):
         'subtitle-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'markup-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'word-goal-set': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_INT,)),
-        'keywords-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
+        'tags-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
         'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
@@ -125,21 +125,21 @@ class DraftEditor(Gtk.Box):
         return text
 
     def add_tag(self, tag):
-        lower_case_keywords = [x.lower() for x in self.current_text_data['keywords']]
-        if tag.lower() in lower_case_keywords:
+        lower_case_tags = [x.lower() for x in self.current_text_data['tags']]
+        if tag.lower() in lower_case_tags:
             return
 
-        self.current_text_data['keywords'].append(tag)
-        self.emit('keywords-changed', self.current_text_data['keywords'])
+        self.current_text_data['tags'].append(tag)
+        self.emit('tags-changed', self.current_text_data['tags'])
 
     def delete_tag(self, tag):
-        lower_case_keywords = [x.lower() for x in self.current_text_data['keywords']]
-        if tag.lower() not in lower_case_keywords:
+        lower_case_tags = [x.lower() for x in self.current_text_data['tags']]
+        if tag.lower() not in lower_case_tags:
             return
 
-        index = lower_case_keywords.index(tag.lower())
-        self.current_text_data['keywords'].pop(index)
-        self.emit('keywords-changed', self.current_text_data['keywords'])
+        index = lower_case_tags.index(tag.lower())
+        self.current_text_data['tags'].pop(index)
+        self.emit('tags-changed', self.current_text_data['tags'])
 
     def set_markup(self, markup):
         self.markup_type = markup
