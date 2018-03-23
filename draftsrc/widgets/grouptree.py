@@ -17,7 +17,7 @@ from gettext import gettext as _
 
 from gi.repository import Gtk, Pango, Gdk, GObject
 
-from draftsrc.models.grouptreestore import DraftGroupTreeStore, Column
+from draftsrc.models.grouptreestore import DraftGroupTreeStore, Column, GroupTreeType
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 from draftsrc.widgets import GROUP_MOVE_INFO, GROUP_MOVE_TARGET
 
@@ -43,7 +43,9 @@ class DraftGroupTree(Gtk.TreeView):
         return '<DraftGroupsView>'
 
     def __init__(self):
-        Gtk.TreeView.__init__(self, DraftGroupTreeStore(top_row_name='Local'))
+        model = DraftGroupTreeStore(tree_type=GroupTreeType.COLLECTION_GROUPS,
+                                    top_row_name='Local')
+        Gtk.TreeView.__init__(self, model)
         ctx = self.get_style_context()
         ctx.add_class('draft-treeview')
 
@@ -56,7 +58,6 @@ class DraftGroupTree(Gtk.TreeView):
                                       Gdk.DragAction.MOVE)
         self.enable_model_drag_dest([GROUP_MOVE_TARGET, TEXT_MOVE_TARGET],
                                     Gdk.DragAction.MOVE)
-        self.set_headers_visible(False)
 
         self.connect('key-press-event', self._on_key_press)
         self.connect('button-press-event', self._on_button_press)
@@ -156,7 +157,7 @@ class DraftGroupTree(Gtk.TreeView):
         top level row"""
         renderer = Gtk.CellRendererText(ellipsize=Pango.EllipsizeMode.END)
         renderer.set_fixed_size(-1, 28)
-        column = Gtk.TreeViewColumn('title', renderer, text=Column.NAME)
+        column = Gtk.TreeViewColumn('Groups', renderer, text=Column.NAME)
         self.title = column
         self.append_column(column)
         self.title.set_expand(True)

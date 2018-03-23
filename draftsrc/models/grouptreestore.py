@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from enum import Enum
 from gettext import gettext as _
 
 from gi.repository import GObject, Gtk
@@ -30,6 +31,12 @@ class Column(object):
     PARENT_ID = 5
 
 
+class GroupTreeType(Enum):
+    COLLECTION_GROUPS = 0
+    RECENT_GROUPS = 1
+    TRASHED_GROUPS = 2
+
+
 class DraftGroupTreeStore(Gtk.TreeStore):
     """Model for storing metadata related to heirarchical group structures"""
     _top_level_iter = None
@@ -37,7 +44,7 @@ class DraftGroupTreeStore(Gtk.TreeStore):
     def __repr__(self):
         return '<DraftTreeStore>'
 
-    def __init__(self, top_row_name):
+    def __init__(self, tree_type, top_row_name):
         Gtk.TreeStore.__init__(
             self,
             GObject.TYPE_STRING,        # name of group
@@ -48,6 +55,7 @@ class DraftGroupTreeStore(Gtk.TreeStore):
             GObject.TYPE_PYOBJECT       # id of the parent group, can be null
         )
         self._append_top_level_row(top_row_name)
+        self._tree_type = tree_type
         self._load_data()
 
     def _append_top_level_row(self, top_row_name):
@@ -55,9 +63,16 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         self._top_level_iter = self._append_group(top_level_group)
 
     def _load_data(self):
-        """Load group data into tree model"""
+        """Load group data into tree model, according to groupt tree type"""
         with db.connect() as connection:
-            for parent_group in data.groups_not_in_groups(connection):
+            load_fn = None
+            kwargs = {'conn': connection}
+            if self._tree_type == GroupTreeType.RECENT_GROUPS:
+                load_fn = data.groups_recently_modified
+            else:
+                load_fn = data.groups_not_in_groups
+
+            for parent_group in load_fn(**kwargs):
                 self._append_group_and_children(connection, parent_group)
 
     def _append_group_and_children(self, connection, group, treeiter=None):
@@ -69,7 +84,10 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         @treeiter: GtkTreeIter, node iterator where @group and children
                    will be appended
         """
-        if group['in_trash']:
+        if ((self._tree_type == GroupTreeType.TRASHED_GROUPS
+                and not group['in_trash'])
+                or (self._tree_type != GroupTreeType.TRASHED_GROUPS
+                and group['in_trash'])):
             return
 
         if not treeiter:

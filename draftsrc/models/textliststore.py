@@ -26,7 +26,6 @@ class TextListType(object):
     TAGGED_TEXTS = 1
     ALL_TEXTS = 2
     RECENT_TEXTS = 3
-    TRASHED_TEXTS = 4
 
 
 class DraftTextListStore(Gio.ListStore):
@@ -90,15 +89,17 @@ class DraftTextListStore(Gio.ListStore):
     def __repr__(self):
         return '<DraftListStore>'
 
-    def __init__(self, list_type, parent_group=None, tag=None):
+    def __init__(self, list_type, parent_group=None, tag=None, trashed=False):
         """Initialises a new DraftListStore of given type. For some types extra
         information like the parent group or tag need to be provided as well.
 
         @parent_group: dict, storing parent group details
         @tag: dict, sotring details of tag
+        @trashed: boolean, whether the model should show trashed texts only
         """
         Gio.ListStore.__init__(self, item_type=self.RowData.__gtype__)
         self._list_type = list_type
+        self._trashed_texts_only = trashed
 
         if self._list_type == TextListType.GROUP_TEXTS:
             assert parent_group is not None
@@ -140,9 +141,9 @@ class DraftTextListStore(Gio.ListStore):
 
             for text in load_fn(**kwargs):
                 row = self._row_data_for_text(text)
-                if self._list_type == TextListType.TRASHED_TEXTS:
+                if self._trashed_texts_only and row.in_trash:
                     self.append(row)
-                elif not row.in_trash:
+                elif not self._trashed_texts_only and not row.in_trash:
                     self.append(row)
 
     def _row_data_for_text(self, text_metadata):
