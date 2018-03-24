@@ -73,6 +73,7 @@ def get_last_insert_id(conn):
 
 def update_text(conn, text_id, values):
     """Update the values for given text id"""
+    values['last_modified'] = db.get_datetime()
     query = '''
         UPDATE text
            SET last_modified = :modified
