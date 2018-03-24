@@ -143,7 +143,7 @@ def get_datetime():
 def get_datetime_last_n_days(last_n_days):
     dt = datetime.now()
     last_day = dt.day - last_n_days
-    dt.replace(day=last_day)
+    dt = dt.replace(day=last_day)
     return dt.isoformat(timespec='milliseconds')
 
 
