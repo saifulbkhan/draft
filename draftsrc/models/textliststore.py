@@ -185,7 +185,12 @@ class DraftTextListStore(Gio.ListStore):
 
         hash_id = item.hash_id
         parent_hashes = list(item.parent_list)
-        file.read_file_contents(hash_id, parent_hashes, buffer, load_file)
+        in_trash = self._trashed_texts_only
+        file.read_file_contents(hash_id,
+                                parent_hashes,
+                                buffer,
+                                load_file,
+                                in_trash)
 
     def set_prop_for_position(self, position, prop, value):
         """Set property @prop for item at @position to @value

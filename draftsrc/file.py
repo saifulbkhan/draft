@@ -51,9 +51,11 @@ def init_storage():
        pass
 
 
-def read_file_contents(filename, parent_names, buffer, load_file_cb):
+def read_file_contents(filename, parent_names, buffer, load_file_cb, in_trash=False):
     parent_dir = sep.join(parent_names)
     fpath = join(BASE_TEXT_DIR, parent_dir, filename)
+    if in_trash:
+        fpath = join(TRASH_DIR, parent_dir, filename)
 
     def load_finish_cb(loader, res, user_data):
         gsf = user_data
@@ -77,7 +79,7 @@ def write_to_file(f, contents):
     contents = bytes(contents, default_encoding)
     try:
         success, etag = f.replace_contents(contents,
-                                           etag,
+                                           None,
                                            False,
                                            Gio.FileCreateFlags.PRIVATE,
                                            None)
