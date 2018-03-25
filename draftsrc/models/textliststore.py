@@ -134,7 +134,7 @@ class DraftTextListStore(Gio.ListStore):
                 }
             elif self._list_type == TextListType.RECENT_TEXTS:
                 load_fn = data.texts_recently_modified
-                kwargs = {'conn', connection}
+                kwargs = {'conn': connection}
             else:
                 load_fn = data.fetch_texts
                 kwargs = {'conn': connection}
@@ -233,6 +233,8 @@ class DraftTextListStore(Gio.ListStore):
 
             data.update_text(connection, id, item.to_dict())
 
+        self.dequeue_final_save(id)
+
         if self._parent_group and parent != self._parent_group:
             self.remove(position)
         return item.db_id
@@ -254,11 +256,16 @@ class DraftTextListStore(Gio.ListStore):
             # update tags after, they have been updated in db
             item.tags = data.fetch_tags_for_text(connection, id)
 
+        self.dequeue_final_save(id)
+
         return item.tags
 
     def queue_final_save(self, metadata):
         db.final_updater.execution_fn = data.update_text
         db.final_updater.enqueue(metadata['id'], metadata)
+
+    def dequeue_final_save(self, id):
+        db.async_updater.remove_if_exists(id)
 
     def delete_item_at_postion(self, position):
         """Delete item at @position in model
@@ -277,6 +284,8 @@ class DraftTextListStore(Gio.ListStore):
 
         with db.connect() as connection:
             data.update_text(connection, id, item.to_dict())
+
+        self.dequeue_final_save(id)
 
     def get_data_for_position(self, position):
         item = self.get_item(position)

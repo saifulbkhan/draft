@@ -19,12 +19,13 @@ from gettext import gettext as _
 from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
 from draftsrc.models.textliststore import DraftTextListStore, TextListType
+from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 
 
 class DraftTextList(Gtk.ListBox):
     """The listbox containing all the texts in a text group"""
-    __gtype__name__ = 'DraftTextsList'
+    __gtype__name__ = 'DraftTextList'
 
     __gsignals__ = {
         'text-moved-to-group': (GObject.SignalFlags.RUN_FIRST,
@@ -34,11 +35,12 @@ class DraftTextList(Gtk.ListBox):
         'text-created': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
+    editor = None
     _texts_being_moved = []
     _multi_row_selection_stack = []
 
     def __repr__(self):
-        return '<DraftTextsList>'
+        return '<DraftTextList>'
 
     def __init__(self):
         """Initialize a new DraftTextsList for given @parent_group
@@ -284,9 +286,25 @@ class DraftTextList(Gtk.ListBox):
         selection.set(selection.get_target(), -1, bytearray(ids))
         self._texts_being_moved = ids
 
-    def set_model(self, parent_group):
-        self._model = DraftTextListStore(list_type=TextListType.GROUP_TEXTS,
-                                         parent_group=parent_group)
+    def set_model(self, collection_class, parent_group=None, tag=None):
+        self._model = None
+        if parent_group:
+            if parent_group['in_trash']:
+                self._model = DraftTextListStore(list_type=TextListType.GROUP_TEXTS,
+                                                 parent_group=parent_group,
+                                                 trashed=True)
+            else:
+                self._model = DraftTextListStore(list_type=TextListType.GROUP_TEXTS,
+                                                 parent_group=parent_group)
+        elif tag:
+            self._model = DraftTextListStore(list_type=TextListType.TAGGED_TEXTS,
+                                             tag=tag)
+        else:
+            if collection_class == CollectionClassType.RECENT:
+                self._model = DraftTextListStore(list_type=TextListType.RECENT_TEXTS)
+            else:
+                self._model = DraftTextListStore(list_type=TextListType.ALL_TEXTS)
+
         self.bind_model(self._model, self._create_row_widget, None)
         self._model.connect('items-changed', self._on_items_changed)
         if self._texts_being_moved:

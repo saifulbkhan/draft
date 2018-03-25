@@ -48,6 +48,7 @@ class DraftEditor(Gtk.Box):
     current_text_data = None
     _current_file = None
     _open_files = {}
+    _load_in_progress = False
 
     def __repr__(self):
         return '<Editor>'
@@ -151,6 +152,9 @@ class DraftEditor(Gtk.Box):
             self.emit('markup-changed', markup)
 
     def switch_view(self, text_data):
+        if self._load_in_progress:
+            return
+
         self.current_text_data = text_data
 
         id = str(text_data['id'])
@@ -184,6 +188,7 @@ class DraftEditor(Gtk.Box):
         # blocking buffer's `buffer-changed` signal handler while loading
         buffer.handler_block(self._on_buffer_changed_id)
 
+        self._load_in_progress = True
         return buffer
 
     def load_file(self, gsf, buffer):
@@ -194,6 +199,7 @@ class DraftEditor(Gtk.Box):
 
             id = self.editor_stack.get_visible_child_name()
             self._open_files[id] = self._current_file
+            self._load_in_progress = False
 
             GLib.idle_add(self._focus_view, True)
 

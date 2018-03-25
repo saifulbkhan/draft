@@ -16,7 +16,7 @@
 from gi.repository import Gtk, Gdk, Gio, GLib
 from gettext import gettext as _
 
-from draftsrc.views.panelview import DraftTextListView, DraftCollectionView
+from draftsrc.views.panelview import DraftTextListView, DraftLibraryView
 from draftsrc.views.contentview import ContentView
 
 
@@ -66,11 +66,12 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
         self._set_up_panel_views()
         self._set_up_content_view()
+        GLib.idle_add(self.libraryview.select_appropriate_row)
         self.connect('key-press-event', self._on_key_press)
 
     def _set_up_panel_views(self):
-        self.grouptreeview = DraftCollectionView(self)
-        self._topbox.pack_start(self.grouptreeview, False, True, 0)
+        self.libraryview = DraftLibraryView(self)
+        self._topbox.pack_start(self.libraryview, False, True, 0)
         self.textlistview = DraftTextListView(self)
         self._topbox.pack_start(self.textlistview, False, True, 0)
 
@@ -84,11 +85,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.textlistview.new_text_request()
 
     def _new_group_request(self, action, param):
-        self.grouptreeview.new_group_request()
+        self.libraryview.new_group_request()
 
     def _escape_selection_modes(self):
         self.textlistview.escape_selection_mode()
-        self.grouptreeview.escape_selection_mode()
+        self.libraryview.escape_selection_mode()
 
     def _on_key_press(self, widget, event):
         modifier = Gtk.accelerator_get_default_mod_mask()
@@ -120,11 +121,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
                 self._escape_selection_modes()
 
     def hide_group_panel(self):
-        self.grouptreeview.hide_panel()
+        self.libraryview.hide_panel()
         self.group_panel_hidden = True
 
     def reveal_group_panel(self):
-        self.grouptreeview.reveal_panel()
+        self.libraryview.reveal_panel()
         self.group_panel_hidden = False
 
     def hide_text_panel(self):
@@ -136,14 +137,14 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.text_panel_hidden = False
 
     def update_content_view_and_headerbar(self):
-        if self.grouptreeview.collection_is_empty():
+        if self.libraryview.collection_is_empty():
             self.contentview.set_empty_collection_state()
             self.hide_headerbar_elements()
             self.hide_group_panel()
             self.hide_text_panel()
             self.lock_group_panel = True
             self.lock_text_panel = True
-        elif self.grouptreeview.selected_group_has_no_texts():
+        elif self.libraryview.selected_group_has_no_texts():
             self.contentview.set_empty_group_state()
             self.show_headerbar_elements()
             self.partial_headerbar_interaction()

@@ -18,13 +18,14 @@ from gettext import gettext as _
 from gi.repository import Gtk, Pango, Gdk, GObject
 
 from draftsrc.models.grouptreestore import DraftGroupTreeStore, Column, GroupTreeType
+from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 from draftsrc.widgets import GROUP_MOVE_INFO, GROUP_MOVE_TARGET
 
 
 class DraftGroupTree(Gtk.TreeView):
     """The view presenting all the text groups in user's collection"""
-    __gtype_name__ = 'DraftGroupsView'
+    __gtype_name__ = 'DraftGroupTree'
 
     __gsignals__ = {
         'texts-dropped': (GObject.SignalFlags.RUN_FIRST,
@@ -39,20 +40,20 @@ class DraftGroupTree(Gtk.TreeView):
         'group-deleted': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
+    _group_column = None
+
     def __repr__(self):
-        return '<DraftGroupsView>'
+        return '<DraftGroupTree>'
 
     def __init__(self):
-        model = DraftGroupTreeStore(tree_type=GroupTreeType.COLLECTION_GROUPS,
-                                    top_row_name='Local')
-        Gtk.TreeView.__init__(self, model)
+        Gtk.TreeView.__init__(self)
         ctx = self.get_style_context()
         ctx.add_class('draft-treeview')
 
         self.selection = self.get_selection()
         self.selection.connect('changed', self._on_selection_changed)
+        self.set_headers_visible(False)
 
-        self._populate()
         self.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
                                       [GROUP_MOVE_TARGET],
                                       Gdk.DragAction.MOVE)
@@ -91,8 +92,6 @@ class DraftGroupTree(Gtk.TreeView):
             return
 
         if not (model and treeiter):
-            root_path = self._root_path()
-            self.selection.select_path(root_path)
             return
 
         path = model.get_path(treeiter)
@@ -152,15 +151,30 @@ class DraftGroupTree(Gtk.TreeView):
             text_ids = list(data)
             self.emit('texts-dropped', text_ids, new_parent_id)
 
+    def set_collection_model(self):
+        tree_type = GroupTreeType.COLLECTION_GROUPS
+        self._set_model_with_type(tree_type)
+
+    def set_trash_model(self):
+        tree_type = GroupTreeType.TRASHED_GROUPS
+        self._set_model_with_type(tree_type)
+
+    def _set_model_with_type(self, tree_type):
+        model = DraftGroupTreeStore(tree_type=tree_type, top_row_name='Local')
+        self.set_model(model)
+        if self._group_column:
+            self.remove_column(self._group_column)
+        self._populate()
+
     def _populate(self):
         """Set up cell renderer and column for the tree view and expand the
         top level row"""
         renderer = Gtk.CellRendererText(ellipsize=Pango.EllipsizeMode.END)
         renderer.set_fixed_size(-1, 28)
         column = Gtk.TreeViewColumn('Groups', renderer, text=Column.NAME)
-        self.title = column
+        self._group_column = column
         self.append_column(column)
-        self.title.set_expand(True)
+        self._group_column.set_expand(True)
         root_path = self._root_path()
         self.expand_row(root_path, False)
 
@@ -174,7 +188,7 @@ class DraftGroupTree(Gtk.TreeView):
 
     def get_selected_rect(self):
         path = self.get_selected_path()
-        return self.get_cell_area(path, self.title)
+        return self.get_cell_area(path, self._group_column)
 
     def set_faded_selection(self, faded):
         """Applies or removes the `draft-faded-selection` class to TreeView,
@@ -241,9 +255,10 @@ class DraftGroupTree(Gtk.TreeView):
         self.emit('group-deleted')
 
     def select_for_id(self, group_id):
+        """Select a group for the given group id"""
         model = self.get_model()
         if group_id is None:
-            path = Gtk.TreePath.new_from_string('0')
+            path = self._root_path()
             self.selection.select_path(path)
             return
 
@@ -255,6 +270,16 @@ class DraftGroupTree(Gtk.TreeView):
             return False
 
         model.foreach(select_if_group_id_matches, None)
+
+    def select_if_not_selected(self):
+        """Select a row if not selected"""
+        # FIXME: Make this select the row containing the
+        # last edited or viewed text item.
+        model, treeiter = self.selection.get_selected()
+        if not treeiter:
+            treeiter = model.get_iter(self._root_path())
+        self.selection.select_iter(treeiter)
+        return model.get_group_for_iter(treeiter)
 
     def count_top_level_groups_and_texts(self):
         """Count the number of groups and texts in the root node"""

@@ -175,6 +175,11 @@ class RequestQueue(OrderedDict):
         if not self.active and self.immediate_activation:
             self.activate()
 
+    def remove_if_exists(self, key):
+        """Remove the item with given key if it exists"""
+        if key in self:
+            self.pop(key)
+
     def activate(self):
         """Work on the contents of the queue, in a separate thread."""
         self.active = True

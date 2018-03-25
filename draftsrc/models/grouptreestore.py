@@ -33,7 +33,6 @@ class Column(object):
 
 class GroupTreeType(Enum):
     COLLECTION_GROUPS = 0
-    RECENT_GROUPS = 1
     TRASHED_GROUPS = 2
 
 
@@ -54,8 +53,8 @@ class DraftGroupTreeStore(Gtk.TreeStore):
             GObject.TYPE_INT,           # id of the group
             GObject.TYPE_PYOBJECT       # id of the parent group, can be null
         )
-        self._append_top_level_row(top_row_name)
         self._tree_type = tree_type
+        self._append_top_level_row(top_row_name)
         self._load_data()
 
     def _append_top_level_row(self, top_row_name):
@@ -65,14 +64,7 @@ class DraftGroupTreeStore(Gtk.TreeStore):
     def _load_data(self):
         """Load group data into tree model, according to groupt tree type"""
         with db.connect() as connection:
-            load_fn = None
-            kwargs = {'conn': connection}
-            if self._tree_type == GroupTreeType.RECENT_GROUPS:
-                load_fn = data.groups_recently_modified
-            else:
-                load_fn = data.groups_not_in_groups
-
-            for parent_group in load_fn(**kwargs):
+            for parent_group in data.groups_not_in_groups(connection):
                 self._append_group_and_children(connection, parent_group)
 
     def _append_group_and_children(self, connection, group, treeiter=None):
@@ -84,19 +76,20 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         @treeiter: GtkTreeIter, node iterator where @group and children
                    will be appended
         """
-        if ((self._tree_type == GroupTreeType.TRASHED_GROUPS
-                and not group['in_trash'])
-                or (self._tree_type != GroupTreeType.TRASHED_GROUPS
-                and group['in_trash'])):
+        if self._tree_type != GroupTreeType.TRASHED_GROUPS and group['in_trash']:
             return
 
         if not treeiter:
             treeiter = self._top_level_iter
 
-        current_iter = self._append_group(group, treeiter)
+        if ((self._tree_type == GroupTreeType.TRASHED_GROUPS
+                and group['in_trash'])
+                or (self._tree_type != GroupTreeType.TRASHED_GROUPS
+                and not group['in_trash'])):
+            treeiter = self._append_group(group, treeiter)
 
         for child_group in data.groups_in_group(connection, group['id']):
-            self._append_group_and_children(connection, child_group, current_iter)
+            self._append_group_and_children(connection, child_group, treeiter)
 
     def _append_group(self, group, treeiter=None):
         """Append a single group at the given node
@@ -132,11 +125,16 @@ class DraftGroupTreeStore(Gtk.TreeStore):
     def _dict_for_top_level_row(self, row_name=None):
         if not row_name:
             row_name = self[self._top_level_iter][Column.NAME]
+
+        in_trash = False
+        if self._tree_type == GroupTreeType.TRASHED_GROUPS:
+            in_trash = True
+
         return {
             'name': row_name,
             'created': db.get_datetime(),
             'last_modified': None,
-            'in_trash': None,
+            'in_trash': in_trash,
             'id': None,
             'parent_id': None
         }
