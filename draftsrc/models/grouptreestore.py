@@ -292,14 +292,16 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         """Count the number of groups contained within group at @treeiter"""
         group = self.get_group_for_iter(treeiter)
         group_id = group['id']
+        in_trash = group['in_trash']
 
         with db.connect() as connection:
-            return data.count_groups(connection, group_id)
+            return data.count_groups(connection, group_id, in_trash)
 
     def count_texts_for_iter(self, treeiter):
         """Count the number of texts contained within group at @treeiter"""
         group = self.get_group_for_iter(treeiter)
         group_id = group['id']
+        in_trash = group['in_trash']
 
         with db.connect() as connection:
-            return data.count_texts(connection, group_id)
+            return data.count_texts(connection, group_id, in_trash)

@@ -434,7 +434,7 @@ def group_for_id(conn, group_id):
     return next(gen)
 
 
-def count_texts(conn, group_id=None):
+def count_texts(conn, group_id=None, in_trash=False):
     """Return the number of texts in the given @group, that are not trashed"""
     base_query = '''
         SELECT COUNT(id)
@@ -444,22 +444,24 @@ def count_texts(conn, group_id=None):
     if group_id is None:
         where_clause = '''
             WHERE parent_id IS NULL
-              AND in_trash = 0
+              AND in_trash = :in_trash
         '''
         cursor = conn.cursor()
-        res = cursor.execute(base_query + where_clause)
+        values = {'in_trash': in_trash}
+        res = cursor.execute(base_query + where_clause, values)
         return res.fetchone()[0]
     else:
         where_clause = '''
              WHERE parent_id = :group_id
-               AND in_trash = 0
+               AND in_trash = :in_trash
         '''
         cursor = conn.cursor()
-        res = cursor.execute(base_query + where_clause, {'group_id': group_id})
+        values = {'group_id': group_id, 'in_trash': in_trash}
+        res = cursor.execute(base_query + where_clause, values)
         return res.fetchone()[0]
 
 
-def count_groups(conn, group_id=None):
+def count_groups(conn, group_id=None, in_trash=False):
     """Return the number of groups in the given @group, that are not trashed"""
     base_query = '''
         SELECT COUNT(id)
@@ -469,16 +471,18 @@ def count_groups(conn, group_id=None):
     if group_id is None:
         where_clause = '''
             WHERE parent_id IS NULL
-              AND in_trash = 0
+              AND in_trash = :in_trash
         '''
         cursor = conn.cursor()
-        res = cursor.execute(base_query + where_clause)
+        values = {'in_trash': in_trash}
+        res = cursor.execute(base_query + where_clause, values)
         return res.fetchone()[0]
     else:
         where_clause = '''
              WHERE parent_id = :group_id
-               AND in_trash = 0
+               AND in_trash = :in_trash
         '''
         cursor = conn.cursor()
-        res = cursor.execute(base_query + where_clause, {'group_id': group_id})
+        values = {'group_id': group_id, 'in_trash': in_trash}
+        res = cursor.execute(base_query + where_clause, values)
         return res.fetchone()[0]

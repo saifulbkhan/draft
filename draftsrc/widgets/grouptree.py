@@ -41,6 +41,7 @@ class DraftGroupTree(Gtk.TreeView):
     }
 
     _group_column = None
+    _tree_type = None
 
     def __repr__(self):
         return '<DraftGroupTree>'
@@ -68,6 +69,9 @@ class DraftGroupTree(Gtk.TreeView):
     def _on_key_press(self, widget, event):
         """Handle key presses within the widget. Ignore some events that are not
         meant for root iter."""
+        if self._tree_type == GroupTreeType.TRASHED_GROUPS:
+            return
+
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
         path_string = self.get_selected_path().to_string()
@@ -102,6 +106,9 @@ class DraftGroupTree(Gtk.TreeView):
     def do_drag_motion(self, context, x, y, time):
         """Override the default drag motion method and highlight with
         INTO_OR_AFTER move scheme"""
+        if self._tree_type == GroupTreeType.TRASHED_GROUPS:
+            return
+
         propagate = Gtk.TreeView.do_drag_motion(self, context, x, y, time)
         res = self.get_path_at_pos(x, y)
         if res:
@@ -119,12 +126,18 @@ class DraftGroupTree(Gtk.TreeView):
     def _drag_data_get(self, widget, drag_context, sel, info, time):
         """Handle `drag-data-get` signal. Supply selection data with db id of
         row being dragged"""
+        if self._tree_type == GroupTreeType.TRASHED_GROUPS:
+            return
+
         path_string = self.get_selected_path().to_string()
         sel.set(sel.get_target(), -1, path_string.encode())
 
     def _drag_data_received(self, widget, drag_context, x, y, sel, info, time):
         """Handle `drag-data-received` signal. Obtain from selection data, the
         id for the row being dragged"""
+        if self._tree_type == GroupTreeType.TRASHED_GROUPS:
+            return
+
         model = self.get_model()
         res = self.get_path_at_pos(x, y)
         new_parent_iter = None
@@ -153,15 +166,20 @@ class DraftGroupTree(Gtk.TreeView):
 
     def set_collection_model(self):
         tree_type = GroupTreeType.COLLECTION_GROUPS
-        self._set_model_with_type(tree_type)
+        top_row_name=_("Local")
+        self._set_model_with_type(tree_type, top_row_name)
+        root_path = self._root_path()
+        self.expand_row(root_path, False)
 
     def set_trash_model(self):
         tree_type = GroupTreeType.TRASHED_GROUPS
-        self._set_model_with_type(tree_type)
+        top_row_name = _("Trash")
+        self._set_model_with_type(tree_type, top_row_name)
 
-    def _set_model_with_type(self, tree_type):
-        model = DraftGroupTreeStore(tree_type=tree_type, top_row_name='Local')
+    def _set_model_with_type(self, tree_type, top_row_name):
+        model = DraftGroupTreeStore(tree_type, top_row_name)
         self.set_model(model)
+        self._tree_type = tree_type
         if self._group_column:
             self.remove_column(self._group_column)
         self._populate()
@@ -175,8 +193,6 @@ class DraftGroupTree(Gtk.TreeView):
         self._group_column = column
         self.append_column(column)
         self._group_column.set_expand(True)
-        root_path = self._root_path()
-        self.expand_row(root_path, False)
 
     def _root_path(self):
         """Get the GtkTreePath for root entry of a treeview"""
@@ -298,3 +314,11 @@ class DraftGroupTree(Gtk.TreeView):
         num_groups = model.count_groups_for_iter(treeiter)
         num_texts = model.count_texts_for_iter(treeiter)
         return num_groups, num_texts
+
+    def has_row_selected(self):
+        """Check if a row has been selected in the treeview"""
+        model, treeiter = self.selection.get_selected()
+        if treeiter is None:
+            return False
+
+        return True

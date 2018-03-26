@@ -44,27 +44,25 @@ class DraftLibraryView(Gtk.Bin):
         self.slider.set_hexpand(False)
         self.add(self.slider)
 
+        self.library_stack = self.builder.get_object('library_stack')
         stack_switcher = self.builder.get_object('library_switcher')
         collection_window = self.builder.get_object('collection_window')
-        self.library_stack = self.builder.get_object('library_stack')
+        collection_box = self.builder.get_object('collection_box')
 
         self.collection_list = DraftCollectionList()
-        collection_window.add(self.collection_list)
+        collection_box.pack_start(self.collection_list, False, True, 0)
 
-        self.collection_view = DraftGroupTree()
-        self.collection_view.set_collection_model()
-        scrolled = Gtk.ScrolledWindow(None, None)
-        scrolled.add(self.collection_view)
-        self.library_stack.add_titled(scrolled,
+        self.trash_view = DraftGroupTree()
+        self.trash_view.set_trash_model()
+        collection_box.pack_start(self.trash_view, False, True, 0)
+
+        self.local_groups_view = DraftGroupTree()
+        self.local_groups_view.set_collection_model()
+        collection_box.pack_start(self.local_groups_view, False, True, 0)
+
+        self.library_stack.add_titled(collection_window,
                                       self.collection_view_name,
                                       _("Collection"))
-
-        # self.tags_view = DraftTagsList()
-        # scrolled = Gtk.ScrolledWindow(None, None)
-        # scrolled.add(self.tags_view)
-        # self.library_stack.add_titled(scrolled,
-        #                               self.tags_view_name,
-        #                               _("Tags"))
 
         self._popover = self.builder.get_object('popover')
         self._popover_title = self.builder.get_object('popover_title')
@@ -82,12 +80,14 @@ class DraftLibraryView(Gtk.Bin):
         for button in toggle_buttons:
             button.connect('clicked', self._on_button_toggled)
 
-        self.collection_view.connect('group-selected', self._on_group_selected)
-        self.collection_view.connect('texts-dropped', self._on_texts_dropped)
-        self.collection_view.connect('rename-requested', self._on_group_rename_requested)
-        self.collection_view.connect('menu-requested', self._on_group_menu_requested)
-        self.collection_view.connect('group-created', self._on_group_created)
-        self.collection_view.connect('group-deleted', self._on_group_deleted)
+        self.local_groups_view.connect('group-selected', self._on_group_selected)
+        self.local_groups_view.connect('texts-dropped', self._on_texts_dropped)
+        self.local_groups_view.connect('rename-requested', self._on_group_rename_requested)
+        self.local_groups_view.connect('menu-requested', self._on_group_menu_requested)
+        self.local_groups_view.connect('group-created', self._on_group_created)
+        self.local_groups_view.connect('group-deleted', self._on_group_deleted)
+
+        self.trash_view.connect('group-selected', self._on_group_selected)
 
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
@@ -99,13 +99,20 @@ class DraftLibraryView(Gtk.Bin):
     def _on_collection_class_selected(self, widget, collection_class_type):
         """Handler for `class-selected` signal from DraftsCollectionView. Calls
         TextListView to update its collection class and consequently its model"""
-        self.collection_view.selection.unselect_all()
+        self.local_groups_view.selection.unselect_all()
+        self.trash_view.selection.unselect_all()
         self.parent_window.textlistview.set_collection_class_type(collection_class_type)
 
     def _on_group_selected(self, widget, group):
         """Handler for `group-selected` signal from DraftsTreeView. Calls on
         TextListView to reload its model with texts from selected group"""
         self.collection_list.selection.unselect_all()
+
+        if widget == self.local_groups_view:
+            self.trash_view.selection.unselect_all()
+        elif widget == self.trash_view:
+            self.local_groups_view.selection.unselect_all()
+
         self.parent_window.update_content_view_and_headerbar()
         self.parent_window.textlistview.set_model_for_group(group)
 
@@ -135,9 +142,9 @@ class DraftLibraryView(Gtk.Bin):
             return
 
         if self._creation_state:
-            self.collection_view.finalize_name_for_new_group(name)
+            self.local_groups_view.finalize_name_for_new_group(name)
         else:
-            self.collection_view.set_name_for_current_selection(name.strip())
+            self.local_groups_view.set_name_for_current_selection(name.strip())
 
         self._popover.popdown()
 
@@ -145,13 +152,13 @@ class DraftLibraryView(Gtk.Bin):
         """When the naming popover closes, discard new group if it has not been
         finalized, set creation state to `False` and set name entry to blank"""
         self._name_entry.set_text('')
-        self.collection_view.discard_new_group()
-        self.collection_view.set_faded_selection(False)
+        self.local_groups_view.discard_new_group()
+        self.local_groups_view.set_faded_selection(False)
         self._creation_state = False
 
     def _on_group_rename_requested(self, widget):
         """Handle request for group rename, set button and popover title"""
-        rect = self.collection_view.get_selected_rect()
+        rect = self.local_groups_view.get_selected_rect()
         self._action_button.set_label('Rename')
         self._popover_title.set_label('Rename Group')
         self._popover.set_pointing_to(rect)
@@ -170,10 +177,11 @@ class DraftLibraryView(Gtk.Bin):
         is the root container."""
 
         def popup_menu():
-            if self.collection_view.get_selected_path().to_string() == '0':
+            if self.local_groups_view.get_selected_path().to_string() == '0':
                 return
 
-            rect = self.collection_view.get_selected_rect()
+            rect = self.local_groups_view.get_selected_rect()
+            self._popover_menu.set_relative_to(self.local_groups_view)
             self._popover_menu.set_pointing_to(rect)
             self._popover_menu.popup()
 
@@ -182,11 +190,11 @@ class DraftLibraryView(Gtk.Bin):
         GLib.idle_add(popup_menu)
 
     def _on_rename_clicked(self, widget):
-        self.collection_view.emit('rename-requested')
+        self.local_groups_view.emit('rename-requested')
         self._popover_menu.popdown()
 
     def _on_delete_clicked(self, widget):
-        self.collection_view.delete_selected_row()
+        self.local_groups_view.delete_selected_row()
         self._popover_menu.popdown()
 
     def toggle_panel(self):
@@ -212,24 +220,25 @@ class DraftLibraryView(Gtk.Bin):
         self.reveal_panel()
         self.library_stack.set_visible_child_name('collection')
 
-        rect = self.collection_view.new_group_request()
-        self.collection_view.set_faded_selection(True)
+        rect = self.local_groups_view.new_group_request()
+        self.local_groups_view.set_faded_selection(True)
 
         self._creation_state = True
         self._action_button.set_label('Create')
         self._popover_title.set_label('Group Name')
+        self._popover.set_relative_to(self.local_groups_view)
         self._popover.set_pointing_to(rect)
         self._popover.popup()
 
     def selection_request(self, group_id):
-        self.collection_view.select_for_id(group_id)
+        self.local_groups_view.select_for_id(group_id)
 
     def escape_selection_mode(self):
         pass
 
     def collection_is_empty(self):
         """Check if there are any groups or texts present in the collection"""
-        num_groups, num_texts = self.collection_view.count_top_level_groups_and_texts()
+        num_groups, num_texts = self.local_groups_view.count_top_level_groups_and_texts()
         if num_groups or num_texts:
             return False
 
@@ -237,7 +246,10 @@ class DraftLibraryView(Gtk.Bin):
 
     def selected_group_has_no_texts(self):
         """Check if selected group has any texts"""
-        num_groups, num_texts = self.collection_view.count_groups_and_texts_for_selection()
+        view = self.local_groups_view
+        if self.trash_view.has_row_selected():
+            view = self.trash_view
+        num_groups, num_texts = view.count_groups_and_texts_for_selection()
         if num_texts:
             return False
 
@@ -247,7 +259,7 @@ class DraftLibraryView(Gtk.Bin):
         """Select an appropriate row in the currently visible view"""
         visible_child_name = self.library_stack.get_visible_child_name()
         if visible_child_name == self.collection_view_name:
-            group = self.collection_view.select_if_not_selected()
+            group = self.local_groups_view.select_if_not_selected()
             self.parent_window.textlistview.set_model_for_group(group)
 
 
@@ -255,7 +267,6 @@ class DraftLibraryView(Gtk.Bin):
 class DraftTextListView(Gtk.Bin):
 
     _panel_visible = True
-    _collection_class_type = None
     sidebar_width = 250
 
     def __repr__(self):
@@ -310,10 +321,9 @@ class DraftTextListView(Gtk.Bin):
             self.search_entry.grab_focus()
 
     def set_model_for_group(self, group):
-        self.view.set_model(self._collection_class_type, parent_group=group)
+        self.view.set_model(parent_group=group)
 
     def set_collection_class_type(self, collection_class_type):
-        self._collection_class_type = collection_class_type
         self.view.set_model(collection_class_type)
 
     def set_editor(self, editor):

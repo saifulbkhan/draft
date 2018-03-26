@@ -286,7 +286,7 @@ class DraftTextList(Gtk.ListBox):
         selection.set(selection.get_target(), -1, bytearray(ids))
         self._texts_being_moved = ids
 
-    def set_model(self, collection_class, parent_group=None, tag=None):
+    def set_model(self, collection_class=None, parent_group=None, tag=None):
         self._model = None
         if parent_group:
             if parent_group['in_trash']:
