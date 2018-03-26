@@ -29,7 +29,7 @@ class Column(object):
     TYPE = 1
 
 
-class DraftCollectionListStore(Gtk.ListStore):
+class DraftCollectionListStore(Gtk.TreeStore):
     """The model for representing useful collection classes."""
     _all_class_row_values = [
         _("All Texts"),
@@ -44,7 +44,7 @@ class DraftCollectionListStore(Gtk.ListStore):
         return '<DraftCollectionListStore>'
 
     def __init__(self):
-        Gtk.ListStore.__init__(
+        Gtk.TreeStore.__init__(
             self,
             GObject.TYPE_STRING,        # name of class
             GObject.TYPE_PYOBJECT       # type of class
@@ -53,5 +53,5 @@ class DraftCollectionListStore(Gtk.ListStore):
 
     def _append_classes(self):
         """Append classes to the model"""
-        self.append(self._all_class_row_values)
-        self.append(self._recent_class_row_values)
+        self.append(None, self._all_class_row_values)
+        self.append(None, self._recent_class_row_values)
