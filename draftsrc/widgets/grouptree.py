@@ -54,6 +54,7 @@ class DraftGroupTree(Gtk.TreeView):
         self.selection = self.get_selection()
         self.selection.connect('changed', self._on_selection_changed)
         self.set_headers_visible(False)
+        self.set_enable_search(False)
 
         self.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
                                       [GROUP_MOVE_TARGET],
@@ -63,29 +64,43 @@ class DraftGroupTree(Gtk.TreeView):
 
         self.connect('key-press-event', self._on_key_press)
         self.connect('button-press-event', self._on_button_press)
+        self.connect('button-release-event', self._on_button_release)
         self.connect('drag-data-get', self._drag_data_get)
         self.connect('drag-data-received', self._drag_data_received)
 
     def _on_key_press(self, widget, event):
         """Handle key presses within the widget. Ignore some events that are not
         meant for root iter."""
-        if self._tree_type == GroupTreeType.TRASHED_GROUPS:
-            return
-
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
         path_string = self.get_selected_path().to_string()
 
         if not event_and_modifiers:
-            if event.keyval == Gdk.KEY_Delete and path_string != '0':
-                self.delete_selected_row()
-            elif event.keyval == Gdk.KEY_F2 and path_string != '0':
-                self.emit('rename-requested')
+            if self._tree_type != GroupTreeType.TRASHED_GROUPS:
+                if event.keyval == Gdk.KEY_Delete and path_string != '0':
+                    self.delete_selected_row()
+                elif event.keyval == Gdk.KEY_F2 and path_string != '0':
+                    self.emit('rename-requested')
+            if event.keyval == Gdk.KEY_ISO_Enter:
+                self.toggle_expand_path(self.get_selected_path())
 
     def _on_button_press(self, widget, event):
         """Handle key presses within the widget"""
-        if event.triggers_context_menu():
-            self.emit('menu-requested')
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        modifiers = (event.state & modifiers)
+
+        if not modifiers:
+            if event.triggers_context_menu():
+                self.emit('menu-requested')
+
+    def _on_button_release(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        modifiers = (event.state & modifiers)
+
+        if not modifiers:
+            if (event.button == Gdk.BUTTON_PRIMARY
+                    and event.type == Gdk.EventType.BUTTON_RELEASE):
+                self.toggle_expand_path(self.get_selected_path())
 
     def _on_selection_changed(self, selection):
         """Handle selection change and subsequently emit `group-selected` signal"""
@@ -99,7 +114,6 @@ class DraftGroupTree(Gtk.TreeView):
             return
 
         path = model.get_path(treeiter)
-        self.expand_row(path, False)
         group = model.get_group_for_iter(treeiter)
         self.emit('group-selected', group)
 
@@ -197,6 +211,12 @@ class DraftGroupTree(Gtk.TreeView):
     def _root_path(self):
         """Get the GtkTreePath for root entry of a treeview"""
         return Gtk.TreePath.new_from_string('0')
+
+    def toggle_expand_path(self, path):
+        if self.row_expanded(path):
+            self.collapse_row(path)
+        else:
+            self.expand_row(path, False)
 
     def get_selected_path(self):
         model, treeiter = self.selection.get_selected()
