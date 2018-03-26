@@ -27,7 +27,7 @@ class DraftLibraryView(Gtk.Bin):
     _panel_visible = True
     _creation_state = False
     collection_view_name = 'collection'
-    trash_view_name = 'trash'
+    tags_view_name = 'tags'
 
     def __repr__(self):
         return '<DraftLibraryView>'
@@ -59,13 +59,12 @@ class DraftLibraryView(Gtk.Bin):
                                       self.collection_view_name,
                                       _("Collection"))
 
-        self.trash_view = DraftGroupTree()
-        self.trash_view.set_trash_model()
-        scrolled = Gtk.ScrolledWindow(None, None)
-        scrolled.add(self.trash_view)
-        self.library_stack.add_titled(scrolled,
-                                      self.trash_view_name,
-                                      _("Trash"))
+        # self.tags_view = DraftTagsList()
+        # scrolled = Gtk.ScrolledWindow(None, None)
+        # scrolled.add(self.tags_view)
+        # self.library_stack.add_titled(scrolled,
+        #                               self.tags_view_name,
+        #                               _("Tags"))
 
         self._popover = self.builder.get_object('popover')
         self._popover_title = self.builder.get_object('popover_title')
@@ -90,8 +89,6 @@ class DraftLibraryView(Gtk.Bin):
         self.collection_view.connect('group-created', self._on_group_created)
         self.collection_view.connect('group-deleted', self._on_group_deleted)
 
-        self.trash_view.connect('group-selected', self._on_group_selected)
-
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
         self._name_entry.connect('changed', self._on_name_entry_changed)
@@ -103,7 +100,6 @@ class DraftLibraryView(Gtk.Bin):
         """Handler for `class-selected` signal from DraftsCollectionView. Calls
         TextListView to update its collection class and consequently its model"""
         self.collection_view.selection.unselect_all()
-        self.trash_view.selection.unselect_all()
         self.parent_window.textlistview.set_collection_class_type(collection_class_type)
 
     def _on_group_selected(self, widget, group):
@@ -252,9 +248,6 @@ class DraftLibraryView(Gtk.Bin):
         visible_child_name = self.library_stack.get_visible_child_name()
         if visible_child_name == self.collection_view_name:
             group = self.collection_view.select_if_not_selected()
-            self.parent_window.textlistview.set_model_for_group(group)
-        if visible_child_name == self.trash_view_name:
-            group = self.trash_view.select_if_not_selected()
             self.parent_window.textlistview.set_model_for_group(group)
 
 
