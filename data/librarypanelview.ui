@@ -28,6 +28,9 @@
         </child>
       </object>
     </child>
+    <style>
+      <class name="draft-borderless"/>
+    </style>
   </object>
   <object class="GtkRevealer" id="slider">
     <property name="visible">True</property>
@@ -73,6 +76,9 @@
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="draft-panel"/>
+        </style>
       </object>
     </child>
   </object>
