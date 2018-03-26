@@ -1,8 +1,9 @@
 @define-color highlight_color mix(@theme_bg_color, @theme_fg_color, 0.2);
 @define-color title_color mix(@theme_bg_color, @theme_fg_color, 0.5);
+@define-color panel-bg-color mix(@theme_bg_color, @content_view_bg, 0.5);
 
 .draft-panel {
-    background-color: @content_view_bg;
+    background-color: @panel-bg-color;
     border-width: 0 1px 0 0;
     border-style: solid;
     border-color: @borders
@@ -74,6 +75,18 @@
 
 .draft-treeview {
     border-color: @success_color;
+    background-color: @panel-bg-color;
+}
+
+.draft-tree-title{
+    color: @title_color;
+    font-weight: bold;
+    font-size: 0.8em;
+    margin: 6px;
+}
+
+.draft-library-separator {
+    margin: 12px 6px;
 }
 
 .draft-treeview:hover {

@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from gettext import gettext as _
 from gi.repository import Gtk, GObject, Pango
 
 from draftsrc.models.collectionliststore import DraftCollectionListStore, Column
@@ -35,18 +36,21 @@ class DraftCollectionList(Gtk.TreeView):
 
     def __init__(self):
         Gtk.TreeView.__init__(self, DraftCollectionListStore())
+        ctx = self.get_style_context()
+        ctx.add_class('draft-treeview')
 
         self.selection = self.get_selection()
         self.selection.connect('changed', self._on_selection_changed)
 
         self.set_headers_visible(False)
+        self.set_enable_search(False)
         self._populate()
 
     def _populate(self):
         """Set up cell renderer and column for the view"""
         renderer = Gtk.CellRendererText(ellipsize=Pango.EllipsizeMode.END)
         renderer.set_fixed_size(-1, 28)
-        column = Gtk.TreeViewColumn("collection", renderer, text=Column.NAME)
+        column = Gtk.TreeViewColumn(_("Library"), renderer, text=Column.NAME)
         self.title = column
         self.append_column(column)
         self.title.set_expand(True)

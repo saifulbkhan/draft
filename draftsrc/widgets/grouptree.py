@@ -203,7 +203,7 @@ class DraftGroupTree(Gtk.TreeView):
         top level row"""
         renderer = Gtk.CellRendererText(ellipsize=Pango.EllipsizeMode.END)
         renderer.set_fixed_size(-1, 28)
-        column = Gtk.TreeViewColumn('Groups', renderer, text=Column.NAME)
+        column = Gtk.TreeViewColumn(_("Groups"), renderer, text=Column.NAME)
         self._group_column = column
         self.append_column(column)
         self._group_column.set_expand(True)

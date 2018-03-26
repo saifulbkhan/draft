@@ -48,6 +48,15 @@ class DraftLibraryView(Gtk.Bin):
         stack_switcher = self.builder.get_object('library_switcher')
         collection_window = self.builder.get_object('collection_window')
         collection_box = self.builder.get_object('collection_box')
+        separator = self.builder.get_object('library_separator')
+
+        label = Gtk.Label()
+        library_title = _("Library")
+        label.set_label(library_title)
+        label.set_halign(Gtk.Align.START)
+        ctx = label.get_style_context()
+        ctx.add_class('draft-tree-title')
+        collection_box.pack_start(label, False, False, 0)
 
         self.collection_list = DraftCollectionList()
         collection_box.pack_start(self.collection_list, False, True, 0)
@@ -55,6 +64,16 @@ class DraftLibraryView(Gtk.Bin):
         self.trash_view = DraftGroupTree()
         self.trash_view.set_trash_model()
         collection_box.pack_start(self.trash_view, False, True, 0)
+
+        collection_box.pack_start(separator, False, True, 0)
+
+        label = Gtk.Label()
+        groups_title =_("Groups")
+        label.set_label(groups_title)
+        label.set_halign(Gtk.Align.START)
+        ctx = label.get_style_context()
+        ctx.add_class('draft-tree-title')
+        collection_box.pack_start(label, False, False, 0)
 
         self.local_groups_view = DraftGroupTree()
         self.local_groups_view.set_collection_model()
