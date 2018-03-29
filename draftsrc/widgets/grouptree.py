@@ -37,7 +37,8 @@ class DraftGroupTree(Gtk.TreeView):
         'rename-requested': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'group-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'group-deleted': (GObject.SignalFlags.RUN_FIRST, None, ())
+        'group-deleted': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'group-restored': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     _group_column = None
@@ -283,12 +284,21 @@ class DraftGroupTree(Gtk.TreeView):
     def delete_selected_row(self, permanent=False):
         """Delete the group under selection"""
         model, treeiter = self.selection.get_selected()
-        if not permanent:
-            model.set_prop_for_iter(treeiter, 'in_trash', True)
-        else:
+        if permanent and model.tree_type == GroupTreeType.TRASHED_GROUPS:
             model.permanently_delete_group_at_iter(treeiter)
+        else:
+            model.set_prop_for_iter(treeiter, 'in_trash', True)
 
         self.emit('group-deleted')
+
+    def restore_selected_row(self):
+        """Restore selected row from trash"""
+        model, treeiter = self.selection.get_selected()
+        if not model.tree_type == GroupTreeType.TRASHED_GROUPS:
+            return
+
+        model.set_prop_for_iter(treeiter, 'in_trash', False)
+        self.emit('group-restored')
 
     def select_for_id(self, group_id):
         """Select a group for the given group id"""
@@ -342,3 +352,14 @@ class DraftGroupTree(Gtk.TreeView):
             return False
 
         return True
+
+    def has_top_level_row_selected(self):
+        """Check if top level row is selected in view"""
+        model, treeiter = self.selection.get_selected()
+        if treeiter is None:
+            return False
+
+        if model.get_path(treeiter) == self._root_path():
+            return True
+
+        return False

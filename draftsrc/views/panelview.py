@@ -90,7 +90,11 @@ class DraftLibraryView(Gtk.Bin):
 
         self._popover_menu = self.builder.get_object('popover_menu')
         self._rename_button = self.builder.get_object('rename_button')
-        self._delete_button = self.builder.get_object('delete_button')
+        self._remove_button = self.builder.get_object('remove_button')
+
+        self._trash_menu = self.builder.get_object('trash_popover_menu')
+        self._restore_button = self.builder.get_object('trash_restore_button')
+        self._delete_button = self.builder.get_object('trash_delete_button')
 
         self.collection_list.connect('class-selected',
                                   self._on_collection_class_selected)
@@ -107,12 +111,16 @@ class DraftLibraryView(Gtk.Bin):
         self.local_groups_view.connect('group-deleted', self._on_group_deleted)
 
         self.trash_view.connect('group-selected', self._on_group_selected)
+        self.trash_view.connect('group-restored', self._on_group_restored)
+        self.trash_view.connect('menu-requested', self._on_trash_menu_requested)
 
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
         self._name_entry.connect('changed', self._on_name_entry_changed)
         self._popover.connect('closed', self._on_popover_closed)
         self._rename_button.connect('clicked', self._on_rename_clicked)
+        self._remove_button.connect('clicked', self._on_remove_clicked)
+        self._restore_button.connect('clicked', self._on_restore_clicked)
         self._delete_button.connect('clicked', self._on_delete_clicked)
 
     def _on_collection_class_selected(self, widget, collection_class_type):
@@ -189,6 +197,12 @@ class DraftLibraryView(Gtk.Bin):
 
     def _on_group_deleted(self, widget):
         """Handle view's `group-deleted` signal"""
+        self.trash_view.set_trash_model()
+        self.parent_window.update_content_view_and_headerbar()
+
+    def _on_group_restored(self, widget):
+        """Handle trash view's `group-restored` signal"""
+        self.local_groups_view.set_collection_model()
         self.parent_window.update_content_view_and_headerbar()
 
     def _on_group_menu_requested(self, widget):
@@ -212,8 +226,33 @@ class DraftLibraryView(Gtk.Bin):
         self.local_groups_view.emit('rename-requested')
         self._popover_menu.popdown()
 
-    def _on_delete_clicked(self, widget):
+    def _on_remove_clicked(self, widget):
         self.local_groups_view.delete_selected_row()
+        self._popover_menu.popdown()
+
+    def _on_trash_menu_requested(self, widget):
+        """Cater to context menu request for a trashed group. Ignore if the
+        selection is the root container."""
+
+        def popup_menu():
+            if self.trash_view.get_selected_path().to_string() == '0':
+                return
+
+            rect = self.trash_view.get_selected_rect()
+            self._trash_menu.set_relative_to(self.trash_view)
+            self._trash_menu.set_pointing_to(rect)
+            self._trash_menu.popup()
+
+        # have to queue this in main loop, so that correct GdkRectangle is
+        # selected before making menu point to it.
+        GLib.idle_add(popup_menu)
+
+    def _on_delete_clicked(self, widget):
+        self.trash_view.delete_selected_row(permanent=True)
+        self._popover_menu.popdown()
+
+    def _on_restore_clicked(self, widget):
+        self.trash_view.restore_selected_row()
         self._popover_menu.popdown()
 
     def toggle_panel(self):
@@ -263,16 +302,48 @@ class DraftLibraryView(Gtk.Bin):
 
         return True
 
+    def trash_is_empty(self):
+        """Checks whether there are any items in trash"""
+        num_groups, num_texts = self.trash_view.count_top_level_groups_and_texts()
+        if num_groups or num_texts:
+            return False
+
+        return True
+
+    def trash_has_no_texts(self):
+        """Checks if trash's top level has any texts in it or not"""
+        num_groups, num_texts = self.trash_view.count_top_level_groups_and_texts()
+        if num_texts:
+            return False
+
+        return True
+
     def selected_group_has_no_texts(self):
         """Check if selected group has any texts"""
         view = self.local_groups_view
-        if self.trash_view.has_row_selected():
+        if self.selected_group_is_in_trash():
             view = self.trash_view
         num_groups, num_texts = view.count_groups_and_texts_for_selection()
         if num_texts:
             return False
 
         return True
+
+    def selected_group_is_in_trash(self):
+        """Check if selected item in panelview is in trash view"""
+        if self.trash_view.has_row_selected():
+            return True
+
+        return False
+
+    def selected_group_is_top_level(self):
+        """Check if the top level group is selected"""
+        view = self.local_groups_view
+        if self.selected_group_is_in_trash():
+            view = self.trash_view
+
+        return view.has_top_level_row_selected()
+
 
     def select_appropriate_row(self):
         """Select an appropriate row in the currently visible view"""

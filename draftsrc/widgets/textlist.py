@@ -198,6 +198,12 @@ class DraftTextList(Gtk.ListBox):
             return
 
         position = row.get_index()
+        row_data = self._model.get_data_for_position(position)
+        if row_data['in_trash']:
+            self.editor.set_sensitive(False)
+        else:
+            self.editor.set_sensitive(True)
+
         self._model.prepare_for_edit(position,
                                     self.editor.switch_view,
                                     self.editor.load_file)

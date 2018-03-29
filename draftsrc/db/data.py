@@ -73,7 +73,6 @@ def get_last_insert_id(conn):
 
 def update_text(conn, text_id, values):
     """Update the values for given text id"""
-    values['last_modified'] = db.get_datetime()
     query = '''
         UPDATE text
            SET last_modified = :modified
@@ -123,6 +122,7 @@ def update_tags_for_text(conn, text_id, labels):
 
 def update_group(conn, group_id, values):
     """Update the values for given group id"""
+    original_values = group_for_id(conn, group_id)
     datetime = db.get_datetime()
     update_query = '''
         UPDATE "group"
@@ -138,32 +138,37 @@ def update_group(conn, group_id, values):
                                   "in_trash": values['in_trash'],
                                   "group_id": group_id})
 
-    # trash items in group, if the group is being trashed
-    if values['in_trash']:
+    # trash/untrash items in group, if the group is being trashed/untrashed
+    if values['in_trash'] != original_values['in_trash']:
 
-        # recursive function that sets `in_trash` to true
+        # recursive function that sets `in_trash`
         # for given group, its subgroups and texts.
-        def _trash_groups_and_texts(conn, group):
+        def set_in_trash_groups_and_texts(conn, group, in_trash):
             trash_group_query = '''
                 UPDATE "group"
-                   SET in_trash = 1
+                   SET in_trash = :in_trash
                  WHERE id = :id'''
-            cursor.execute(trash_group_query, {"id": group})
+            cursor.execute(trash_group_query,
+                           {"id": group, 'in_trash': in_trash})
 
             trash_texts_query = '''
                 UPDATE text
-                   SET in_trash = 1
+                   SET in_trash = :in_trash
+                     , last_modified = :datetime
                  WHERE parent_id = :id'''
-            cursor.execute(trash_texts_query, {"id": group})
+            cursor.execute(trash_texts_query,
+                           {"id": group, 'in_trash': in_trash, 'datetime': datetime})
+            conn.commit()
 
             select_subgroups_query = '''
-                SELECT id
+                SELECT id, name
                   FROM "group"
                  WHERE parent_id = :id'''
-            for subgroup in cursor.execute(select_subgroups_query, {"id": group}):
-                _trash_groups_and_texts(conn, subgroup[0])
+            res = cursor.execute(select_subgroups_query, {'id': group})
+            for subgroup in res.fetchall():
+                set_in_trash_groups_and_texts(conn, subgroup[0], in_trash)
 
-        _trash_groups_and_texts(conn, group_id)
+        set_in_trash_groups_and_texts(conn, group_id, values['in_trash'])
 
 
 def delete_text(conn, text_id):
@@ -193,7 +198,8 @@ def delete_group(conn, group_id):
         SELECT id
           FROM "group"
          WHERE parent_id = :id'''
-    for row in cursor.execute(query, {"id": group_id}):
+    res = cursor.execute(select_query, {'id': group_id})
+    for row in res.fetchall():
         delete_group(conn, row[0])
 
 

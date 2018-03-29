@@ -53,7 +53,7 @@ class DraftGroupTreeStore(Gtk.TreeStore):
             GObject.TYPE_INT,           # id of the group
             GObject.TYPE_PYOBJECT       # id of the parent group, can be null
         )
-        self._tree_type = tree_type
+        self.tree_type = tree_type
         self._append_top_level_row(top_row_name)
         self._load_data()
 
@@ -76,15 +76,15 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         @treeiter: GtkTreeIter, node iterator where @group and children
                    will be appended
         """
-        if self._tree_type != GroupTreeType.TRASHED_GROUPS and group['in_trash']:
+        if self.tree_type != GroupTreeType.TRASHED_GROUPS and group['in_trash']:
             return
 
         if not treeiter:
             treeiter = self._top_level_iter
 
-        if ((self._tree_type == GroupTreeType.TRASHED_GROUPS
+        if ((self.tree_type == GroupTreeType.TRASHED_GROUPS
                 and group['in_trash'])
-                or (self._tree_type != GroupTreeType.TRASHED_GROUPS
+                or (self.tree_type != GroupTreeType.TRASHED_GROUPS
                 and not group['in_trash'])):
             treeiter = self._append_group(group, treeiter)
 
@@ -127,7 +127,7 @@ class DraftGroupTreeStore(Gtk.TreeStore):
             row_name = self[self._top_level_iter][Column.NAME]
 
         in_trash = False
-        if self._tree_type == GroupTreeType.TRASHED_GROUPS:
+        if self.tree_type == GroupTreeType.TRASHED_GROUPS:
             in_trash = True
 
         return {
@@ -236,16 +236,55 @@ class DraftGroupTreeStore(Gtk.TreeStore):
                                group_dir_parents,
                                new_parent_dir_parents)
 
-            if trashed:
+            if trashed and self.tree_type == GroupTreeType.COLLECTION_GROUPS:
                 group = data.group_for_id(connection, group_id)
-                group_dir_name = group['hash_id']
-                group_dir_parents = group['parents']
-                file.trash_file(group_dir_name, group_dir_parents)
+                texts_to_be_trashed = self._all_texts_in_group(connection,
+                                                               group['id'],
+                                                               in_trash=False)
+                for text in texts_to_be_trashed:
+                    parent_list = texts_to_be_trashed[text]
+                    file.trash_file(text, parent_list)
+
+            if not trashed and self.tree_type == GroupTreeType.TRASHED_GROUPS:
+                group = data.group_for_id(connection, group_id)
+                if group['parent_id'] is not None:
+                    parent_group = data.group_for_id(connection, group['parent_id'])
+                    # if a group is being restored whose parents are still in
+                    # trash, then make this group exist on its own in the main
+                    # collection i.e., with no parents.
+                    if parent_group['in_trash']:
+                        values['parent_id'] = None
+                texts_to_be_restored = self._all_texts_in_group(connection,
+                                                                group['id'],
+                                                                in_trash=True)
+                for text in texts_to_be_restored:
+                    parent_list = texts_to_be_restored[text]
+                    # if group's parent is being set to NULL, then restore the
+                    # files within to correct locations accordingly
+                    if not values['parent_id']:
+                        parent_list = parent_list[parent_list.index(group['hash_id']):]
+                    file.trash_file(text, parent_list, untrash=True)
 
             data.update_group(connection, group_id, values)
 
-        if trashed:
+        if trashed and self.tree_type != GroupTreeType.TRASHED_GROUPS:
             self.remove(treeiter)
+
+        if not trashed and self.tree_type == GroupTreeType.TRASHED_GROUPS:
+            self.remove(treeiter)
+
+    def _all_texts_in_group(self, connection, group_id, in_trash):
+        texts_in_group = {}
+
+        def append_texts_in_group(id):
+            for text in data.texts_in_group(connection, id):
+                if text['in_trash'] == in_trash:
+                    texts_in_group[text['hash_id']] = text['parents']
+            for group in data.groups_in_group(connection, id):
+                append_texts_in_group(group['id'])
+
+        append_texts_in_group(group_id)
+        return texts_in_group
 
     def move_to_group(self, child_iter, parent_iter):
         """Move group at @child_iter to group @parent_iter and set this parent
@@ -284,6 +323,12 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         values = self._dict_for_row(treeiter)
         group_id = values['id']
         with db.connect() as connection:
+            texts_to_be_deleted = self._all_texts_in_group(connection,
+                                                           group_id,
+                                                           in_trash=True)
+            for text_name in texts_to_be_deleted:
+                file.delete_file_permanently(text_name)
+
             data.delete_group(connection, group_id)
 
         self.remove(treeiter)

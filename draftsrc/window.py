@@ -145,7 +145,16 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.lock_group_panel = True
             self.lock_text_panel = True
         elif self.libraryview.selected_group_has_no_texts():
-            self.contentview.set_empty_group_state()
+            if self.libraryview.selected_group_is_in_trash():
+                if self.libraryview.trash_is_empty():
+                    self.contentview.set_empty_trash_state()
+                elif (self.libraryview.trash_has_no_texts() and
+                        self.libraryview.selected_group_is_top_level()):
+                    self.contentview.set_empty_trash_texts_state()
+                else:
+                    self.contentview.set_empty_trashed_group_state()
+            else:
+                self.contentview.set_empty_group_state()
             self.show_headerbar_elements()
             self.partial_headerbar_interaction()
             self.hide_text_panel()

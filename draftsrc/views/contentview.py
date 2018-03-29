@@ -49,6 +49,9 @@ class ContentView(Gtk.Bin):
         self.empty_state = _DraftEmptyView()
         self.content_stack.add_titled(self.empty_state, 'empty', 'Empty')
 
+        self.empty_trash_state = _DraftEmptyTrashView()
+        self.content_stack.add_titled(self.empty_trash_state, 'trash', 'Trash')
+
         self.content_stack.set_visible_child_name('editor')
 
     def preview_content(self):
@@ -71,15 +74,46 @@ class ContentView(Gtk.Bin):
         self.empty_state.update_labels()
 
         if self.content_stack.get_visible_child_name() != 'empty':
-            self._last_content_state = self.content_stack.get_visible_child_name()
+            current_state = self.content_stack.get_visible_child_name()
+            if current_state in ['editor', 'preview']:
+                self._last_content_state = current_state
             self.content_stack.set_visible_child_name('empty')
 
     def set_empty_collection_state(self):
         self.empty_state.update_labels(empty_collection=True)
 
         if self.content_stack.get_visible_child_name() != 'empty':
-            self._last_content_state = self.content_stack.get_visible_child_name()
+            current_state = self.content_stack.get_visible_child_name()
+            if current_state in ['editor', 'preview']:
+                self._last_content_state = current_state
             self.content_stack.set_visible_child_name('empty')
+
+    def set_empty_trashed_group_state(self):
+        self.empty_trash_state.update_labels()
+
+        if self.content_stack.get_visible_child_name() != 'trash':
+            current_state = self.content_stack.get_visible_child_name()
+            if current_state in ['editor', 'preview']:
+                self._last_content_state = current_state
+            self.content_stack.set_visible_child_name('trash')
+
+    def set_empty_trash_state(self):
+        self.empty_trash_state.update_labels(empty_trash=True)
+
+        if self.content_stack.get_visible_child_name() != 'trash':
+            current_state = self.content_stack.get_visible_child_name()
+            if current_state in ['editor', 'preview']:
+                self._last_content_state = current_state
+            self.content_stack.set_visible_child_name('trash')
+
+    def set_empty_trash_texts_state(self):
+        self.empty_trash_state.update_labels(empty_trash_texts=True)
+
+        if self.content_stack.get_visible_child_name() != 'trash':
+            current_state = self.content_stack.get_visible_child_name()
+            if current_state in ['editor', 'preview']:
+                self._last_content_state = current_state
+            self.content_stack.set_visible_child_name('trash')
 
     def set_last_content_state(self):
         self.content_stack.set_visible_child_name(self._last_content_state)
@@ -101,7 +135,7 @@ class _DraftEmptyView(Gtk.Bin):
         self._builder = Gtk.Builder()
         self._builder.add_from_resource('/org/gnome/Draft/contentview.ui')
 
-        util_box = self._builder.get_object('util_box')
+        util_box = self._builder.get_object('info_box')
         util_box.set_visible(True)
 
         self.title_label = self._builder.get_object('title_label')
@@ -120,3 +154,32 @@ class _DraftEmptyView(Gtk.Bin):
 
         self.title_label.set_label(title_text)
         self.info_label.set_label(info_text)
+
+
+class _DraftEmptyTrashView(Gtk.Bin):
+    """A container housing empty state notification elements for application's
+    trash"""
+
+    def __repr__(self):
+        return '<DraftEmptyTrashView>'
+
+    def __init__(self):
+        Gtk.Bin.__init__(self)
+
+        self._builder = Gtk.Builder()
+        self._builder.add_from_resource('/org/gnome/Draft/contentview.ui')
+
+        trash_box = self._builder.get_object('trash_box')
+        trash_box.set_visible(True)
+
+        self.trash_title_label = self._builder.get_object('trash_title_label')
+        self.add(trash_box)
+
+    def update_labels(self, empty_trash=False, empty_trash_texts=False):
+        trash_title = _("Empty Group")
+        if empty_trash:
+            trash_title = _("Trash is Empty")
+        if empty_trash_texts:
+            trash_title = _("No Texts in Trash")
+
+        self.trash_title_label.set_label(trash_title)

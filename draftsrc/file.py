@@ -55,7 +55,7 @@ def read_file_contents(filename, parent_names, buffer, load_file_cb, in_trash=Fa
     parent_dir = sep.join(parent_names)
     fpath = join(BASE_TEXT_DIR, parent_dir, filename)
     if in_trash:
-        fpath = join(TRASH_DIR, parent_dir, filename)
+        fpath = join(TRASH_DIR, filename)
 
     def load_finish_cb(loader, res, user_data):
         gsf = user_data
@@ -114,6 +114,10 @@ def write_to_source_file_async(gsf, buffer):
 def create_dir(dirname, parent_names):
     parent_dir = sep.join(parent_names)
     f_path = join(BASE_TEXT_DIR, parent_dir, dirname)
+    create_dir_if_not_exists(f_path)
+
+
+def create_dir_if_not_exists(f_path):
     try:
         return Gio.File.new_for_path(f_path).make_directory_with_parents()
     except Exception as e:
@@ -129,6 +133,11 @@ def move_from_src_to_dest(src_path, dest_path):
         f_dest = Gio.File.new_for_path(dest_path)
         f_src.move(f_dest, Gio.FileCopyFlags.OVERWRITE, None, None, None)
     except Exception as e:
+        srcname = f_src.get_basename()
+        destname = f_dest.get_basename()
+        if e.code == Gio.IOErrorEnum.WOULD_MERGE and srcname == destname:
+            f_dest.delete()
+            f_src.move(f_dest, Gio.FileCopyFlags.OVERWRITE, None, None, None)
         # TODO: Warn file move failure
         return
 
@@ -146,9 +155,17 @@ def trash_file(filename, parent_names, untrash=False):
     src_path = join(BASE_TEXT_DIR, parent_dir, filename)
     dest_path = join(TRASH_DIR, filename)
     if untrash:
+        parent_path = join(BASE_TEXT_DIR, parent_dir)
+        create_dir_if_not_exists(parent_path)
         move_from_src_to_dest(dest_path, src_path)
     else:
         move_from_src_to_dest(src_path, dest_path)
+
+
+def delete_file_permanently(filename):
+    f_path = join(TRASH_DIR, filename)
+    f = Gio.File.new_for_path(f_path)
+    f.delete_async(GLib.PRIORITY_DEFAULT, None, None, None)
 
 
 @contextmanager
