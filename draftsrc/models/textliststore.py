@@ -208,6 +208,7 @@ class DraftTextListStore(Gio.ListStore):
         item = self.get_item(position)
         id = item.db_id
         setattr(item, prop, value)
+        item.last_modified = db.get_datetime()
         # TODO: 'notify' view that a prop for an item has changed
 
         db.async_updater.execution_fn = data.update_text
@@ -218,6 +219,7 @@ class DraftTextListStore(Gio.ListStore):
         the corresponding folder"""
         item = self.get_item(position)
         item.parent_id = parent
+        item.last_modified = db.get_datetime()
         id = item.db_id
 
         with db.connect() as connection:
@@ -253,6 +255,7 @@ class DraftTextListStore(Gio.ListStore):
         """
         item = self.get_item(position)
         item.tags = tags
+        item.last_modified = db.get_datetime()
         id = item.db_id
 
         with db.connect() as connection:
@@ -267,6 +270,7 @@ class DraftTextListStore(Gio.ListStore):
 
     def queue_final_save(self, metadata):
         db.final_updater.execution_fn = data.update_text
+        db.final_updater.fetch_fn = data.text_for_id
         db.final_updater.enqueue(metadata['id'], metadata)
 
     def dequeue_final_save(self, id):

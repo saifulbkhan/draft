@@ -158,10 +158,15 @@ def get_relative_datetime(dt_str):
     return date_time.strftime('%d %b %Y')
 
 
+def get_datetime_from_string(dt_str):
+    return datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f')
+
+
 class RequestQueue(OrderedDict):
     """A dict with queue like FIFO methods"""
     active = False
     execution_fn = None
+    fetch_fn = None
 
     def __init__(self, async=True, immediate_activation=True):
         super().__init__()
@@ -210,6 +215,13 @@ class RequestQueue(OrderedDict):
                 break
 
             with connect() as connection:
+                if self.fetch_fn:
+                    current_values = self.fetch_fn(connection, id)
+                    last_modified = get_datetime_from_string(current_values['last_modified'])
+                    new_last_modified = get_datetime_from_string(values['last_modified'])
+                    if last_modified > new_last_modified:
+                        break;
+
                 self.execution_fn(connection, id, values)
 
         self.active = False
