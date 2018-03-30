@@ -32,7 +32,11 @@ class DraftTextList(Gtk.ListBox):
                                 None,
                                 (GObject.TYPE_PYOBJECT,)),
         'text-deleted': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'text-created': (GObject.SignalFlags.RUN_FIRST, None, ())
+        'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'menu-requested': (GObject.SignalFlags.RUN_FIRST,
+                           None,
+                           (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN))
     }
 
     editor = None
@@ -177,6 +181,14 @@ class DraftTextList(Gtk.ListBox):
                     row = self.get_row_at_index(i)
                     row.set_selectable(True)
                     self.select_row(row)
+        else:
+            if event.triggers_context_menu():
+                row = self._row_at_event_coordinates(event)
+                self.select_row(row)
+                rect = row.get_allocation()
+                position = row.get_index()
+                row_data = self._model.get_data_for_position(position)
+                self.emit('menu-requested', rect, row_data['in_trash'])
 
     def _on_button_release(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -459,8 +471,18 @@ class DraftTextList(Gtk.ListBox):
         if metadata:
             self._model.queue_final_save(metadata)
 
-    def delete_selected_row(self):
+    def delete_selected_row(self, permanent=False):
         """Delete currently selected text in the list"""
         position = self.get_selected_row().get_index()
-        self._model.delete_item_at_postion(position)
+        if permanent:
+            self._model.delete_item_at_postion_permanently(position)
+        else:
+            self._model.delete_item_at_postion(position)
         self.emit('text-deleted')
+
+    def restore_selected_row(self):
+        """Restore the currently selected row, which is expected to be already
+        in trash"""
+        position = self.get_selected_row().get_index()
+        self._model.restore_item_at_position(position)
+        self.emit('text-restored')

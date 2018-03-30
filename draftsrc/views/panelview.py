@@ -344,7 +344,6 @@ class DraftLibraryView(Gtk.Bin):
 
         return view.has_top_level_row_selected()
 
-
     def select_appropriate_row(self):
         """Select an appropriate row in the currently visible view"""
         visible_child_name = self.library_stack.get_visible_child_name()
@@ -382,9 +381,23 @@ class DraftTextListView(Gtk.Bin):
         self.search_bar = self.builder.get_object('search_bar')
         self.search_entry = self.builder.get_object('search_entry')
 
+        self._text_menu = self.builder.get_object('text_menu')
+        self._open_button = self.builder.get_object('open_button')
+        self._trash_button = self.builder.get_object('trash_button')
+
+        self._trash_menu = self.builder.get_object('trash_menu')
+        self._restore_button = self.builder.get_object('restore_button')
+        self._delete_button = self.builder.get_object('delete_button')
+
         self.view.connect('text-moved-to-group', self._on_text_moved_to_group)
         self.view.connect('text-deleted', self._on_text_deleted)
         self.view.connect('text-created', self._on_text_created)
+        self.view.connect('menu-requested', self._on_menu_requested)
+
+        self._open_button.connect('clicked', self._on_open_clicked)
+        self._trash_button.connect('clicked', self._on_trash_clicked)
+        self._restore_button.connect('clicked', self._on_restore_clicked)
+        self._delete_button.connect('clicked', self._on_delete_clicked)
 
     def toggle_panel(self):
         if self._panel_visible:
@@ -437,3 +450,29 @@ class DraftTextListView(Gtk.Bin):
 
     def _on_text_created(self, widget):
         self.parent_window.update_content_view_and_headerbar()
+
+    def _on_menu_requested(self, widget, rect, in_trash):
+
+        def popup_menu():
+            if in_trash:
+                self._trash_menu.set_pointing_to(rect)
+                self._trash_menu.popup()
+            else:
+                self._text_menu.set_pointing_to(rect)
+                self._text_menu.popup()
+
+        # have to queue this in main loop, so that correct GdkRectangle is
+        # selected before making menu point to it.
+        GLib.idle_add(popup_menu)
+
+    def _on_open_clicked(self, widget):
+        pass
+
+    def _on_trash_clicked(self, widget):
+        self.view.delete_selected_row()
+
+    def _on_restore_clicked(self, widget):
+        self.view.restore_selected_row()
+
+    def _on_delete_clicked(self, widget):
+        self.view.delete_selected_row(permanent=True)

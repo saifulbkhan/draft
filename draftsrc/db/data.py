@@ -361,6 +361,37 @@ def texts_recently_modified(conn, last_n_days=7):
     return fetch_texts(conn, where_condition, order_condition, args)
 
 
+def texts_in_trash_but_not_parent(conn):
+    """Return texts that are in trash, but their parents are not in trash. Most
+    useful for displaying these trashed orphans in top level trash bin."""
+    where_condition = '''
+        id IN (SELECT id
+                 FROM text
+                WHERE in_trash = 1
+                  AND parent_id IN (SELECT id
+                                      FROM "group"
+                                     WHERE in_trash = 0))
+    '''
+    return fetch_texts(conn, where_condition)
+
+
+def count_texts_in_trash_but_not_parent(conn):
+    """Returns the count of texts that are in trash but their parents are not"""
+    query = '''
+        SELECT COUNT(id)
+          FROM text
+         WHERE id IN (SELECT id
+                       FROM text
+                      WHERE in_trash = 1
+                        AND parent_id IN (SELECT id
+                                            FROM "group"
+                                           WHERE in_trash = 0))
+    '''
+    cursor = conn.cursor()
+    res = cursor.execute(query)
+    return res.fetchone()[0]
+
+
 def fetch_parents_for_group(conn, group_id):
     """Returns a list of hash strings for parent groups that joined
     together can form a relative path to group dir"""

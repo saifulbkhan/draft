@@ -116,6 +116,7 @@ class DraftTextListStore(Gio.ListStore):
         with db.connect() as connection:
             load_fn = None
             kwargs = {}
+            load_orphan_trash = False
             if self._list_type == TextListType.GROUP_TEXTS:
                 if self._parent_group['id']:
                     load_fn = data.texts_in_group
@@ -126,6 +127,8 @@ class DraftTextListStore(Gio.ListStore):
                 else:
                     load_fn = data.texts_not_in_groups
                     kwargs = {'conn': connection}
+                    if self._trashed_texts_only:
+                        load_orphan_trash = True
             elif self._list_type == TextListType.TAGGED_TEXTS:
                 load_fn = data.texts_with_tag
                 kwargs = {
@@ -144,6 +147,10 @@ class DraftTextListStore(Gio.ListStore):
                 if self._trashed_texts_only and row.in_trash:
                     self.append(row)
                 elif not self._trashed_texts_only and not row.in_trash:
+                    self.append(row)
+            if load_orphan_trash:
+                for text in data.texts_in_trash_but_not_parent(connection):
+                    row = self._row_data_for_text(text)
                     self.append(row)
 
     def _row_data_for_text(self, text_metadata):
@@ -287,12 +294,55 @@ class DraftTextListStore(Gio.ListStore):
         hash_id = item.hash_id
         parent_hashes = item.parent_list
         item.in_trash = True
+        item.last_modified = db.get_datetime()
 
         self.remove(position)
         file.trash_file(hash_id, parent_hashes)
 
         with db.connect() as connection:
             data.update_text(connection, id, item.to_dict())
+
+        self.dequeue_final_save(id)
+
+    def restore_item_at_position(self, position):
+        """Restore an item from trash, assuming its there already"""
+        item = self.get_item(position)
+        if not item.in_trash:
+            return
+
+        id = item.db_id
+        hash_id = item.hash_id
+        parent_hashes = item.parent_list
+        item.in_trash = False
+        item.last_modified = db.get_datetime()
+
+        self.remove(position)
+
+        with db.connect() as connection:
+            group = data.group_for_id(connection, item.parent_id)
+            if group['in_trash']:
+                item.parent_id = None
+                parent_hashes = []
+
+            file.trash_file(hash_id, parent_hashes, untrash=True)
+            data.update_text(connection, id, item.to_dict())
+
+        self.dequeue_final_save(id)
+
+    def delete_item_at_postion_permanently(self, position):
+        """Delete an item from trash permanently"""
+        item = self.get_item(position)
+        if not item.in_trash:
+            return
+
+        id = item.db_id
+        hash_id = item.hash_id
+
+        self.remove(position)
+        file.delete_file_permanently(hash_id)
+
+        with db.connect() as connection:
+            data.delete_text(connection, id)
 
         self.dequeue_final_save(id)
 
