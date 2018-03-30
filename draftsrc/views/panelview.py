@@ -265,6 +265,7 @@ class DraftLibraryView(Gtk.Bin):
 
     def _on_empty_trash_button_clicked(self, widget):
         self.trash_view.delete_all_permanently()
+        self.parent_window.update_content_view_and_headerbar()
 
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""

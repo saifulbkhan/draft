@@ -340,6 +340,8 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         in_trash = group['in_trash']
 
         with db.connect() as connection:
+            if self._iter_is_top_level(treeiter) and in_trash:
+                return self.iter_n_children(self._top_level_iter)
             return data.count_groups(connection, group_id, in_trash)
 
     def count_texts_for_iter(self, treeiter):
