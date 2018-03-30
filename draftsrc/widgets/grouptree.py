@@ -291,6 +291,17 @@ class DraftGroupTree(Gtk.TreeView):
 
         self.emit('group-deleted')
 
+    def delete_all_permanently(self):
+        """Delete all immediate children from a trash model and therefore
+        deleting every group and text in trash"""
+
+        model = self.get_model()
+        if model.tree_type == GroupTreeType.TRASHED_GROUPS:
+            root_iter = model.get_iter_first()
+            while model.iter_has_child(root_iter):
+                treeiter = model.iter_children(root_iter)
+                model.permanently_delete_group_at_iter(treeiter)
+
     def restore_selected_row(self):
         """Restore selected row from trash"""
         model, treeiter = self.selection.get_selected()

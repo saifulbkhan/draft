@@ -95,6 +95,7 @@ class DraftLibraryView(Gtk.Bin):
         self._trash_menu = self.builder.get_object('trash_popover_menu')
         self._restore_button = self.builder.get_object('trash_restore_button')
         self._delete_button = self.builder.get_object('trash_delete_button')
+        self._empty_trash_button = self.builder.get_object('empty_trash_button')
 
         self.collection_list.connect('class-selected',
                                   self._on_collection_class_selected)
@@ -122,6 +123,7 @@ class DraftLibraryView(Gtk.Bin):
         self._remove_button.connect('clicked', self._on_remove_clicked)
         self._restore_button.connect('clicked', self._on_restore_clicked)
         self._delete_button.connect('clicked', self._on_delete_clicked)
+        self._empty_trash_button.connect('clicked', self._on_empty_trash_button_clicked)
 
     def _on_collection_class_selected(self, widget, collection_class_type):
         """Handler for `class-selected` signal from DraftsCollectionView. Calls
@@ -210,7 +212,7 @@ class DraftLibraryView(Gtk.Bin):
         is the root container."""
 
         def popup_menu():
-            if self.local_groups_view.get_selected_path().to_string() == '0':
+            if self.local_groups_view.has_top_level_row_selected():
                 return
 
             rect = self.local_groups_view.get_selected_rect()
@@ -235,8 +237,14 @@ class DraftLibraryView(Gtk.Bin):
         selection is the root container."""
 
         def popup_menu():
-            if self.trash_view.get_selected_path().to_string() == '0':
-                return
+            if self.trash_view.has_top_level_row_selected():
+                self._empty_trash_button.set_visible(True)
+                self._delete_button.set_visible(False)
+                self._restore_button.set_visible(False)
+            else:
+                self._empty_trash_button.set_visible(False)
+                self._delete_button.set_visible(True)
+                self._restore_button.set_visible(True)
 
             rect = self.trash_view.get_selected_rect()
             self._trash_menu.set_relative_to(self.trash_view)
@@ -254,6 +262,9 @@ class DraftLibraryView(Gtk.Bin):
     def _on_restore_clicked(self, widget):
         self.trash_view.restore_selected_row()
         self._popover_menu.popdown()
+
+    def _on_empty_trash_button_clicked(self, widget):
+        self.trash_view.delete_all_permanently()
 
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""
