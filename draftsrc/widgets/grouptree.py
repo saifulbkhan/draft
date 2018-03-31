@@ -65,7 +65,6 @@ class DraftGroupTree(Gtk.TreeView):
 
         self.connect('key-press-event', self._on_key_press)
         self.connect('button-press-event', self._on_button_press)
-        self.connect('button-release-event', self._on_button_release)
         self.connect('drag-data-get', self._drag_data_get)
         self.connect('drag-data-received', self._drag_data_received)
 
@@ -93,14 +92,8 @@ class DraftGroupTree(Gtk.TreeView):
         if not modifiers:
             if event.triggers_context_menu():
                 self.emit('menu-requested')
-
-    def _on_button_release(self, widget, event):
-        modifiers = Gtk.accelerator_get_default_mod_mask()
-        modifiers = (event.state & modifiers)
-
-        if not modifiers:
-            if (event.button == Gdk.BUTTON_PRIMARY
-                    and event.type == Gdk.EventType.BUTTON_RELEASE):
+            elif (event.button == Gdk.BUTTON_PRIMARY
+                    and event.type == Gdk.EventType._2BUTTON_PRESS):
                 self.toggle_expand_path(self.get_selected_path())
 
     def _on_selection_changed(self, selection):
