@@ -480,7 +480,7 @@ class DraftTextListView(Gtk.Bin):
         GLib.idle_add(popup_menu)
 
     def _on_open_clicked(self, widget):
-        pass
+        self.view.activate_selected_row()
 
     def _on_trash_clicked(self, widget):
         self.view.delete_selected_row()

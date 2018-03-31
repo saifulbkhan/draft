@@ -483,6 +483,10 @@ class DraftTextList(Gtk.ListBox):
         if metadata:
             self._model.queue_final_save(metadata)
 
+    def activate_selected_row(self):
+        row = self.get_selected_row()
+        row.emit('activate')
+
     def delete_selected_row(self, permanent=False):
         """Delete currently selected text in the list"""
         position = self.get_selected_row().get_index()
