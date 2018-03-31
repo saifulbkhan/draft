@@ -42,6 +42,7 @@ class DraftTextList(Gtk.ListBox):
     editor = None
     _texts_being_moved = []
     _multi_row_selection_stack = []
+    _double_click_in_progress = False
 
     def __repr__(self):
         return '<DraftTextList>'
@@ -57,6 +58,8 @@ class DraftTextList(Gtk.ListBox):
         self.connect('button-release-event', self._on_button_release)
         self._row_selected_handler_id = self.connect('row-selected',
                                                      self._on_row_selected)
+        self.connect('row-activated', self._on_row_activated)
+        self.set_activate_on_single_click(False)
         self.set_selection_mode(Gtk.SelectionMode.BROWSE)
 
     def _create_row_widget(self, text_data, user_data):
@@ -144,7 +147,6 @@ class DraftTextList(Gtk.ListBox):
         modifiers = Gtk.accelerator_get_default_mod_mask()
         modifiers = (event.state & modifiers)
 
-
         if modifiers:
             control_mask = Gdk.ModifierType.CONTROL_MASK
             shift_mask = Gdk.ModifierType.SHIFT_MASK
@@ -189,6 +191,9 @@ class DraftTextList(Gtk.ListBox):
                 position = row.get_index()
                 row_data = self._model.get_data_for_position(position)
                 self.emit('menu-requested', rect, row_data['in_trash'])
+            elif (event.button == Gdk.BUTTON_PRIMARY
+                    and event.type == Gdk.EventType._2BUTTON_PRESS):
+                self._double_click_in_progress = True
 
     def _on_button_release(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -196,6 +201,10 @@ class DraftTextList(Gtk.ListBox):
 
         if not modifiers:
             if event.button == Gdk.BUTTON_PRIMARY:
+                if self._double_click_in_progress:
+                    GLib.idle_add(self.editor.focus_view, True)
+                    self._double_click_in_progress = False
+
                 row = self._row_at_event_coordinates(event)
                 row.set_selectable(True)
                 self.set_multi_selection_mode(False)
@@ -217,8 +226,11 @@ class DraftTextList(Gtk.ListBox):
             self.editor.set_sensitive(True)
 
         self._model.prepare_for_edit(position,
-                                    self.editor.switch_view,
-                                    self.editor.load_file)
+                                     self.editor.switch_view,
+                                     self.editor.load_file)
+
+    def _on_row_activated(self, widget, row):
+        GLib.idle_add(self.editor.focus_view, True)
 
     def _on_items_changed(self, model, position, removed, added):
         """Handler for model's `items-changed` signal"""

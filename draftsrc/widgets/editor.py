@@ -165,7 +165,6 @@ class DraftEditor(Gtk.Box):
             view = scrollable.get_child()
             self._prep_view(view)
             self._current_file = self._open_files[id]
-            GLib.idle_add(self._focus_view)
 
             if self.parent.in_preview_mode():
                 self.parent.preview_content()
@@ -201,14 +200,12 @@ class DraftEditor(Gtk.Box):
             self._open_files[id] = self._current_file
             self._load_in_progress = False
 
-            GLib.idle_add(self._focus_view, True)
-
         if self.parent.in_preview_mode():
             self.parent.preview_content()
 
         self.statusbar.update_state()
 
-    def _focus_view(self, scroll_to_insert=False):
+    def focus_view(self, scroll_to_insert=False):
         self.view.grab_focus()
 
         if scroll_to_insert:
