@@ -467,9 +467,11 @@ class DraftTextListView(Gtk.Bin):
 
         def popup_menu():
             if in_trash:
+                self._trash_menu.set_relative_to(self.view)
                 self._trash_menu.set_pointing_to(rect)
                 self._trash_menu.popup()
             else:
+                self._text_menu.set_relative_to(self.view)
                 self._text_menu.set_pointing_to(rect)
                 self._text_menu.popup()
 
