@@ -91,11 +91,15 @@ class DraftLibraryView(Gtk.Bin):
         self._popover_menu = self.builder.get_object('popover_menu')
         self._rename_button = self.builder.get_object('rename_button')
         self._remove_button = self.builder.get_object('remove_button')
+        self._expand_button = self.builder.get_object('expand_button')
+        self._collapse_button = self.builder.get_object('collapse_button')
 
         self._trash_menu = self.builder.get_object('trash_popover_menu')
         self._restore_button = self.builder.get_object('trash_restore_button')
         self._delete_button = self.builder.get_object('trash_delete_button')
         self._empty_trash_button = self.builder.get_object('empty_trash_button')
+        self._trash_expand_button = self.builder.get_object('trash_expand_button')
+        self._trash_collapse_button = self.builder.get_object('trash_collapse_button')
 
         self.collection_list.connect('class-selected',
                                   self._on_collection_class_selected)
@@ -121,9 +125,13 @@ class DraftLibraryView(Gtk.Bin):
         self._popover.connect('closed', self._on_popover_closed)
         self._rename_button.connect('clicked', self._on_rename_clicked)
         self._remove_button.connect('clicked', self._on_remove_clicked)
+        self._expand_button.connect('clicked', self._on_expand_clicked)
+        self._collapse_button.connect('clicked', self._on_expand_clicked)
         self._restore_button.connect('clicked', self._on_restore_clicked)
         self._delete_button.connect('clicked', self._on_delete_clicked)
         self._empty_trash_button.connect('clicked', self._on_empty_trash_button_clicked)
+        self._trash_expand_button.connect('clicked', self._on_trash_expand_clicked)
+        self._trash_collapse_button.connect('clicked', self._on_trash_expand_clicked)
 
     def _on_collection_class_selected(self, widget, collection_class_type):
         """Handler for `class-selected` signal from DraftsCollectionView. Calls
@@ -220,9 +228,22 @@ class DraftLibraryView(Gtk.Bin):
             self._popover_menu.set_pointing_to(rect)
             self._popover_menu.popup()
 
+            if not self.local_groups_view.selected_row_can_expand():
+                self._expand_button.set_sensitive(False)
+                self._collapse_button.set_sensitive(False)
+            elif self.local_groups_view.selected_row_is_expanded():
+                self._expand_button.set_sensitive(False)
+                self._collapse_button.set_sensitive(True)
+            else:
+                self._expand_button.set_sensitive(True)
+                self._collapse_button.set_sensitive(False)
+
         # have to queue this in main loop, so that correct GdkRectangle is
         # selected before making menu point to it.
         GLib.idle_add(popup_menu)
+
+    def _on_expand_clicked(self, widget):
+        self.local_groups_view.activate_selected_row()
 
     def _on_rename_clicked(self, widget):
         self.local_groups_view.emit('rename-requested')
@@ -246,6 +267,16 @@ class DraftLibraryView(Gtk.Bin):
                 self._delete_button.set_visible(True)
                 self._restore_button.set_visible(True)
 
+            if not self.trash_view.selected_row_can_expand():
+                self._trash_expand_button.set_sensitive(False)
+                self._trash_collapse_button.set_sensitive(False)
+            elif self.trash_view.selected_row_is_expanded():
+                self._trash_expand_button.set_sensitive(False)
+                self._trash_collapse_button.set_sensitive(True)
+            else:
+                self._trash_expand_button.set_sensitive(True)
+                self._trash_collapse_button.set_sensitive(False)
+
             rect = self.trash_view.get_selected_rect()
             self._trash_menu.set_relative_to(self.trash_view)
             self._trash_menu.set_pointing_to(rect)
@@ -262,6 +293,9 @@ class DraftLibraryView(Gtk.Bin):
     def _on_restore_clicked(self, widget):
         self.trash_view.restore_selected_row()
         self._popover_menu.popdown()
+
+    def _on_trash_expand_clicked(self, widget):
+        self.trash_view.activate_selected_row()
 
     def _on_empty_trash_button_clicked(self, widget):
         self.trash_view.delete_all_permanently()

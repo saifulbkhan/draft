@@ -56,6 +56,7 @@ class DraftGroupTree(Gtk.TreeView):
         self.selection.connect('changed', self._on_selection_changed)
         self.set_headers_visible(False)
         self.set_enable_search(False)
+        self.set_activate_on_single_click(False)
 
         self.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK,
                                       [GROUP_MOVE_TARGET],
@@ -67,6 +68,7 @@ class DraftGroupTree(Gtk.TreeView):
         self.connect('button-press-event', self._on_button_press)
         self.connect('drag-data-get', self._drag_data_get)
         self.connect('drag-data-received', self._drag_data_received)
+        self.connect('row-activated', self._on_row_activated)
 
     def _on_key_press(self, widget, event):
         """Handle key presses within the widget. Ignore some events that are not
@@ -81,8 +83,6 @@ class DraftGroupTree(Gtk.TreeView):
                     self.delete_selected_row()
                 elif event.keyval == Gdk.KEY_F2 and path_string != '0':
                     self.emit('rename-requested')
-            if event.keyval == Gdk.KEY_ISO_Enter:
-                self.toggle_expand_path(self.get_selected_path())
 
     def _on_button_press(self, widget, event):
         """Handle key presses within the widget"""
@@ -92,9 +92,6 @@ class DraftGroupTree(Gtk.TreeView):
         if not modifiers:
             if event.triggers_context_menu():
                 self.emit('menu-requested')
-            elif (event.button == Gdk.BUTTON_PRIMARY
-                    and event.type == Gdk.EventType._2BUTTON_PRESS):
-                self.toggle_expand_path(self.get_selected_path())
 
     def _on_selection_changed(self, selection):
         """Handle selection change and subsequently emit `group-selected` signal"""
@@ -110,6 +107,9 @@ class DraftGroupTree(Gtk.TreeView):
         path = model.get_path(treeiter)
         group = model.get_group_for_iter(treeiter)
         self.emit('group-selected', group)
+
+    def _on_row_activated(self, widget, path, column):
+        self.toggle_expand_path(path)
 
     def do_drag_motion(self, context, x, y, time):
         """Override the default drag motion method and highlight with
@@ -273,6 +273,26 @@ class DraftGroupTree(Gtk.TreeView):
         """Change name for the group under current selection"""
         model, treeiter = self.selection.get_selected()
         model.set_prop_for_iter(treeiter, 'name', name)
+
+    def selected_row_can_expand(self):
+        """Check if selected row is capable of being expanded, i.e., has
+        children"""
+        num_groups, num_texts = self.count_groups_and_texts_for_selection()
+        if num_groups:
+            return True
+        return False
+
+    def selected_row_is_expanded(self):
+        """Check if selected path is expanded or not"""
+        path = self.get_selected_path()
+        if self.row_expanded(path):
+            return True
+        return False
+
+    def activate_selected_row(self):
+        """Activates a the currently selected row"""
+        path = self.get_selected_path()
+        self.toggle_expand_path(path)
 
     def delete_selected_row(self, permanent=False):
         """Delete the group under selection"""
