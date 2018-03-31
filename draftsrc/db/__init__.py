@@ -17,7 +17,7 @@ import os.path
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import OrderedDict
 
 from gi.repository import GLib, Gio
@@ -141,9 +141,7 @@ def get_datetime():
 
 
 def get_datetime_last_n_days(last_n_days):
-    dt = datetime.now()
-    last_day = dt.day - last_n_days
-    dt = dt.replace(day=last_day)
+    dt = datetime.now() - timedelta(days=last_n_days)
     return dt.isoformat(timespec='milliseconds')
 
 
