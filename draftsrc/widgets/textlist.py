@@ -463,21 +463,30 @@ class DraftTextList(Gtk.ListBox):
             self._model.queue_final_save(metadata)
 
     def activate_selected_row(self):
+        """Activate selected row"""
         row = self.get_selected_row()
         row.emit('activate')
 
-    def delete_selected_row(self, permanent=False):
-        """Delete currently selected text in the list"""
-        position = self.get_selected_row().get_index()
-        if permanent:
-            self._model.delete_item_at_postion_permanently(position)
-        else:
-            self._model.delete_item_at_postion(position)
+    def delete_selected(self, permanent=False):
+        """Delete currently selected texts in the list"""
+        selected_rows = self.get_selected_rows()
+        for row in selected_rows:
+            position = row.get_index()
+            if permanent:
+                self._model.delete_item_at_postion_permanently(position)
+            else:
+                self._model.delete_item_at_postion(position)
+
+        self.set_multi_selection_mode(False)
         self.emit('text-deleted')
 
-    def restore_selected_row(self):
-        """Restore the currently selected row, which is expected to be already
+    def restore_selected(self):
+        """Restore the currently selected rows, which is expected to be already
         in trash"""
-        position = self.get_selected_row().get_index()
-        self._model.restore_item_at_position(position)
+        selected_rows = self.get_selected_rows()
+        for row in selected_rows:
+            position = row.get_index()
+            self._model.restore_item_at_position(position)
+
+        self.set_multi_selection_mode(False)
         self.emit('text-restored')

@@ -505,6 +505,11 @@ class DraftTextListView(Gtk.Bin):
                 self._trash_menu.set_pointing_to(rect)
                 self._trash_menu.popup()
             else:
+                if self.view.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
+                    self._open_button.set_sensitive(False)
+                else:
+                    self._open_button.set_sensitive(True)
+
                 self._text_menu.set_relative_to(self.view)
                 self._text_menu.set_pointing_to(rect)
                 self._text_menu.popup()
@@ -517,10 +522,10 @@ class DraftTextListView(Gtk.Bin):
         self.view.activate_selected_row()
 
     def _on_trash_clicked(self, widget):
-        self.view.delete_selected_row()
+        self.view.delete_selected()
 
     def _on_restore_clicked(self, widget):
-        self.view.restore_selected_row()
+        self.view.restore_selected()
 
     def _on_delete_clicked(self, widget):
-        self.view.delete_selected_row(permanent=True)
+        self.view.delete_selected(permanent=True)
