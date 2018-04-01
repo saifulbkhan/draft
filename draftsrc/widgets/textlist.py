@@ -162,27 +162,6 @@ class DraftTextList(Gtk.ListBox):
                         self._multi_row_selection_stack.remove(row)
                 else:
                     row.set_selectable(True)
-            elif (event.button == Gdk.BUTTON_PRIMARY
-                    and modifiers == shift_mask):
-                self.set_multi_selection_mode(True)
-                row = self._row_at_event_coordinates(event)
-                row_end = row.get_index()
-                row.set_selectable(True)
-
-                if not self._multi_row_selection_stack:
-                    selected_row = self.get_selected_row()
-                    self._multi_row_selection_stack.append(selected_row)
-
-                row = self._multi_row_selection_stack[-1]
-                row_start = row.get_index()
-                if row_start > row_end:
-                    row_end = row_start + row_end
-                    row_start = row_end - row_start
-                    row_end = row_end - row_start
-                for i in range(row_start, row_end):
-                    row = self.get_row_at_index(i)
-                    row.set_selectable(True)
-                    self.select_row(row)
         else:
             if event.triggers_context_menu():
                 row = self._row_at_event_coordinates(event)
