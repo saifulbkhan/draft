@@ -193,6 +193,15 @@ class DraftTextList(Gtk.ListBox):
         if not row:
             return
 
+        def on_row_unfocused(widget, cb_data=None):
+            if not self.get_focus_child():
+                self._set_listview_class(True)
+
+        # if row loses focus then grayed selection, but if selection is within
+        # the list itself then remove gray selection class
+        row.connect('focus-out-event', on_row_unfocused)
+        self._set_listview_class(False)
+
         if self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
             self._multi_row_selection_stack.append(row)
             return
@@ -295,6 +304,14 @@ class DraftTextList(Gtk.ListBox):
         selection.set(selection.get_target(), -1, bytearray(ids))
         self._texts_being_moved = ids
 
+    def _set_listview_class(self, set_class):
+        listview_class = 'draft-listview'
+        ctx = self.get_style_context()
+        if set_class and not ctx.has_class(listview_class):
+            ctx.add_class(listview_class)
+        elif not set_class and ctx.has_class(listview_class):
+            ctx.remove_class(listview_class)
+
     def set_model(self, collection_class=None, parent_group=None, tag=None):
         self._model = None
         if parent_group:
@@ -331,6 +348,7 @@ class DraftTextList(Gtk.ListBox):
             if position is not None:
                 row = self.get_row_at_index(position)
                 self.select_row(row)
+        self._set_listview_class(True)
 
     def set_editor(self, editor):
         """Set editor for @self
