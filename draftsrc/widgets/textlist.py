@@ -390,6 +390,8 @@ class DraftTextList(Gtk.ListBox):
         @title: string, the title to be saved for current selection
         """
         row = self.get_selected_row()
+        if not row:
+            return
         position = row.get_index()
         self._model.set_prop_for_position(position, 'title', title)
         self.editor.current_text_data['title'] = title
@@ -405,6 +407,8 @@ class DraftTextList(Gtk.ListBox):
         @subtitle: string, the subtitle to be saved for current selection
         """
         row = self.get_selected_row()
+        if not row:
+            return
         position = row.get_index()
         self._model.set_prop_for_position(position, 'subtitle', subtitle)
         self.editor.current_text_data['subtitle'] = subtitle
@@ -419,6 +423,8 @@ class DraftTextList(Gtk.ListBox):
         @markup: string, the markup to be saved for current selection
         """
         row = self.get_selected_row()
+        if not row:
+            return
         position = row.get_index()
         self._model.set_prop_for_position(position, 'markup', markup)
         self.editor.current_text_data['markup'] = markup
@@ -430,6 +436,8 @@ class DraftTextList(Gtk.ListBox):
         @markup: int, the word count goal to be saved for current selection
         """
         row = self.get_selected_row()
+        if not row:
+            return
         position = row.get_index()
         self._model.set_prop_for_position(position, 'word_goal', goal)
         self.editor.current_text_data['word_goal'] = goal
@@ -443,6 +451,8 @@ class DraftTextList(Gtk.ListBox):
                tagged with.
         """
         row = self.get_selected_row()
+        if not row:
+            return
         position = row.get_index()
         new_tags = self._model.set_tags_for_position(position, tags)
 
