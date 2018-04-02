@@ -324,6 +324,15 @@ class DraftGroupTree(Gtk.TreeView):
         model.set_prop_for_iter(treeiter, 'in_trash', False)
         self.emit('group-restored')
 
+    def selected_row_will_be_orphaned(self):
+        """Check whether the selected row will be orphaned if it is restored
+        from trash"""
+        model, treeiter = self.selection.get_selected()
+        group = model.get_group_for_iter(treeiter)
+        if group['parent_id'] is not None:
+            return True
+        return False
+
     def select_for_id(self, group_id):
         """Select a group for the given group id"""
         model = self.get_model()

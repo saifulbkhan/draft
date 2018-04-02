@@ -319,10 +319,11 @@ class DraftTextListStore(Gio.ListStore):
         self.remove(position)
 
         with db.connect() as connection:
-            group = data.group_for_id(connection, item.parent_id)
-            if group['in_trash']:
-                item.parent_id = None
-                parent_hashes = []
+            if item.parent_id:
+                group = data.group_for_id(connection, item.parent_id)
+                if group['in_trash']:
+                    item.parent_id = None
+                    parent_hashes = []
 
             file.trash_file(hash_id, parent_hashes, untrash=True)
             data.update_text(connection, id, item.to_dict())
@@ -346,8 +347,18 @@ class DraftTextListStore(Gio.ListStore):
 
         self.dequeue_final_save(id)
 
-    def get_data_for_position(self, position):
+    def get_data_for_position(self, position, parent_group=False):
+        """Obtain a dictionary of metadata for the given position. If the
+        optional argument @parent_group is supplied `True`, then the group is
+        returned as a dictionary as well."""
         item = self.get_item(position)
+        if parent_group:
+            if item.parent_id:
+                with db.connect() as connection:
+                    group = data.group_for_id(connection, item.parent_id)
+                    return item.to_dict(), group
+            else:
+                return item.to_dict(), None
         return item.to_dict()
 
     def get_position_for_id(self, text_id):

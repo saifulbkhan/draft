@@ -216,6 +216,28 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         dialog_box.set_default_response(Gtk.ResponseType.ACCEPT)
         return dialog_box
 
+    def bring_up_orphan_restore_dialog(self, restore_texts=False, num_items=1):
+        dialog_box = self.create_new_dialog_box()
+        if restore_texts:
+            head = _("Are you sure you want to restore these texts?")
+            info = _("If you restore these texts without their parent_group, they will be orphaned and appear in “Local” texts.")
+            if num_items == 1:
+                head = _("Are you sure you want to restore this text?")
+                info = _("If you restore this text without its parent group, it will be orphaned and appear in “Local” texts.")
+            markup = '<big><b>%s</b></big>' % head
+            dialog_box.set_markup(markup)
+            dialog_box.format_secondary_text(info)
+        else:
+            head = _("Are you sure you want to restore the selected group?")
+            info = _("If you restore this group without its parent, it will become a top level group within “Local” groups.")
+            markup = '<big><b>%s</b></big>' % head
+            dialog_box.set_markup(markup)
+            dialog_box.format_secondary_text(info)
+        dialog_box.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        dialog_box.add_button(_("Restore"), Gtk.ResponseType.ACCEPT)
+        dialog_box.set_default_response(Gtk.ResponseType.ACCEPT)
+        return dialog_box
+
 
 class _DraftHeaderBar(Gtk.Box):
     __gtype_name__ = 'DraftHeaderBar'

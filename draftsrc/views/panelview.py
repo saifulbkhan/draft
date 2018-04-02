@@ -295,7 +295,14 @@ class DraftLibraryView(Gtk.Bin):
         self._popover_menu.popdown()
 
     def _on_restore_clicked(self, widget):
-        self.trash_view.restore_selected_row()
+        if self.trash_view.selected_row_will_be_orphaned():
+            dialog = self.parent_window.bring_up_orphan_restore_dialog()
+            response = dialog.run()
+            if response == Gtk.ResponseType.ACCEPT:
+                self.trash_view.restore_selected_row()
+            dialog.destroy()
+        else:
+            self.trash_view.restore_selected_row()
         self._popover_menu.popdown()
 
     def _on_trash_expand_clicked(self, widget):
@@ -529,7 +536,16 @@ class DraftTextListView(Gtk.Bin):
         self.view.delete_selected()
 
     def _on_restore_clicked(self, widget):
-        self.view.restore_selected()
+        num_rows = self.view.selected_rows_will_be_orphaned()
+        if num_rows:
+            dialog = self.parent_window.bring_up_orphan_restore_dialog(restore_texts=True,
+                                                                       num_items=num_rows)
+            response = dialog.run()
+            if response == Gtk.ResponseType.ACCEPT:
+                self.view.restore_selected()
+            dialog.destroy()
+        else:
+            self.view.restore_selected()
 
     def _on_delete_clicked(self, widget):
         num_rows = len(self.view.get_selected_rows())

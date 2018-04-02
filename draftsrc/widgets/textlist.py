@@ -500,3 +500,16 @@ class DraftTextList(Gtk.ListBox):
 
         self.set_multi_selection_mode(False)
         self.emit('text-restored')
+
+    def selected_rows_will_be_orphaned(self):
+        """Check if the currently selected row in list will be orphaned if we
+        restore the text from trash"""
+        count = 0
+        selected_rows = self.get_selected_rows()
+        for row in selected_rows:
+            position = row.get_index()
+            text, parent_group = self._model.get_data_for_position(position,
+                                                                   parent_group=True)
+            if parent_group and parent_group['in_trash']:
+                count += 1
+        return count
