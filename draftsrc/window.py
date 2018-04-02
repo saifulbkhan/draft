@@ -184,6 +184,38 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         headerbar = self.get_titlebar()
         headerbar.set_preview_button_sensitive(True)
 
+    def create_new_dialog_box(self):
+        builder = Gtk.Builder()
+        builder.add_from_resource('/org/gnome/Draft/dialogbox.ui')
+        dialog_box = builder.get_object('dialog_box')
+        dialog_box.set_transient_for(self)
+        return dialog_box
+
+    def bring_up_final_deletion_dialog(self, delete_texts=False, num_items=1):
+        dialog_box = self.create_new_dialog_box()
+        if delete_texts:
+            head = _("Are you sure you want to delete the %s selected items?") % num_items
+            info = _("If you delete the items, they will be permanently lost.")
+            if num_items == 1:
+                head = _("Are you sure you want to delete the selected text?")
+                info = _("If you delete this text, it will be permanently lost.")
+            markup = '<big><b>%s</b></big>' % head
+            dialog_box.set_markup(markup)
+            dialog_box.format_secondary_text(info)
+        else:
+            head = _("Are you sure you want to delete the selected group?")
+            info = _("If you delete this group, all subgroups and texts contained within will be permanently deleted along with it.")
+            markup = '<big><b>%s</b></big>' % head
+            dialog_box.set_markup(markup)
+            dialog_box.format_secondary_text(info)
+        dialog_box.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        dialog_box.add_button(_("Delete"), Gtk.ResponseType.ACCEPT)
+        del_button = dialog_box.get_widget_for_response(Gtk.ResponseType.ACCEPT)
+        ctx = del_button.get_style_context()
+        ctx.add_class('destructive-action')
+        dialog_box.set_default_response(Gtk.ResponseType.ACCEPT)
+        return dialog_box
+
 
 class _DraftHeaderBar(Gtk.Box):
     __gtype_name__ = 'DraftHeaderBar'

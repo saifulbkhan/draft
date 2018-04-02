@@ -287,7 +287,11 @@ class DraftLibraryView(Gtk.Bin):
         GLib.idle_add(popup_menu)
 
     def _on_delete_clicked(self, widget):
-        self.trash_view.delete_selected_row(permanent=True)
+        dialog = self.parent_window.bring_up_final_deletion_dialog()
+        response = dialog.run()
+        if response == Gtk.ResponseType.ACCEPT:
+            self.trash_view.delete_selected_row(permanent=True)
+        dialog.destroy()
         self._popover_menu.popdown()
 
     def _on_restore_clicked(self, widget):
@@ -528,4 +532,10 @@ class DraftTextListView(Gtk.Bin):
         self.view.restore_selected()
 
     def _on_delete_clicked(self, widget):
-        self.view.delete_selected(permanent=True)
+        num_rows = len(self.view.get_selected_rows())
+        dialog = self.parent_window.bring_up_final_deletion_dialog(delete_texts=True,
+                                                                   num_items=num_rows)
+        response = dialog.run()
+        if response == Gtk.ResponseType.ACCEPT:
+            self.view.delete_selected(permanent=True)
+        dialog.destroy()
