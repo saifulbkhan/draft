@@ -48,10 +48,7 @@ class DraftTextList(Gtk.ListBox):
         return '<DraftTextList>'
 
     def __init__(self):
-        """Initialize a new DraftTextsList for given @parent_group
-
-        @parent_group: string, unique hash string for @parent_group
-        """
+        """Initialize a new DraftTextsList for given @parent_group"""
         Gtk.ListBox.__init__(self)
         self.connect('key-press-event', self._on_key_press)
         self.connect('button-press-event', self._on_button_press)
@@ -70,10 +67,8 @@ class DraftTextList(Gtk.ListBox):
 
         row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         row_box.set_visible(True)
-        row_box.set_spacing(2)
-        for direction in ['left', 'right', 'top', 'bottom']:
-            method = 'set_margin_%s' % direction
-            getattr(row_box, method)(6)
+        ctx = row_box.get_style_context()
+        ctx.add_class('draft-text-box-row')
 
         title_label = Gtk.Label()
         row_box.pack_start(title_label, True, False, 0)
