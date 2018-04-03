@@ -22,6 +22,7 @@ db_sources = [
 models_sources = [
   'models/grouptreestore.py',
   'models/collectionliststore.py',
+  'models/tagliststore.py',
   'models/textliststore.py'
 ]
 
@@ -44,6 +45,7 @@ widgets_sources = [
   'widgets/collectionlist.py',
   'widgets/preview.py',
   'widgets/statusbar.py',
+  'widgets/taglist.py',
   'widgets/textlist.py'
 ]
 

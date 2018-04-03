@@ -471,6 +471,40 @@ def group_for_id(conn, group_id):
     return next(gen)
 
 
+def fetch_tags(conn, where_condition='', order_condition='', args={}):
+    """Return an iterator of all tags satisfying @where_condition and ordered
+    by @order_condition"""
+    query = '''
+        SELECT keyword
+          FROM tag
+    '''
+    if where_condition:
+        query += '\nWHERE %s' % where_condition
+    if order_condition:
+        query += '\nORDER BY' % order_condition
+
+    cursor = conn.cursor()
+    for row in cursor.execute(query, args):
+        values = {
+            'keyword': row[0]
+        }
+
+        yield values
+
+
+def tags_with_at_least_one_text(conn):
+    """Return an iterator of tags that are tagged to at least one text item that
+    is not in trash."""
+    where_condition = '''
+        keyword in (SELECT tag_keyword
+                      FROM text_tags
+                     WHERE text_id IN (SELECT id
+                                         FROM text
+                                        WHERE in_trash = 0))
+    '''
+    return fetch_tags(conn, where_condition=where_condition)
+
+
 def count_texts(conn, group_id=None, in_trash=False):
     """Return the number of texts in the given @group, that are not trashed"""
     base_query = '''

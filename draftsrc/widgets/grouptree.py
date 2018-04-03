@@ -358,6 +358,7 @@ class DraftGroupTree(Gtk.TreeView):
         if not treeiter:
             treeiter = model.get_iter(self._root_path())
         self.selection.select_iter(treeiter)
+        self.grab_focus()
         return model.get_group_for_iter(treeiter)
 
     def count_top_level_groups_and_texts(self):

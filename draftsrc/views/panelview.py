@@ -18,6 +18,7 @@ from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
 from draftsrc.widgets.collectionlist import DraftCollectionList
 from draftsrc.widgets.grouptree import DraftGroupTree
+from draftsrc.widgets.taglist import DraftTagList
 from draftsrc.widgets.textlist import DraftTextList
 
 
@@ -83,6 +84,12 @@ class DraftLibraryView(Gtk.Bin):
                                       self.collection_view_name,
                                       _("Collection"))
 
+        self.tag_list = DraftTagList()
+        self.library_stack.add_titled(self.tag_list,
+                                      self.tags_view_name,
+                                      _("Tags"))
+
+
         self._popover = self.builder.get_object('popover')
         self._popover_title = self.builder.get_object('popover_title')
         self._name_entry = self.builder.get_object('text_entry')
@@ -118,6 +125,8 @@ class DraftLibraryView(Gtk.Bin):
         self.trash_view.connect('group-selected', self._on_group_selected)
         self.trash_view.connect('group-restored', self._on_group_restored)
         self.trash_view.connect('menu-requested', self._on_trash_menu_requested)
+
+        self.tag_list.connect('tag-selected', self._on_tag_selected)
 
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
@@ -312,6 +321,9 @@ class DraftLibraryView(Gtk.Bin):
         self.trash_view.delete_all_permanently()
         self.parent_window.update_content_view_and_headerbar()
 
+    def _on_tag_selected(self, widget, tag):
+        self.parent_window.textlistview.set_model_for_tag(tag)
+
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""
         if self._panel_visible:
@@ -407,6 +419,8 @@ class DraftLibraryView(Gtk.Bin):
         if visible_child_name == self.collection_view_name:
             group = self.local_groups_view.select_if_not_selected()
             self.parent_window.textlistview.set_model_for_group(group)
+        if visible_child_name == self.tags_view_name:
+            self.tag_list.select_if_not_selected()
 
 
 # TODO: Make this a stack for storing multiple DraftTextsList
@@ -482,6 +496,9 @@ class DraftTextListView(Gtk.Bin):
 
     def set_model_for_group(self, group):
         self.view.set_model(parent_group=group)
+
+    def set_model_for_tag(self, tag):
+        self.view.set_model(tag=tag)
 
     def set_collection_class_type(self, collection_class_type):
         self.view.set_model(collection_class_type)

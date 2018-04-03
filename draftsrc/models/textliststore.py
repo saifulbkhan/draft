@@ -133,7 +133,7 @@ class DraftTextListStore(Gio.ListStore):
                 load_fn = data.texts_with_tag
                 kwargs = {
                     'conn': connection,
-                    'tag_label': self._tag['label']
+                    'tag_label': self._tag['keyword']
                 }
             elif self._list_type == TextListType.RECENT_TEXTS:
                 load_fn = data.texts_recently_modified
