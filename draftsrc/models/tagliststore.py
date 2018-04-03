@@ -100,4 +100,4 @@ class DraftTagListStore(Gio.ListStore):
             for label in tags_to_reassess:
                 num_items_with_tag = data.count_texts_with_tag(connection, label)
                 if num_items_with_tag == 0:
-                    self.remove(current_tags_and_position[label])
+                    self.remove(self.get_position_for_tag(label))

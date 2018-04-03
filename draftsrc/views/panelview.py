@@ -168,6 +168,7 @@ class DraftLibraryView(Gtk.Bin):
         """Handle `clicked` signal on any of the buttons of the stack-switcher"""
         if self.library_stack.get_transition_running():
             self.select_appropriate_row()
+        self.parent_window.update_content_view_and_headerbar()
 
     def _on_texts_dropped(self, widget, text_ids, new_parent_id):
         """Handle view's `texts-dropped` signal"""
@@ -379,6 +380,12 @@ class DraftLibraryView(Gtk.Bin):
     def escape_selection_mode(self):
         pass
 
+    def tag_view_is_shown(self):
+        child_name = self.library_stack.get_visible_child_name()
+        if child_name == self.tags_view_name:
+            return True
+        return False
+
     def collection_is_empty(self):
         """Check if there are any groups or texts present in the collection"""
         num_groups, num_texts = self.local_groups_view.count_top_level_groups_and_texts()
@@ -438,7 +445,7 @@ class DraftLibraryView(Gtk.Bin):
         if visible_child_name == self.tags_view_name:
             self.tag_list.select_if_not_selected()
 
-    def update_tag_list(self, text, tags):
+    def update_tag_list_with_updated_tags(self, tags):
         """Update the tag list when tags are updated for a text"""
         self.tag_list.update_state(tags)
 
@@ -541,13 +548,16 @@ class DraftTextListView(Gtk.Bin):
     def _on_text_moved_to_group(self, widget, group_id):
         self.parent_window.libraryview.selection_request(group_id)
 
-    def _on_text_deleted(self, widget):
+    def _on_text_deleted(self, widget, tags, permanent):
+        if not permanent:
+            self.parent_window.libraryview.update_tag_list_with_updated_tags([])
         self.parent_window.update_content_view_and_headerbar()
 
     def _on_text_created(self, widget):
         self.parent_window.update_content_view_and_headerbar()
 
-    def _on_text_restored(self, widget):
+    def _on_text_restored(self, widget, tags):
+        self.parent_window.libraryview.update_tag_list_with_updated_tags(tags)
         self.parent_window.update_content_view_and_headerbar()
 
     def _on_menu_requested(self, widget, rect, in_trash):
@@ -572,7 +582,7 @@ class DraftTextListView(Gtk.Bin):
         GLib.idle_add(popup_menu)
 
     def _on_tags_changed(self, widget, text, tags):
-        self.parent_window.libraryview.update_tag_list(text, tags)
+        self.parent_window.libraryview.update_tag_list_with_updated_tags(tags)
 
     def _on_open_clicked(self, widget):
         self.view.activate_selected_row()

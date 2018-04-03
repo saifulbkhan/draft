@@ -85,8 +85,12 @@ class DraftTagList(Gtk.ListBox):
         return self._model.get_n_items()
 
     def update_state(self, tags):
-        """Update model to reflect changes done to a text by addition/deletion
-        of tags"""
+        """Update model to reflect changes done by addition or exclusion of tags
+        through various different operations. This method can handle addition or
+        deletion of tags from texts, trashing of texts (in which case an empty
+        list is provided in place of @tags) and restoring of texts from trash
+        (in which case the combination of the tags from restored texts is
+        supplied for @tags)"""
         had_selected_row = bool(self.get_selected_row())
         self._model.update(tags)
         self.emit('list-changed')
@@ -104,6 +108,8 @@ class DraftTagList(Gtk.ListBox):
         selected_row = self.get_selected_row()
         if tags and not selected_row and had_selected_row:
             select_first_tag_in_tags()
+        elif not tags and not selected_row and had_selected_row:
+            self.select_if_not_selected()
         elif not selected_row:
             return
         else:

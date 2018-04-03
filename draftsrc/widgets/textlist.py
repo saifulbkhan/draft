@@ -31,9 +31,13 @@ class DraftTextList(Gtk.ListBox):
         'text-moved-to-group': (GObject.SignalFlags.RUN_FIRST,
                                 None,
                                 (GObject.TYPE_PYOBJECT,)),
-        'text-deleted': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'text-deleted': (GObject.SignalFlags.RUN_FIRST,
+                         None,
+                         (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN,)),
+        'text-restored': (GObject.SignalFlags.RUN_FIRST,
+                          None,
+                          (GObject.TYPE_PYOBJECT,)),
         'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
                            None,
                            (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
@@ -153,6 +157,8 @@ class DraftTextList(Gtk.ListBox):
                     and modifiers == control_mask):
                 self.set_multi_selection_mode(True)
                 row = self._row_at_event_coordinates(event)
+                if not row:
+                    return
                 if row.is_selected() and len(self.get_selected_rows()) > 1:
                     self.unselect_row(row)
                     row.set_selectable(False)
@@ -163,6 +169,8 @@ class DraftTextList(Gtk.ListBox):
         else:
             if event.triggers_context_menu():
                 row = self._row_at_event_coordinates(event)
+                if not row:
+                    return
                 self.select_row(row)
                 rect = row.get_allocation()
                 position = row.get_index()
@@ -183,6 +191,8 @@ class DraftTextList(Gtk.ListBox):
                     self._double_click_in_progress = False
 
                 row = self._row_at_event_coordinates(event)
+                if not row:
+                    return
                 row.set_selectable(True)
                 self.set_multi_selection_mode(False)
 
@@ -505,26 +515,32 @@ class DraftTextList(Gtk.ListBox):
     def delete_selected(self, permanent=False):
         """Delete currently selected texts in the list"""
         selected_rows = self.get_selected_rows()
+        tags = []
         for row in selected_rows:
             position = row.get_index()
+            text = self._model.get_data_for_position(position)
+            tags += text['tags']
             if permanent:
                 self._model.delete_item_at_postion_permanently(position)
             else:
                 self._model.delete_item_at_postion(position)
 
         self.set_multi_selection_mode(False)
-        self.emit('text-deleted')
+        self.emit('text-deleted', list(set(tags)), permanent)
 
     def restore_selected(self):
         """Restore the currently selected rows, which is expected to be already
         in trash"""
         selected_rows = self.get_selected_rows()
+        tags = []
         for row in selected_rows:
             position = row.get_index()
+            text = self._model.get_data_for_position(position)
+            tags += text['tags']
             self._model.restore_item_at_position(position)
 
         self.set_multi_selection_mode(False)
-        self.emit('text-restored')
+        self.emit('text-restored', list(set(tags)))
 
     def selected_rows_will_be_orphaned(self):
         """Check if the currently selected row in list will be orphaned if we

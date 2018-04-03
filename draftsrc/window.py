@@ -137,6 +137,15 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.text_panel_hidden = False
 
     def update_content_view_and_headerbar(self):
+        if self.libraryview.tag_view_is_shown():
+            self.contentview.set_last_content_state()
+            self.show_headerbar_elements()
+            self.complete_headerbar_interaction()
+            self.reveal_text_panel()
+            self.lock_group_panel = False
+            self.lock_text_panel = False
+            return
+
         if self.libraryview.collection_is_empty():
             self.contentview.set_empty_collection_state()
             self.hide_headerbar_elements()
