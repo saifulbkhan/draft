@@ -483,6 +483,7 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('text-moved-to-group', self._on_text_moved_to_group)
         self.view.connect('text-deleted', self._on_text_deleted)
         self.view.connect('text-created', self._on_text_created)
+        self.view.connect('text-restored', self._on_text_restored)
         self.view.connect('menu-requested', self._on_menu_requested)
         self.view.connect('tags-changed', self._on_tags_changed)
 
@@ -544,6 +545,9 @@ class DraftTextListView(Gtk.Bin):
         self.parent_window.update_content_view_and_headerbar()
 
     def _on_text_created(self, widget):
+        self.parent_window.update_content_view_and_headerbar()
+
+    def _on_text_restored(self, widget):
         self.parent_window.update_content_view_and_headerbar()
 
     def _on_menu_requested(self, widget, rect, in_trash):
