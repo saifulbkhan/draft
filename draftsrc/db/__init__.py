@@ -78,7 +78,7 @@ def init_db(app_version):
             try:
                 create_tag_table = '''
                     CREATE TABLE tag (
-                        keyword TEXT NOT NULL DEFAULT NULL PRIMARY KEY,
+                        keyword TEXT NOT NULL DEFAULT NULL PRIMARY KEY
                     )'''
                 cursor.execute(create_tag_table)
             except:
