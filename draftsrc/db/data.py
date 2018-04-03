@@ -505,6 +505,29 @@ def tags_with_at_least_one_text(conn):
     return fetch_tags(conn, where_condition=where_condition)
 
 
+def tag_with_label(conn, label):
+    """Return the tag with given label"""
+    where_condition = 'keyword = :label'
+    args = {'label': label}
+    gen = fetch_tags(conn, where_condition=where_condition, args=args)
+    return next(gen)
+
+
+def count_texts_with_tag(conn, label):
+    """Return a count of the number of texts tagged with given label"""
+    query = '''
+        SELECT COUNT(text_id)
+          FROM text_tags
+         WHERE tag_keyword = :label
+           AND text_id IN (SELECT id
+                             FROM text
+                            WHERE in_trash = 0)
+    '''
+    cursor = conn.cursor()
+    res = cursor.execute(query, {'label': label})
+    return res.fetchone()[0]
+
+
 def count_texts(conn, group_id=None, in_trash=False):
     """Return the number of texts in the given @group, that are not trashed"""
     base_query = '''

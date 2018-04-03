@@ -36,7 +36,10 @@ class DraftTextList(Gtk.ListBox):
         'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
                            None,
-                           (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN))
+                           (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
+        'tags-changed': (GObject.SignalFlags.RUN_FIRST,
+                         None,
+                         (GObject.TYPE_PYOBJECT, GObject.TYPE_PYOBJECT))
     }
 
     editor = None
@@ -468,12 +471,14 @@ class DraftTextList(Gtk.ListBox):
             return
         position = row.get_index()
         new_tags = self._model.set_tags_for_position(position, tags)
+        text = self._model.get_data_for_position(position)
 
         # since @new_tags might have slightly different letter case tags, we
         # should re-update editor tags as well and then update statusbar, though
         # this is probably not the best place to do it.
         self.editor.current_text_data['tags'] = new_tags
         self.editor.statusbar.update_text_data()
+        self.emit('tags-changed', text, new_tags)
 
     def save_last_edit_data(self, widget, metadata):
         """Save last metdata that would be associated with the last edit session

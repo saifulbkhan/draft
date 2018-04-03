@@ -27,8 +27,10 @@ class DraftTagList(Gtk.ListBox):
     __gsignals__ = {
         'tag-selected': (GObject.SignalFlags.RUN_FIRST,
                          None,
-                         (GObject.TYPE_PYOBJECT,))
+                         (GObject.TYPE_PYOBJECT,)),
+        'list-changed': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
+
     def __repr__(self):
         return '<DraftTagList>'
 
@@ -70,9 +72,44 @@ class DraftTagList(Gtk.ListBox):
         self.emit('tag-selected', tag)
 
     def select_if_not_selected(self):
+        """Select the first tag in list if none is selected"""
         row = self.get_selected_row()
         if row is None:
             row = self.get_row_at_index(0)
             self.select_row(row)
         row.activate()
         row.grab_focus()
+
+    def get_num_tags_in_list(self):
+        """Obtain the number of items in the list"""
+        return self._model.get_n_items()
+
+    def update_state(self, tags):
+        """Update model to reflect changes done to a text by addition/deletion
+        of tags"""
+        had_selected_row = bool(self.get_selected_row())
+        self._model.update(tags)
+        self.emit('list-changed')
+
+        # from here on, we assume that all labels in tags have a
+        # place in the model
+        def select_first_tag_in_tags():
+            label = tags[0]
+            tag_position = self._model.get_position_for_tag(label)
+            row = self.get_row_at_index(tag_position)
+            if row:
+                self.select_row(row)
+                row.activate()
+
+        selected_row = self.get_selected_row()
+        if tags and not selected_row and had_selected_row:
+            select_first_tag_in_tags()
+        elif not selected_row:
+            return
+        else:
+            selected_position = selected_row.get_index()
+            selected_tag = self._model.get_data_for_position(selected_position)
+            if tags and selected_tag['keyword'] not in tags:
+                select_first_tag_in_tags()
+            elif not tags:
+                self.select_if_not_selected()
