@@ -220,8 +220,15 @@ class DraftTextList(Gtk.ListBox):
 
     def _on_items_changed(self, model, position, removed, added):
         """Handler for model's `items-changed` signal"""
-        row = self.get_row_at_index(position)
-        GLib.idle_add(self.select_row, row)
+        position_to_select = position - 1
+        num_items = self._model.get_n_items()
+        if position_to_select >= num_items:
+            position_to_select = num_items - 1
+        elif position_to_select < 0:
+            position_to_select = 0
+        row = self.get_row_at_index(position_to_select)
+        if row:
+            GLib.idle_add(self.select_row, row)
 
     def _drag_begin(self, widget, drag_context):
         """When drag action begins this function does several things:
