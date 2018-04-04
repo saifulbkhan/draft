@@ -111,9 +111,13 @@
     margin: 6px;
 }
 
-.draft-faded-selection:selected {
+.draft-faded-treeview {
+    background-color: @panel_bg_color;
+}
+
+.draft-faded-treeview:selected {
     color: @theme_selected_bg_color;
-    background-color: @content_view_bg;
+    background-color: @panel_bg_color;
     border-width: 1px 0;
     border-style: solid;
     border-color: @theme_selected_bg_color;

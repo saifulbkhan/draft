@@ -224,12 +224,14 @@ class DraftGroupTree(Gtk.TreeView):
         """Applies or removes the `draft-faded-selection` class to TreeView,
         useful when trying to visually denote the selected row as partially
         present"""
-        faded_class = 'draft-faded-selection'
+        faded_class = 'draft-faded-treeview'
         ctx = self.get_style_context()
         if faded:
+            ctx.remove_class('draft-treeview')
             ctx.add_class(faded_class)
         elif ctx.has_class(faded_class):
             ctx.remove_class(faded_class)
+            ctx.add_class('draft-treeview')
 
     def new_group_request(self):
         """Instruct model to create a new group and then return the GdkRectangle
