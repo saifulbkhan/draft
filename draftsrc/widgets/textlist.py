@@ -130,7 +130,7 @@ class DraftTextList(Gtk.ListBox):
         if not event_and_modifiers:
             # Delete row and file with (Del)
             if event.keyval == Gdk.KEY_Delete:
-                self.delete_selected_row()
+                self.delete_selected()
 
     def _row_at_event_coordinates(self, event):
         device = event.device
