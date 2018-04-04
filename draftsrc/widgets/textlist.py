@@ -201,6 +201,7 @@ class DraftTextList(Gtk.ListBox):
 
         # if row loses focus then grayed selection, but if selection is within
         # the list itself then remove gray selection class
+        row.grab_focus()
         row.connect('focus-out-event', on_row_unfocused)
         self._set_listview_class(False)
 
@@ -224,11 +225,11 @@ class DraftTextList(Gtk.ListBox):
 
     def _on_items_changed(self, model, position, removed, added):
         """Handler for model's `items-changed` signal"""
-        position_to_select = position - 1
+        position_to_select = position
         num_items = self._model.get_n_items()
         if position_to_select >= num_items:
             position_to_select = num_items - 1
-        elif position_to_select < 0:
+        if position_to_select < 0:
             position_to_select = 0
         row = self.get_row_at_index(position_to_select)
         if row:
@@ -395,6 +396,8 @@ class DraftTextList(Gtk.ListBox):
     def new_text_request(self):
         """Request for creation of a new text and append it to the list"""
         self._model.new_text_request()
+        position = self._model.get_latest_modified_position()
+        self.select_row(self.get_row_at_index(position))
         self.emit('text-created')
 
     def set_group_for_ids(self, text_ids, group):
