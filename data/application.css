@@ -111,18 +111,6 @@
     margin: 6px;
 }
 
-.draft-taglist {
-    background-color: @panel_bg_color;
-}
-
-.draft-taglist > row:selected:not(:focus) {
-    background-color: @unfocused_selection_color;
-}
-
-.draft-tag-box-row {
-    margin: 6px;
-}
-
 .draft-faded-selection:selected {
     color: @theme_selected_bg_color;
     background-color: @content_view_bg;

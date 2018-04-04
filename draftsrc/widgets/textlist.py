@@ -32,18 +32,12 @@ class DraftTextList(Gtk.ListBox):
                                 None,
                                 (GObject.TYPE_PYOBJECT,)),
         'text-deleted': (GObject.SignalFlags.RUN_FIRST,
-                         None,
-                         (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN,)),
-        'text-restored': (GObject.SignalFlags.RUN_FIRST,
-                          None,
-                          (GObject.TYPE_PYOBJECT,)),
+                         None, (GObject.TYPE_BOOLEAN,)),
+        'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
                            None,
-                           (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
-        'tags-changed': (GObject.SignalFlags.RUN_FIRST,
-                         None,
-                         (GObject.TYPE_PYOBJECT, GObject.TYPE_PYOBJECT))
+                           (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN))
     }
 
     editor = None
@@ -488,14 +482,12 @@ class DraftTextList(Gtk.ListBox):
             return
         position = row.get_index()
         new_tags = self._model.set_tags_for_position(position, tags)
-        text = self._model.get_data_for_position(position)
 
         # since @new_tags might have slightly different letter case tags, we
         # should re-update editor tags as well and then update statusbar, though
         # this is probably not the best place to do it.
         self.editor.current_text_data['tags'] = new_tags
         self.editor.statusbar.update_text_data()
-        self.emit('tags-changed', text, new_tags)
 
     def save_last_edit_data(self, widget, metadata):
         """Save last metdata that would be associated with the last edit session
@@ -515,32 +507,26 @@ class DraftTextList(Gtk.ListBox):
     def delete_selected(self, permanent=False):
         """Delete currently selected texts in the list"""
         selected_rows = self.get_selected_rows()
-        tags = []
         for row in selected_rows:
             position = row.get_index()
-            text = self._model.get_data_for_position(position)
-            tags += text['tags']
             if permanent:
                 self._model.delete_item_at_postion_permanently(position)
             else:
                 self._model.delete_item_at_postion(position)
 
         self.set_multi_selection_mode(False)
-        self.emit('text-deleted', list(set(tags)), permanent)
+        self.emit('text-deleted', permanent)
 
     def restore_selected(self):
         """Restore the currently selected rows, which is expected to be already
         in trash"""
         selected_rows = self.get_selected_rows()
-        tags = []
         for row in selected_rows:
             position = row.get_index()
-            text = self._model.get_data_for_position(position)
-            tags += text['tags']
             self._model.restore_item_at_position(position)
 
         self.set_multi_selection_mode(False)
-        self.emit('text-restored', list(set(tags)))
+        self.emit('text-restored')
 
     def selected_rows_will_be_orphaned(self):
         """Check if the currently selected row in list will be orphaned if we

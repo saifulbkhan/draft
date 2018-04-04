@@ -18,7 +18,6 @@ from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
 from draftsrc.widgets.collectionlist import DraftCollectionList
 from draftsrc.widgets.grouptree import DraftGroupTree
-from draftsrc.widgets.taglist import DraftTagList
 from draftsrc.widgets.textlist import DraftTextList
 
 
@@ -84,12 +83,6 @@ class DraftLibraryView(Gtk.Bin):
                                       self.collection_view_name,
                                       _("Collection"))
 
-        self.tag_list = DraftTagList()
-        self.library_stack.add_titled(self.tag_list,
-                                      self.tags_view_name,
-                                      _("Tags"))
-
-
         self._popover = self.builder.get_object('popover')
         self._popover_title = self.builder.get_object('popover_title')
         self._name_entry = self.builder.get_object('text_entry')
@@ -111,7 +104,6 @@ class DraftLibraryView(Gtk.Bin):
         self.collection_list.connect('class-selected',
                                   self._on_collection_class_selected)
 
-        self._lock_tag_view_if_needed()
         toggle_buttons = self._stack_switcher.get_children()
         for button in toggle_buttons:
             button.connect('clicked', self._on_button_toggled)
@@ -126,9 +118,6 @@ class DraftLibraryView(Gtk.Bin):
         self.trash_view.connect('group-selected', self._on_group_selected)
         self.trash_view.connect('group-restored', self._on_group_restored)
         self.trash_view.connect('menu-requested', self._on_trash_menu_requested)
-
-        self.tag_list.connect('tag-selected', self._on_tag_selected)
-        self.tag_list.connect('list-changed', self._on_tag_list_changed)
 
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
@@ -168,7 +157,6 @@ class DraftLibraryView(Gtk.Bin):
         """Handle `clicked` signal on any of the buttons of the stack-switcher"""
         if self.library_stack.get_transition_running():
             self.select_appropriate_row()
-        self.parent_window.update_content_view_and_headerbar()
 
     def _on_texts_dropped(self, widget, text_ids, new_parent_id):
         """Handle view's `texts-dropped` signal"""
@@ -324,23 +312,6 @@ class DraftLibraryView(Gtk.Bin):
         self.trash_view.delete_all_permanently()
         self.parent_window.update_content_view_and_headerbar()
 
-    def _on_tag_selected(self, widget, tag):
-        if self.library_stack.get_visible_child_name() == self.tags_view_name:
-            self.parent_window.textlistview.set_model_for_tag(tag)
-
-    def _on_tag_list_changed(self, widget):
-        self._lock_tag_view_if_needed()
-
-    def _lock_tag_view_if_needed(self):
-        toggle_buttons = self._stack_switcher.get_children()
-        tags_button = toggle_buttons[1]
-        tags_present = bool(self.tag_list.get_num_tags_in_list())
-        tags_button.set_sensitive(tags_present)
-        if (not tags_present
-                and self.library_stack.get_visible_child_name() == self.tags_view_name):
-            self.library_stack.set_visible_child_name(self.collection_view_name)
-            self.select_appropriate_row()
-
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""
         if self._panel_visible:
@@ -379,12 +350,6 @@ class DraftLibraryView(Gtk.Bin):
 
     def escape_selection_mode(self):
         pass
-
-    def tag_view_is_shown(self):
-        child_name = self.library_stack.get_visible_child_name()
-        if child_name == self.tags_view_name:
-            return True
-        return False
 
     def collection_is_empty(self):
         """Check if there are any groups or texts present in the collection"""
@@ -442,12 +407,6 @@ class DraftLibraryView(Gtk.Bin):
         if visible_child_name == self.collection_view_name:
             group = self.local_groups_view.select_if_not_selected()
             self.parent_window.textlistview.set_model_for_group(group)
-        if visible_child_name == self.tags_view_name:
-            self.tag_list.select_if_not_selected()
-
-    def update_tag_list_with_updated_tags(self, tags):
-        """Update the tag list when tags are updated for a text"""
-        self.tag_list.update_state(tags)
 
 
 # TODO: Make this a stack for storing multiple DraftTextsList
@@ -492,7 +451,6 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('text-created', self._on_text_created)
         self.view.connect('text-restored', self._on_text_restored)
         self.view.connect('menu-requested', self._on_menu_requested)
-        self.view.connect('tags-changed', self._on_tags_changed)
 
         self._open_button.connect('clicked', self._on_open_clicked)
         self._trash_button.connect('clicked', self._on_trash_clicked)
@@ -526,9 +484,6 @@ class DraftTextListView(Gtk.Bin):
     def set_model_for_group(self, group):
         self.view.set_model(parent_group=group)
 
-    def set_model_for_tag(self, tag):
-        self.view.set_model(tag=tag)
-
     def set_collection_class_type(self, collection_class_type):
         self.view.set_model(collection_class_type)
 
@@ -548,16 +503,13 @@ class DraftTextListView(Gtk.Bin):
     def _on_text_moved_to_group(self, widget, group_id):
         self.parent_window.libraryview.selection_request(group_id)
 
-    def _on_text_deleted(self, widget, tags, permanent):
-        if not permanent:
-            self.parent_window.libraryview.update_tag_list_with_updated_tags([])
+    def _on_text_deleted(self, widget, permanent):
         self.parent_window.update_content_view_and_headerbar()
 
     def _on_text_created(self, widget):
         self.parent_window.update_content_view_and_headerbar()
 
-    def _on_text_restored(self, widget, tags):
-        self.parent_window.libraryview.update_tag_list_with_updated_tags(tags)
+    def _on_text_restored(self, widget):
         self.parent_window.update_content_view_and_headerbar()
 
     def _on_menu_requested(self, widget, rect, in_trash):
@@ -580,9 +532,6 @@ class DraftTextListView(Gtk.Bin):
         # have to queue this in main loop, so that correct GdkRectangle is
         # selected before making menu point to it.
         GLib.idle_add(popup_menu)
-
-    def _on_tags_changed(self, widget, text, tags):
-        self.parent_window.libraryview.update_tag_list_with_updated_tags(tags)
 
     def _on_open_clicked(self, widget):
         self.view.activate_selected_row()
