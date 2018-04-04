@@ -199,10 +199,14 @@ class DraftTextList(Gtk.ListBox):
             if not self.get_focus_child():
                 self._set_listview_class(True)
 
+        def on_row_focused(widget, cb_data=None):
+            self._set_listview_class(False)
+
         # if row loses focus then grayed selection, but if selection is within
         # the list itself then remove gray selection class
         row.grab_focus()
         row.connect('focus-out-event', on_row_unfocused)
+        row.connect('focus-in-event', on_row_focused)
         self._set_listview_class(False)
 
         if self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
