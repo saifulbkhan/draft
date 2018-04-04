@@ -26,8 +26,6 @@ class DraftLibraryView(Gtk.Bin):
     and resizing"""
     _panel_visible = True
     _creation_state = False
-    collection_view_name = 'collection'
-    tags_view_name = 'tags'
 
     def __repr__(self):
         return '<DraftLibraryView>'
@@ -44,9 +42,6 @@ class DraftLibraryView(Gtk.Bin):
         self.slider.set_hexpand(False)
         self.add(self.slider)
 
-        self.library_stack = self.builder.get_object('library_stack')
-        self._stack_switcher = self.builder.get_object('library_switcher')
-        collection_window = self.builder.get_object('collection_window')
         collection_box = self.builder.get_object('collection_box')
         separator = self.builder.get_object('library_separator')
 
@@ -79,10 +74,6 @@ class DraftLibraryView(Gtk.Bin):
         self.local_groups_view.set_collection_model()
         collection_box.pack_start(self.local_groups_view, False, True, 0)
 
-        self.library_stack.add_titled(collection_window,
-                                      self.collection_view_name,
-                                      _("Collection"))
-
         self._popover = self.builder.get_object('popover')
         self._popover_title = self.builder.get_object('popover_title')
         self._name_entry = self.builder.get_object('text_entry')
@@ -103,10 +94,6 @@ class DraftLibraryView(Gtk.Bin):
 
         self.collection_list.connect('class-selected',
                                   self._on_collection_class_selected)
-
-        toggle_buttons = self._stack_switcher.get_children()
-        for button in toggle_buttons:
-            button.connect('clicked', self._on_button_toggled)
 
         self.local_groups_view.connect('group-selected', self._on_group_selected)
         self.local_groups_view.connect('texts-dropped', self._on_texts_dropped)
@@ -152,11 +139,6 @@ class DraftLibraryView(Gtk.Bin):
 
         self.parent_window.update_content_view_and_headerbar()
         self.parent_window.textlistview.set_model_for_group(group)
-
-    def _on_button_toggled(self, widget, user_data=None):
-        """Handle `clicked` signal on any of the buttons of the stack-switcher"""
-        if self.library_stack.get_transition_running():
-            self.select_appropriate_row()
 
     def _on_texts_dropped(self, widget, text_ids, new_parent_id):
         """Handle view's `texts-dropped` signal"""
@@ -333,7 +315,6 @@ class DraftLibraryView(Gtk.Bin):
         """Cater to the request for new group creation. Pops up an entry to set
         the name of the new group as well"""
         self.reveal_panel()
-        self.library_stack.set_visible_child_name('collection')
 
         rect = self.local_groups_view.new_group_request()
         self.local_groups_view.set_faded_selection(True)
@@ -402,11 +383,9 @@ class DraftLibraryView(Gtk.Bin):
         return view.has_top_level_row_selected()
 
     def select_appropriate_row(self):
-        """Select an appropriate row in the currently visible view"""
-        visible_child_name = self.library_stack.get_visible_child_name()
-        if visible_child_name == self.collection_view_name:
-            group = self.local_groups_view.select_if_not_selected()
-            self.parent_window.textlistview.set_model_for_group(group)
+        """Select an appropriate row in the library"""
+        group = self.local_groups_view.select_if_not_selected()
+        self.parent_window.textlistview.set_model_for_group(group)
 
 
 # TODO: Make this a stack for storing multiple DraftTextsList
