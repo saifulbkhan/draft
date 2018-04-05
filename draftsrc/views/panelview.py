@@ -80,6 +80,8 @@ class DraftLibraryView(Gtk.Bin):
         self._action_button = self.builder.get_object('action_button')
 
         self._popover_menu = self.builder.get_object('popover_menu')
+        self._new_group_button = self.builder.get_object('group_button')
+        self._sub_group_button = self.builder.get_object('subgroup_button')
         self._rename_button = self.builder.get_object('rename_button')
         self._remove_button = self.builder.get_object('remove_button')
         self._expand_button = self.builder.get_object('expand_button')
@@ -203,7 +205,15 @@ class DraftLibraryView(Gtk.Bin):
 
         def popup_menu():
             if self.local_groups_view.has_top_level_row_selected():
-                return
+                self._new_group_button.set_visible(True)
+                self._sub_group_button.set_visible(False)
+                self._rename_button.set_sensitive(False)
+                self._remove_button.set_sensitive(False)
+            else:
+                self._sub_group_button.set_visible(True)
+                self._new_group_button.set_visible(False)
+                self._rename_button.set_sensitive(True)
+                self._remove_button.set_sensitive(True)
 
             rect = self.local_groups_view.get_selected_rect()
             self._popover_menu.set_relative_to(self.local_groups_view)
