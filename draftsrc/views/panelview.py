@@ -324,7 +324,8 @@ class DraftLibraryView(Gtk.Bin):
     def new_group_request(self):
         """Cater to the request for new group creation. Pops up an entry to set
         the name of the new group as well"""
-        self.reveal_panel()
+        # use parent's reveal method to ensure size group allotment
+        self.parent_window.reveal_library_panel()
 
         rect = self.local_groups_view.new_group_request()
         self.local_groups_view.set_faded_selection(True)
@@ -463,12 +464,25 @@ class DraftTextListView(Gtk.Bin):
         self._panel_visible = True
 
     def search_toggled(self):
-        if self.search_bar.get_search_mode():
-            self.search_bar.set_search_mode(False)
-            self.search_entry.set_text("")
+        if self.search_mode_is_on():
+            self.search_mode_off()
+            self.parent_window.update_content_view_and_headerbar()
         else:
-            self.search_bar.set_search_mode(True)
-            self.search_entry.grab_focus()
+            self.search_mode_on()
+            self.parent_window.reveal_text_panel()
+
+    def search_mode_is_on(self):
+        return self.search_bar.get_search_mode()
+
+    def search_mode_on(self):
+        self.parent_window.search_button_active(True)
+        self.search_bar.set_search_mode(True)
+        self.search_entry.grab_focus()
+
+    def search_mode_off(self):
+        self.parent_window.search_button_active(False)
+        self.search_bar.set_search_mode(False)
+        self.search_entry.set_text("")
 
     def set_model_for_group(self, group):
         self.view.set_model(parent_group=group)

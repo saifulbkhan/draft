@@ -7,16 +7,41 @@
     <property name="can_focus">False</property>
     <property name="icon_name">document-new-symbolic</property>
   </object>
+  <object class="GtkHeaderBar" id="content_header">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="show_close_button">True</property>
+    <child>
+      <object class="GtkToggleButton" id="preview_button">
+        <property name="label" translatable="yes">Preview</property>
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">True</property>
+        <property name="valign">center</property>
+        <signal name="toggled" handler="_on_preview_toggled" swapped="no"/>
+      </object>
+      <packing>
+        <property name="pack_type">end</property>
+        <property name="position">2</property>
+      </packing>
+    </child>
+    <style>
+      <class name="draft-titlebar"/>
+    </style>
+  </object>
+  <object class="GtkImage" id="down_arrow_icon">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">pan-down-symbolic</property>
+  </object>
   <object class="GtkImage" id="search_icon">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="icon_name">edit-find-symbolic</property>
   </object>
-  <object class="GtkHeaderBar" id="HeaderBar">
+  <object class="GtkHeaderBar" id="list_header">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="title">Draft</property>
-    <property name="show_close_button">True</property>
     <child>
       <object class="GtkButton" id="new_button">
         <property name="visible">True</property>
@@ -46,22 +71,143 @@
         <property name="position">1</property>
       </packing>
     </child>
-    <child>
-      <object class="GtkToggleButton" id="preview_button">
-        <property name="label" translatable="yes">Preview</property>
+    <child type="title">
+      <object class="GtkBox">
         <property name="visible">True</property>
-        <property name="can_focus">True</property>
-        <property name="receives_default">True</property>
-        <property name="valign">center</property>
-        <signal name="toggled" handler="_on_preview_toggled" swapped="no"/>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <placeholder/>
+        </child>
       </object>
-      <packing>
-        <property name="pack_type">end</property>
-        <property name="position">2</property>
-      </packing>
+    </child>
+  </object>
+  <object class="GtkImage" id="toggle_panel_icon">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">draft-toggle-panel-symbolic.symbolic</property>
+  </object>
+  <object class="GtkHeaderBar" id="library_header">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="show_close_button">True</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <child>
+          <object class="GtkToggleButton" id="toggle_panel_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="image">toggle_panel_icon</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="toggle_popup_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="image">down_arrow_icon</property>
+            <style>
+              <class name="image-button"/>
+              <class name="draft-popup-button"/>
+            </style>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <style>
+          <class name="linked"/>
+        </style>
+      </object>
+    </child>
+    <child type="title">
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
     </child>
     <style>
-      <class name="titlebar"/>
+      <class name="draft-library-header"/>
     </style>
+  </object>
+  <object class="GtkPopoverMenu" id="toggle_panel_popup">
+    <property name="can_focus">False</property>
+    <property name="relative_to">toggle_popup_button</property>
+    <property name="position">bottom</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="margin_left">12</property>
+        <property name="margin_right">12</property>
+        <property name="margin_top">12</property>
+        <property name="margin_bottom">12</property>
+        <property name="orientation">vertical</property>
+        <property name="spacing">6</property>
+        <child>
+          <object class="GtkModelButton" id="texts_only_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="action_name">win.show_only_text_panel</property>
+            <property name="text" translatable="yes">Show Texts Only</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkModelButton" id="show_both_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="action_name">win.show_both_panels</property>
+            <property name="text" translatable="yes">Show Both Panels</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkModelButton" id="hide_both_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="action_name">win.hide_both_panels</property>
+            <property name="text" translatable="yes">Hide Both Panels</property>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="submenu">main</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
   </object>
 </interface>

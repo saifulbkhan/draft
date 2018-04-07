@@ -140,3 +140,22 @@
 .draft-empty-state-info {
     font-size: 1.0em;
 }
+
+.draft-popup-button {
+    min-width: 20px;
+    padding: 0px;
+}
+
+.draft-titlebar:dir(ltr) {
+    border-top-left-radius: 0px
+}
+
+
+.draft-titlebar-no-title label {
+    min-width: 0px;
+}
+
+.draft-library-header {
+    padding-right: 0px;
+    margin-right: -12px;
+}

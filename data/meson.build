@@ -30,6 +30,7 @@ install_data(
   install_dir: join_paths(datadir, 'draft/styles')
 )
 
+subdir('icons')
+
 # TODO: Making a desktop file
 # TODO: Preparing appdata
-# TODO: Install icons
