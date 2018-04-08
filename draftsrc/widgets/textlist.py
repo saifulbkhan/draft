@@ -35,6 +35,9 @@ class DraftTextList(Gtk.ListBox):
                          None, (GObject.TYPE_BOOLEAN,)),
         'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'text-opened': (GObject.SignalFlags.RUN_FIRST,
+                        None,
+                        (GObject.TYPE_STRING,)),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
                            None,
                            (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN))
@@ -223,6 +226,7 @@ class DraftTextList(Gtk.ListBox):
         self._model.prepare_for_edit(position,
                                      self.editor.switch_view,
                                      self.editor.load_file)
+        self.emit('text-opened', row_data['title'])
 
     def _on_row_activated(self, widget, row):
         GLib.idle_add(self.editor.focus_view, True)

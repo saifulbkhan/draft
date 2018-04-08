@@ -168,6 +168,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self._library_hsize_group.remove_widget(self.libraryview)
         self.libraryview.hide_panel()
         self.library_panel_hidden = True
+        self.expanded_library_header(False)
         if self.text_panel_hidden:
             self.panel_button_active(False)
         else:
@@ -176,9 +177,10 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def reveal_library_panel(self):
         if self.lock_library_panel:
             return
-        self.libraryview.reveal_panel()
         self.library_panel_hidden = False
+        self.libraryview.reveal_panel()
         self.panel_button_active(True)
+        self.expanded_library_header(True)
         self._library_hsize_group.add_widget(self.libraryview)
 
     def hide_text_panel(self):
@@ -186,6 +188,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self._textlist_hsize_group.remove_widget(self.textlistview)
         self.textlistview.hide_panel()
         self.text_panel_hidden = True
+        self.expanded_textlist_header(False)
         if self.library_panel_hidden:
             self.panel_button_active(False)
         else:
@@ -194,14 +197,16 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def reveal_text_panel(self):
         if self.lock_text_panel and not self.textlistview.search_mode_is_on():
             return
-        self.textlistview.reveal_panel()
         self.text_panel_hidden = False
+        self.textlistview.reveal_panel()
         self.panel_button_active(True)
+        self.expanded_textlist_header(True)
         self._textlist_hsize_group.add_widget(self.textlistview)
 
     def update_content_view_and_headerbar(self):
         if self.libraryview.collection_is_empty():
             self.contentview.set_empty_collection_state()
+            self.set_content_title("")
             self.hide_headerbar_elements()
             self.hide_library_panel()
             self.lock_text_panel = True
@@ -223,6 +228,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
             if self.textlistview.search_mode_is_on():
                 self.textlistview.search_mode_off()
+            self.set_content_title("")
             self.show_headerbar_elements()
             self.partial_headerbar_interaction()
             self.lock_library_panel = False
@@ -268,6 +274,22 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def panel_button_active(self, active):
         headerbar = self.get_titlebar()
         headerbar.set_panel_button_active(active)
+
+    def set_content_title(self, title):
+        headerbar = self.get_titlebar()
+        headerbar.set_content_header_title(title)
+
+    def expanded_library_header(self, expanded):
+        headerbar = self.get_titlebar()
+        headerbar.set_library_header_expanded_style(expanded)
+
+    def expanded_textlist_header(self, expanded):
+        headerbar = self.get_titlebar()
+        headerbar.set_textlist_header_expanded_style(expanded)
+
+    def alternate_textlist_header(self, set_alt):
+        headerbar = self.get_titlebar()
+        headerbar.set_textlist_header_alt_expanded_style(set_alt)
 
     def create_new_dialog_box(self):
         builder = Gtk.Builder()
@@ -348,10 +370,14 @@ class _DraftHeaderBar(Gtk.Box):
         self._library_header = self._builder.get_object('library_header')
         self.pack_start(self._library_header, False, False, 0)
         library_hsize_group.add_widget(self._library_header)
+        self._library_header.connect('size-allocate',
+                                     self._on_library_header_size_allocate)
 
         self._list_header = self._builder.get_object('list_header')
         self.pack_start(self._list_header, False, False, 0)
         list_hsize_group.add_widget(self._list_header)
+        self._list_header.connect('size-allocate',
+                                  self._on_list_header_size_allocate)
 
         self._content_header = self._builder.get_object('content_header')
         self.pack_start(self._content_header, True, True, 0)
@@ -377,6 +403,7 @@ class _DraftHeaderBar(Gtk.Box):
         self._preview_button = self._builder.get_object('preview_button')
         self._preview_button.connect('toggled', self._on_preview_toggled)
         self._new_button = self._builder.get_object('new_button')
+        self._content_title_label = self._builder.get_object('content_title_label')
 
     def _on_toggle_panel_clicked(self, widget):
         self.emit('panels-toggled')
@@ -442,6 +469,88 @@ class _DraftHeaderBar(Gtk.Box):
     def set_panel_button_active(self, active):
         with self._toggle_panel_button.handler_block(self._toggle_handler_id):
             self._toggle_panel_button.set_active(active)
+
+    def set_content_header_title(self, title):
+        self._content_title_label.set_label(title)
+
+    def set_library_header_expanded_style(self, expanded):
+        ctx = self._library_header.get_style_context()
+        expanded_class = 'draft-library-header-expanded'
+        shrunk_class = 'draft-library-header-shrunk'
+        if expanded:
+            if ctx.has_class(shrunk_class):
+                ctx.remove_class(shrunk_class)
+            ctx.add_class(expanded_class)
+        else:
+            if ctx.has_class(expanded_class):
+                ctx.remove_class(expanded_class)
+            ctx.add_class(shrunk_class)
+
+    def set_textlist_header_expanded_style(self, expanded):
+        ctx = self._list_header.get_style_context()
+        expanded_class = 'draft-textlist-header-expanded'
+        shrunk_class = 'draft-textlist-header-shrunk'
+        if expanded:
+            if ctx.has_class(shrunk_class):
+                ctx.remove_class(shrunk_class)
+            ctx.add_class(expanded_class)
+        else:
+            if ctx.has_class(expanded_class):
+                ctx.remove_class(expanded_class)
+            ctx.add_class(shrunk_class)
+
+    def set_textlist_header_alt_expanded_style(self, set_alt, width_offset):
+        ctx = self._list_header.get_style_context()
+        alternate_class = 'draft-textlist-header-expanded-alt'
+        titlebar_ctx = self._content_header.get_style_context()
+        titlebar_class = 'draft-titlebar-alt'
+
+        if set_alt:
+            self._set_margin_for_context(ctx,
+                                         alternate_class,
+                                         'right',
+                                         width_offset)
+            self._set_margin_for_context(titlebar_ctx,
+                                         titlebar_class,
+                                         'left',
+                                         -width_offset)
+        elif ctx.has_class(alternate_class):
+            ctx.remove_class(alternate_class)
+            titlebar_ctx.remove_class(titlebar_class)
+
+    def set_title_shifted_style(self, set_shifted, shift_offset):
+        ctx = self._content_title_label.get_style_context()
+        title_class = 'draft-content-title'
+        if set_shifted:
+            self._set_margin_for_context(ctx,
+                                         title_class,
+                                         'right',
+                                         shift_offset)
+        elif ctx.has_class(title_class):
+            ctx.remove_class(title_class)
+
+    def _set_margin_for_context(self, context, style_class, side, width_offset):
+        alt_css = '.%s:dir(ltr) { margin-%s: %spx; }' % (style_class,
+                                                         side,
+                                                         width_offset)
+        alt_css = alt_css.encode('utf-8')
+        alt_css_provider = Gtk.CssProvider()
+        alt_css_provider.load_from_data(alt_css)
+        context.add_provider(alt_css_provider,
+                             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        context.add_class(style_class)
+
+    def _on_library_header_size_allocate(self, widget, allocation):
+        if self.parent.library_panel_hidden:
+            self.set_textlist_header_alt_expanded_style(True, allocation.width)
+        else:
+            self.set_textlist_header_alt_expanded_style(False, 0)
+
+    def _on_list_header_size_allocate(self, widget, allocation):
+        if self.parent.text_panel_hidden:
+            self.set_title_shifted_style(True, allocation.width)
+        else:
+            self.set_title_shifted_style(False, 0)
 
     def _update_decorations(self, settings, pspec):
         layout_desc = settings.props.gtk_decoration_layout;

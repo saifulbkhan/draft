@@ -155,7 +155,15 @@
     min-width: 0px;
 }
 
-.draft-library-header {
+.draft-library-header-expanded:dir(ltr) {
+    border-right: 1px solid @borders;
+}
+
+.draft-library-header-shrunk:dir(ltr) {
     padding-right: 0px;
     margin-right: -12px;
+}
+
+.draft-textlist-header-expanded:dir(ltr) {
+    border-right: 1px solid @borders;
 }
