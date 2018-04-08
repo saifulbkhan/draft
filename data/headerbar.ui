@@ -11,6 +11,22 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="show_close_button">True</property>
+    <child>
+      <object class="GtkBox" id="content_button_box">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="spacing">6</property>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <placeholder/>
+        </child>
+      </object>
+    </child>
     <child type="title">
       <object class="GtkLabel" id="content_title_label">
         <property name="visible">True</property>
@@ -31,54 +47,64 @@
       </object>
       <packing>
         <property name="pack_type">end</property>
-        <property name="position">2</property>
+        <property name="position">3</property>
       </packing>
     </child>
-    <style>
-      <class name="draft-titlebar"/>
-    </style>
   </object>
   <object class="GtkImage" id="down_arrow_icon">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="icon_name">pan-down-symbolic</property>
   </object>
-  <object class="GtkImage" id="search_icon">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="icon_name">edit-find-symbolic</property>
-  </object>
   <object class="GtkHeaderBar" id="list_header">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
+    <property name="show_close_button">True</property>
     <child>
-      <object class="GtkButton" id="new_button">
+      <object class="GtkBox" id="list_button_box">
         <property name="visible">True</property>
-        <property name="can_focus">True</property>
-        <property name="focus_on_click">False</property>
-        <property name="receives_default">True</property>
-        <property name="action_name">win.new_text</property>
-        <property name="image">add_icon</property>
-        <style>
-          <class name="image-button"/>
-        </style>
+        <property name="can_focus">False</property>
+        <property name="spacing">6</property>
+        <child>
+          <placeholder/>
+        </child>
+        <child>
+          <object class="GtkButton" id="new_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="focus_on_click">False</property>
+            <property name="receives_default">True</property>
+            <property name="action_name">win.new_text</property>
+            <property name="image">add_icon</property>
+            <style>
+              <class name="image-button"/>
+            </style>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToggleButton" id="search_button">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="receives_default">True</property>
+            <property name="valign">center</property>
+            <property name="image">search_icon</property>
+            <signal name="toggled" handler="_on_search_toggled" swapped="no"/>
+            <style>
+              <class name="image-button"/>
+            </style>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
       </object>
-    </child>
-    <child>
-      <object class="GtkToggleButton" id="search_button">
-        <property name="visible">True</property>
-        <property name="can_focus">True</property>
-        <property name="receives_default">True</property>
-        <property name="valign">center</property>
-        <property name="image">search_icon</property>
-        <signal name="toggled" handler="_on_search_toggled" swapped="no"/>
-        <style>
-          <class name="image-button"/>
-        </style>
-      </object>
-      <packing>
-        <property name="position">1</property>
-      </packing>
     </child>
     <child type="title">
       <object class="GtkLabel">
@@ -86,8 +112,13 @@
       </object>
     </child>
     <style>
-      <class name="draft-textlist-header-expanded"/>
+      <class name="draft-textlist-header"/>
     </style>
+  </object>
+  <object class="GtkImage" id="search_icon">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">edit-find-symbolic</property>
   </object>
   <object class="GtkImage" id="toggle_panel_icon">
     <property name="visible">True</property>
@@ -99,7 +130,7 @@
     <property name="can_focus">False</property>
     <property name="show_close_button">True</property>
     <child>
-      <object class="GtkBox">
+      <object class="GtkBox" id="library_buttons">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <child>
@@ -146,7 +177,7 @@
       </object>
     </child>
     <style>
-      <class name="draft-library-header-expanded"/>
+      <class name="draft-library-header"/>
     </style>
   </object>
   <object class="GtkPopoverMenu" id="toggle_panel_popup">

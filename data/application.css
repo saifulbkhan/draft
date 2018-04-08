@@ -146,24 +146,10 @@
     padding: 0px;
 }
 
-.draft-titlebar:dir(ltr) {
-    border-top-left-radius: 0px
-}
-
-
-.draft-titlebar-no-title label {
-    min-width: 0px;
-}
-
-.draft-library-header-expanded:dir(ltr) {
+.draft-library-header:dir(ltr) {
     border-right: 1px solid @borders;
 }
 
-.draft-library-header-shrunk:dir(ltr) {
-    padding-right: 0px;
-    margin-right: -12px;
-}
-
-.draft-textlist-header-expanded:dir(ltr) {
+.draft-textlist-header:dir(ltr) {
     border-right: 1px solid @borders;
 }
