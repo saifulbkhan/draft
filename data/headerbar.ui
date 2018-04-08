@@ -31,6 +31,9 @@
       <object class="GtkLabel" id="content_title_label">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="ellipsize">end</property>
+        <property name="single_line_mode">True</property>
+        <property name="max_width_chars">30</property>
         <style>
           <class name="title"/>
         </style>

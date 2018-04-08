@@ -440,7 +440,7 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('text-deleted', self._on_text_deleted)
         self.view.connect('text-created', self._on_text_created)
         self.view.connect('text-restored', self._on_text_restored)
-        self.view.connect('text-opened', self._on_text_opened)
+        self.view.connect('text-title-changed', self._on_text_title_changed)
         self.view.connect('menu-requested', self._on_menu_requested)
 
         self._open_button.connect('clicked', self._on_open_clicked)
@@ -516,7 +516,7 @@ class DraftTextListView(Gtk.Bin):
     def _on_text_restored(self, widget):
         self.parent_window.update_content_view_and_headerbar()
 
-    def _on_text_opened(self, widget, text_title):
+    def _on_text_title_changed(self, widget, text_title):
         self.parent_window.set_content_title(text_title)
 
     def _on_menu_requested(self, widget, rect, in_trash):

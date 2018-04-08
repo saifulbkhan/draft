@@ -35,7 +35,7 @@ class DraftTextList(Gtk.ListBox):
                          None, (GObject.TYPE_BOOLEAN,)),
         'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'text-opened': (GObject.SignalFlags.RUN_FIRST,
+        'text-title-changed': (GObject.SignalFlags.RUN_FIRST,
                         None,
                         (GObject.TYPE_STRING,)),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
@@ -226,7 +226,7 @@ class DraftTextList(Gtk.ListBox):
         self._model.prepare_for_edit(position,
                                      self.editor.switch_view,
                                      self.editor.load_file)
-        self.emit('text-opened', row_data['title'])
+        self.emit('text-title-changed', row_data['title'])
 
     def _on_row_activated(self, widget, row):
         GLib.idle_add(self.editor.focus_view, True)
@@ -436,6 +436,7 @@ class DraftTextList(Gtk.ListBox):
 
         box = row.get_child().get_child()
         self._set_title_label(box, title)
+        self.emit('text-title-changed', title)
 
     def set_subtitle_for_current_selection(self, widget, subtitle):
         """Set the subtitle for currently selected text, as well as write this
