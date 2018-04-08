@@ -541,8 +541,13 @@ class _DraftHeaderBar(Gtk.Box):
         settings = Gtk.Settings.get_default()
         layout_desc = settings.props.gtk_decoration_layout;
         tokens = layout_desc.split(":", 1)
+        alt_set = False
         if len(tokens) > 1:
             self._content_header.props.decoration_layout = ":" + tokens[1]
+            if self._content_header is alt_header and tokens[1]:
+                alt_set  = True
         else:
             alt_header.props.decoration_layout = ""
-        alt_header.props.decoration_layout = tokens[0]
+
+        if not alt_set:
+            alt_header.props.decoration_layout = tokens[0]
