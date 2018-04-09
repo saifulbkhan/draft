@@ -150,6 +150,14 @@
     border-right: 1px solid @borders;
 }
 
+.draft-library-header:dir(rtl) {
+    border-left: 1px solid @borders;
+}
+
 .draft-textlist-header:dir(ltr) {
     border-right: 1px solid @borders;
+}
+
+.draft-textlist-header:dir(rtl) {
+    border-left: 1px solid @borders;
 }
