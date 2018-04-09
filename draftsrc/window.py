@@ -314,6 +314,21 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         dialog_box.set_default_response(Gtk.ResponseType.ACCEPT)
         return dialog_box
 
+    def bring_up_emptying_trash_dialog(self):
+        dialog_box = self.create_new_dialog_box()
+        head = _("Empty all items from Trash?")
+        info = _("All items from Trash will be permanently deleted.")
+        markup = '<big><b>%s</b></big>' % head
+        dialog_box.set_markup(markup)
+        dialog_box.format_secondary_text(info)
+        dialog_box.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+        dialog_box.add_button(_("Empty"), Gtk.ResponseType.ACCEPT)
+        del_button = dialog_box.get_widget_for_response(Gtk.ResponseType.ACCEPT)
+        ctx = del_button.get_style_context()
+        ctx.add_class('destructive-action')
+        dialog_box.set_default_response(Gtk.ResponseType.ACCEPT)
+        return dialog_box
+
     def bring_up_orphan_restore_dialog(self, restore_texts=False, num_items=1):
         dialog_box = self.create_new_dialog_box()
         if restore_texts:

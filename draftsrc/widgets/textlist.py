@@ -47,6 +47,7 @@ class DraftTextList(Gtk.ListBox):
     _texts_being_moved = []
     _multi_row_selection_stack = []
     _double_click_in_progress = False
+    _items_changed_handler_id =None
 
     def __repr__(self):
         return '<DraftTextList>'
@@ -207,10 +208,11 @@ class DraftTextList(Gtk.ListBox):
 
         # if row loses focus then grayed selection, but if selection is within
         # the list itself then remove gray selection class
-        row.grab_focus()
-        row.connect('focus-out-event', on_row_unfocused)
-        row.connect('focus-in-event', on_row_focused)
-        self._set_listview_class(False)
+        if row:
+            row.grab_focus()
+            row.connect('focus-out-event', on_row_unfocused)
+            row.connect('focus-in-event', on_row_focused)
+            self._set_listview_class(False)
 
         if self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
             self._multi_row_selection_stack.append(row)
@@ -350,7 +352,8 @@ class DraftTextList(Gtk.ListBox):
                 self._model = DraftTextListStore(list_type=TextListType.ALL_TEXTS)
 
         self.bind_model(self._model, self._create_row_widget, None)
-        self._model.connect('items-changed', self._on_items_changed)
+        self._items_changed_handler_id = self._model.connect('items-changed',
+                                                             self._on_items_changed)
         if self._texts_being_moved:
             if len(self._texts_being_moved) > 1:
                 self.set_multi_selection_mode(True)
@@ -519,13 +522,7 @@ class DraftTextList(Gtk.ListBox):
     def delete_selected(self, permanent=False):
         """Delete currently selected texts in the list"""
         selected_rows = self.get_selected_rows()
-        for row in selected_rows:
-            position = row.get_index()
-            if permanent:
-                self._model.delete_item_at_postion_permanently(position)
-            else:
-                self._model.delete_item_at_postion(position)
-
+        self.delete_rows(selected_rows, permanent=permanent)
         self.set_multi_selection_mode(False)
         self.emit('text-deleted', permanent)
 
@@ -552,3 +549,18 @@ class DraftTextList(Gtk.ListBox):
             if parent_group and parent_group['in_trash']:
                 count += 1
         return count
+
+    def delete_rows(self, rows, permanent=False):
+        for row in rows:
+            position = row.get_index()
+            if permanent:
+                self._model.delete_item_at_postion_permanently(position)
+            else:
+                self._model.delete_item_at_postion(position)
+
+    def delete_all_rows_permanently(self):
+        all_rows = self.get_children()
+        with self.handler_block(self._row_selected_handler_id):
+            with self._model.handler_block(self._items_changed_handler_id):
+                self.delete_rows(all_rows, permanent=True)
+        self.emit('text-deleted', True)

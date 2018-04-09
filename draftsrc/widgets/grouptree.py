@@ -306,10 +306,9 @@ class DraftGroupTree(Gtk.TreeView):
 
         self.emit('group-deleted')
 
-    def delete_all_permanently(self):
+    def delete_all_groups_permanently(self):
         """Delete all immediate children from a trash model and therefore
-        deleting every group and text in trash"""
-
+        deleting every group and and their texts in trash"""
         model = self.get_model()
         if model.tree_type == GroupTreeType.TRASHED_GROUPS:
             root_iter = model.get_iter_first()
@@ -351,6 +350,13 @@ class DraftGroupTree(Gtk.TreeView):
             return False
 
         model.foreach(select_if_group_id_matches, None)
+
+    def select_top_level(self):
+        """Selects the top level root node. This can be helpful for selecting
+        one node that we know will be present always (hopefully)"""
+        model = self.get_model()
+        treeiter = model.get_iter(self._root_path())
+        self.selection.select_iter(treeiter)
 
     def select_if_not_selected(self):
         """Select a row if not selected"""

@@ -301,8 +301,14 @@ class DraftLibraryView(Gtk.Bin):
         self.trash_view.activate_selected_row()
 
     def _on_empty_trash_button_clicked(self, widget):
-        self.trash_view.delete_all_permanently()
-        self.parent_window.update_content_view_and_headerbar()
+        dialog = self.parent_window.bring_up_emptying_trash_dialog()
+        response = dialog.run()
+        if response == Gtk.ResponseType.ACCEPT:
+            self.trash_view.delete_all_groups_permanently()
+            self.trash_view.select_top_level()
+            self.parent_window.textlistview.delete_all_texts_permanently()
+            self.parent_window.update_content_view_and_headerbar()
+        dialog.destroy()
 
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""
@@ -503,6 +509,10 @@ class DraftTextListView(Gtk.Bin):
     def escape_selection_mode(self):
         if self.view.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
             self.view.set_multi_selection_mode(False, escape=True)
+
+    def delete_all_texts_permanently(self):
+        # warning: assuming the user has been already informed by library view.
+        self.view.delete_all_rows_permanently()
 
     def _on_text_moved_to_group(self, widget, group_id):
         self.parent_window.libraryview.selection_request(group_id)

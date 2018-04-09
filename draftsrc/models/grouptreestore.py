@@ -319,8 +319,8 @@ class DraftGroupTreeStore(Gtk.TreeStore):
 
     def permanently_delete_group_at_iter(self, treeiter):
         """Remove the row @treeiter from model and delete the group for this
-        entry from the DB as well"""
-        values = self._dict_for_row(treeiter)
+        entry from the DB as well, unless its the root node."""
+        values = self.get_group_for_iter(treeiter)
         group_id = values['id']
         with db.connect() as connection:
             texts_to_be_deleted = self._all_texts_in_group(connection,
@@ -329,9 +329,11 @@ class DraftGroupTreeStore(Gtk.TreeStore):
             for text_name in texts_to_be_deleted:
                 file.delete_file_permanently(text_name)
 
-            data.delete_group(connection, group_id)
+            if group_id is not None:
+                data.delete_group(connection, group_id)
 
-        self.remove(treeiter)
+        if not self._iter_is_top_level(treeiter):
+            self.remove(treeiter)
 
     def count_groups_for_iter(self, treeiter):
         """Count the number of groups contained within group at @treeiter"""
