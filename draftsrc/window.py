@@ -214,7 +214,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.lock_text_panel = True
         elif self.libraryview.selected_group_has_no_texts():
             if self.libraryview.selected_group_is_in_trash():
-                self.new_text_button_sensitive(False)
+                self.show_headerbar_elements(in_trash=True)
                 if self.libraryview.trash_is_empty():
                     self.contentview.set_empty_trash_state()
                 elif (self.libraryview.trash_has_no_texts() and
@@ -223,25 +223,23 @@ class ApplicationWindow(Gtk.ApplicationWindow):
                 else:
                     self.contentview.set_empty_trashed_group_state()
             else:
-                self.new_text_button_sensitive(True)
+                self.show_headerbar_elements(in_trash=False)
                 self.contentview.set_empty_group_state()
 
             if self.textlistview.search_mode_is_on():
                 self.textlistview.search_mode_off()
             self.set_content_title("")
-            self.show_headerbar_elements()
             self.partial_headerbar_interaction()
             self.lock_library_panel = False
             self.hide_text_panel()
             self.lock_text_panel = True
         else:
             if self.libraryview.selected_group_is_in_trash():
-                self.new_text_button_sensitive(False)
+                self.show_headerbar_elements(in_trash=True)
             else:
-                self.new_text_button_sensitive(True)
+                self.show_headerbar_elements(in_trash=False)
 
             self.contentview.set_last_content_state()
-            self.show_headerbar_elements()
             self.complete_headerbar_interaction()
             self.lock_library_panel = False
             self.lock_text_panel = False
@@ -251,9 +249,10 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         headerbar = self.get_titlebar()
         headerbar.set_elements_visible(False)
 
-    def show_headerbar_elements(self):
+    def show_headerbar_elements(self, in_trash=False):
         headerbar = self.get_titlebar()
-        headerbar.set_elements_visible(True)
+        new_text_button_visible = not in_trash
+        headerbar.set_elements_visible(True, new_text_button_visible)
 
     def partial_headerbar_interaction(self):
         headerbar = self.get_titlebar()
@@ -266,10 +265,6 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def search_button_active(self, active):
         headerbar = self.get_titlebar()
         headerbar.set_search_button_active(active)
-
-    def new_text_button_sensitive(self, sensitive):
-        headerbar = self.get_titlebar()
-        headerbar.set_new_button_sensitive(sensitive)
 
     def panel_button_active(self, active):
         headerbar = self.get_titlebar()
@@ -446,10 +441,10 @@ class _DraftHeaderBar(Gtk.Box):
     def _on_preview_toggled(self, widget):
         self.emit('preview-toggled')
 
-    def set_elements_visible(self, visible):
+    def set_elements_visible(self, visible, new_button_visible=True):
         self._toggle_panel_button.set_visible(visible)
         self._toggle_popup_button.set_visible(visible)
-        self._new_button.set_visible(visible)
+        self._new_button.set_visible(new_button_visible)
         self._search_button.set_visible(visible)
         self._preview_button.set_visible(visible)
 
@@ -458,9 +453,6 @@ class _DraftHeaderBar(Gtk.Box):
 
     def set_search_button_active(self, active):
         self._search_button.set_active(active)
-
-    def set_new_button_sensitive(self, sensitive):
-        self._new_button.set_sensitive(sensitive)
 
     def set_panel_button_active(self, active):
         with self._toggle_panel_button.handler_block(self._toggle_handler_id):
@@ -517,14 +509,16 @@ class _DraftHeaderBar(Gtk.Box):
         self._update_decorations()
 
     def _failsafe_pack_start(self, new_parent, child, pack_pos=None):
+        visible = child.get_visible()
         old_parent = child.get_parent()
         if old_parent:
             old_parent.remove(child)
-        if pack_pos is not None:
-            new_parent.pack_start(child, False, False, 0)
-            new_parent.reorder_child(child, pack_pos)
-        else:
-            new_parent.pack_start(child)
+        if visible:
+            if pack_pos is not None:
+                new_parent.pack_start(child, False, False, 0)
+                new_parent.reorder_child(child, pack_pos)
+            else:
+                new_parent.pack_start(child)
 
     def _update_decorations(self):
         alt_header = self._library_header
