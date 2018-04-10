@@ -103,7 +103,7 @@ def run_application():
     except SystemExit as e:
         ret = e.code
     finally:
-        db.final_updater.activate()
+        db.final_text_updater.activate()
 
     return ret
 

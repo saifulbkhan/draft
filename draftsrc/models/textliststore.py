@@ -218,8 +218,7 @@ class DraftTextListStore(Gio.ListStore):
         item.last_modified = db.get_datetime()
         # TODO: 'notify' view that a prop for an item has changed
 
-        db.async_updater.execution_fn = data.update_text
-        db.async_updater.enqueue(id, item.to_dict())
+        db.async_text_updater.enqueue(id, item.to_dict())
 
     def set_parent_for_position(self, position, parent):
         """Set the parent id for text at given position and move the text to
@@ -276,12 +275,11 @@ class DraftTextListStore(Gio.ListStore):
         return item.tags
 
     def queue_final_save(self, metadata):
-        db.final_updater.execution_fn = data.update_text
-        db.final_updater.fetch_fn = data.text_for_id
-        db.final_updater.enqueue(metadata['id'], metadata)
+        db.final_text_updater.fetch_fn = data.text_for_id
+        db.final_text_updater.enqueue(metadata['id'], metadata)
 
     def dequeue_final_save(self, id):
-        db.async_updater.remove_if_exists(id)
+        db.final_text_updater.remove_if_exists(id)
 
     def delete_item_at_postion(self, position):
         """Delete item at @position in model

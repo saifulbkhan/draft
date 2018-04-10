@@ -23,6 +23,7 @@ from collections import OrderedDict
 from gi.repository import GLib, Gio
 
 from draftsrc.file import USER_DATA_DIR, make_backup
+from draftsrc.db import data
 from draftsrc.db.migrations import migrate_db
 
 DB_URL = os.path.join(USER_DATA_DIR, 'draft.db')
@@ -218,7 +219,7 @@ class RequestQueue(OrderedDict):
                     last_modified = get_datetime_from_string(current_values['last_modified'])
                     new_last_modified = get_datetime_from_string(values['last_modified'])
                     if last_modified > new_last_modified:
-                        break;
+                        continue
 
                 self.execution_fn(connection, id, values)
 
@@ -226,11 +227,13 @@ class RequestQueue(OrderedDict):
 
 
 # a queue for regular updates that need to be performed immediately
-async_updater = RequestQueue()
+async_text_updater = RequestQueue()
+async_text_updater.execution_fn = data.update_text
 
 # TODO: a queue for updates which could be issued periodically
 timed_updater = RequestQueue()
 time_period = 180
 
 # a queue of updates that will be executed when the app quits
-final_updater = RequestQueue(async=False, immediate_activation=False)
+final_text_updater = RequestQueue(async=False, immediate_activation=False)
+final_text_updater.execution_fn = data.update_text
