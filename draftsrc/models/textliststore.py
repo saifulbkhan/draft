@@ -275,7 +275,6 @@ class DraftTextListStore(Gio.ListStore):
         return item.tags
 
     def queue_final_save(self, metadata):
-        db.final_text_updater.fetch_fn = data.text_for_id
         db.final_text_updater.enqueue(metadata['id'], metadata)
 
     def dequeue_final_save(self, id):

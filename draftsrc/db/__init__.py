@@ -162,10 +162,9 @@ def get_datetime_from_string(dt_str):
 
 
 class RequestQueue(OrderedDict):
-    """A dict with queue like FIFO methods"""
+    """A dict with queue like FIFO methods, and supports asynchronous work
+    to be done with the items contained within."""
     active = False
-    execution_fn = None
-    fetch_fn = None
 
     def __init__(self, async=True, immediate_activation=True):
         super().__init__()
@@ -203,9 +202,21 @@ class RequestQueue(OrderedDict):
         return key, val
 
     def do_work(self):
+        """Defines what should be done with the items in queue. This method
+        must be defined by subclasses accordingly."""
+        self.active = False
+
+
+class UpdateRequestQueue(RequestQueue):
+    """A RequestQueue meant for performing updates to the database."""
+    execution_fn = None
+    fetch_fn = None
+
+    def do_work(self):
         """Loop over the queue and for each item perform `execution_fn`
         operation."""
         if self.execution_fn is None:
+            self.active = False
             return
 
         while True:
@@ -226,14 +237,37 @@ class RequestQueue(OrderedDict):
         self.active = False
 
 
+def DeleteRequestQueue(RequestQueue):
+    """A RequestQueue for async deletion of items from the database"""
+    deletion_fn = None
+
+    def do_work(self):
+        """Loop over the queue and perform `deletion_fn` for each of the
+        items"""
+        if deletion_fn is not None:
+            self.active = False
+            return
+
+        while True:
+            id, values = self.dequeue()
+            if not (id and values):
+                break
+
+            with connect() as connection:
+                self.deletion_fn(connection, id)
+
+        self.active = False
+
+
 # a queue for regular updates that need to be performed immediately
-async_text_updater = RequestQueue()
+async_text_updater = UpdateRequestQueue()
 async_text_updater.execution_fn = data.update_text
 
 # TODO: a queue for updates which could be issued periodically
-timed_updater = RequestQueue()
+timed_updater = UpdateRequestQueue()
 time_period = 180
 
 # a queue of updates that will be executed when the app quits
-final_text_updater = RequestQueue(async=False, immediate_activation=False)
+final_text_updater = UpdateRequestQueue(async=False, immediate_activation=False)
 final_text_updater.execution_fn = data.update_text
+final_text_updater.fetch_fn = data.text_for_id
