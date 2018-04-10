@@ -237,20 +237,20 @@ class UpdateRequestQueue(RequestQueue):
         self.active = False
 
 
-def DeleteRequestQueue(RequestQueue):
+class DeleteRequestQueue(RequestQueue):
     """A RequestQueue for async deletion of items from the database"""
     deletion_fn = None
 
     def do_work(self):
         """Loop over the queue and perform `deletion_fn` for each of the
         items"""
-        if deletion_fn is not None:
+        if self.deletion_fn is None:
             self.active = False
             return
 
         while True:
             id, values = self.dequeue()
-            if not (id and values):
+            if id is None:
                 break
 
             with connect() as connection:
@@ -262,6 +262,14 @@ def DeleteRequestQueue(RequestQueue):
 # a queue for regular updates that need to be performed immediately
 async_text_updater = UpdateRequestQueue()
 async_text_updater.execution_fn = data.update_text
+
+# a queue for asynchrnously deleting texts immediately
+async_text_deleter = DeleteRequestQueue()
+async_text_deleter.deletion_fn = data.delete_text
+
+# a queue for asynchrnously deleting texts immediately
+async_group_deleter = DeleteRequestQueue()
+async_group_deleter.deletion_fn = data.delete_group
 
 # TODO: a queue for updates which could be issued periodically
 timed_updater = UpdateRequestQueue()

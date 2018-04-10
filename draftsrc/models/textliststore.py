@@ -338,9 +338,7 @@ class DraftTextListStore(Gio.ListStore):
 
         self.remove(position)
         file.delete_file_permanently(hash_id)
-
-        with db.connect() as connection:
-            data.delete_text(connection, id)
+        db.async_text_deleter.enqueue(id, None)
 
         self.dequeue_final_save(id)
 

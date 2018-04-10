@@ -322,15 +322,16 @@ class DraftGroupTreeStore(Gtk.TreeStore):
         entry from the DB as well, unless its the root node."""
         values = self.get_group_for_iter(treeiter)
         group_id = values['id']
+        texts_to_be_deleted = []
         with db.connect() as connection:
             texts_to_be_deleted = self._all_texts_in_group(connection,
                                                            group_id,
                                                            in_trash=True)
-            for text_name in texts_to_be_deleted:
-                file.delete_file_permanently(text_name)
+        for text_name in texts_to_be_deleted:
+            file.delete_file_permanently(text_name)
 
-            if group_id is not None:
-                data.delete_group(connection, group_id)
+        if group_id is not None:
+            db.async_group_deleter.enqueue(group_id, None)
 
         if not self._iter_is_top_level(treeiter):
             self.remove(treeiter)
