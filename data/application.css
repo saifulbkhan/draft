@@ -111,6 +111,14 @@
     margin: 12px;
 }
 
+list > row {
+    border-bottom: 1px solid alpha(@borders, 0.3);
+}
+
+list > row label:nth-child(2) {
+    margin-top: 6px;
+}
+
 .draft-faded-treeview {
     background-color: @panel_bg_color;
 }
