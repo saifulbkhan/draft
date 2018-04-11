@@ -110,4 +110,4 @@ class DraftPreview(Gtk.Box):
         # TODO: Add shortcuts to textview
         if not event_and_modifiers:
             if event.keyval == Gdk.KEY_F9:
-                self.main_window.toggle_panel()
+                self.main_window.toggle_panels()

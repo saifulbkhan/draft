@@ -125,11 +125,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.libraryview.escape_selection_mode()
 
     def _on_panels_toggled(self, widget):
-        if (not self.library_panel_hidden
-                or not self.text_panel_hidden):
-            self._hide_both_panels(None, None)
-        else:
-            self._show_both_panels(None, None)
+        self.toggle_panels()
 
     def _on_search_toggled(self, widget):
         self.textlistview.search_toggled()
@@ -162,6 +158,13 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             elif event.keyval == Gdk.KEY_Escape:
                 self.textlistview.search_mode_off()
                 self._escape_selection_modes()
+
+    def toggle_panels(self):
+        if (not self.library_panel_hidden
+                or not self.text_panel_hidden):
+            self._hide_both_panels(None, None)
+        else:
+            self._show_both_panels(None, None)
 
     def hide_library_panel(self):
         if self.libraryview in self._library_hsize_group.get_widgets():
