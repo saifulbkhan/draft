@@ -44,7 +44,7 @@ def _obtain_group_index_dirname(group_id):
         return dirname
 
 
-def create_index_for_group(group_id):
+def create_index_for_group(group_id, in_trash):
     """Create an index of texts contained in given group or its children"""
     with db.connect() as connection:
         dirname = _obtain_group_index_dirname(group_id)
@@ -81,18 +81,18 @@ def create_index_for_group(group_id):
             else:
                 add_all_texts_in_library()
 
-        add_all_texts_in_group(group_id)
+        add_all_texts_in_group(group_id, in_trash)
         writer.commit()
 
         return ix
 
 
-def search_in_group(group_id, search_string, search_tags=False):
+def search_in_group(group_id, search_string, search_tags=False, in_trash=False):
     """Return a dict of text_id:content or text_id:tags in the given group that
     match search_string"""
     ix = None
     try:
-        ix = create_index_for_group(group_id)
+        ix = create_index_for_group(group_id, in_trash)
     except index.LockError as e:
         # TODO: (notify) Index locked! Going read-only with existing index.
         dirname = _obtain_group_index_dirname(group_id)
@@ -128,9 +128,9 @@ class ThreadedSearcher():
     _work_data = ()
     busy = False
 
-    def search_in_group_threaded(self, group_id, search_terms, search_tags, cb):
+    def search_in_group_threaded(self, group_id, search_terms, search_tags, in_trash, cb):
         """Creates a new thread and makes it perform search."""
-        data_tuple = (group_id, search_terms, search_tags, cb)
+        data_tuple = (group_id, search_terms, search_tags, in_trash, cb)
         self._work_data = data_tuple
         if not self.busy:
             self.activate()
@@ -147,11 +147,12 @@ class ThreadedSearcher():
         After search is complete, queues callback on GLib's main loop,
         with obtained results as args."""
 
-        def perform_search(search_group_id, search_terms, search_tags):
+        def perform_search(search_group_id, search_terms, search_tags, in_trash):
             """Search for texts matching `search_terms` for the `group_id`."""
             res = search_in_group(search_group_id,
                                   search_terms,
-                                  search_tags)
+                                  search_tags,
+                                  in_trash)
             return res
 
         results = {}
@@ -159,10 +160,11 @@ class ThreadedSearcher():
         while self._work_data is not None:
             data = self._work_data
             self._work_data = None
-            group_id, search_terms, search_tags, post_search_callback = data
+            group_id, search_terms, search_tags, in_trash, post_search_callback = data
             results = perform_search(group_id,
                                      search_terms,
-                                     search_tags)
+                                     search_tags,
+                                     in_trash)
 
         GLib.idle_add(post_search_callback, results)
         self.busy = False
