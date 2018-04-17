@@ -16,6 +16,7 @@
 from gettext import gettext as _
 from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
+from draftsrc import search
 from draftsrc.widgets.collectionlist import DraftCollectionList
 from draftsrc.widgets.grouptree import DraftGroupTree
 from draftsrc.widgets.textlist import DraftTextList
@@ -409,6 +410,7 @@ class DraftLibraryView(Gtk.Bin):
 class DraftTextListView(Gtk.Bin):
 
     _panel_visible = True
+    _group_shown = None
     sidebar_width = 250
 
     def __repr__(self):
@@ -449,6 +451,7 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('text-title-changed', self._on_text_title_changed)
         self.view.connect('menu-requested', self._on_menu_requested)
 
+        self.search_entry.connect('search-changed', self._on_search_changed)
         self._open_button.connect('clicked', self._on_open_clicked)
         self._trash_button.connect('clicked', self._on_trash_clicked)
         self._restore_button.connect('clicked', self._on_restore_clicked)
@@ -492,9 +495,11 @@ class DraftTextListView(Gtk.Bin):
         self.search_entry.set_text("")
 
     def set_model_for_group(self, group):
+        self._group_shown = group
         self.view.set_model(parent_group=group)
 
     def set_collection_class_type(self, collection_class_type):
+        self._group_shown = None
         self.view.set_model(collection_class_type)
 
     def set_editor(self, editor):
@@ -576,3 +581,18 @@ class DraftTextListView(Gtk.Bin):
         if response == Gtk.ResponseType.ACCEPT:
             self.view.delete_selected(permanent=True)
         dialog.destroy()
+
+    def _on_search_changed(self, search_entry):
+        search_terms = search_entry.get_text()
+
+        def post_search_callback(results):
+            for text_id in results:
+                print(text_id, '\n', results[text_id])
+            print("-" * 20)
+
+        if self._group_shown is not None:
+            group_id = self._group_shown['id']
+            search.text_finder.search_in_group_threaded(group_id,
+                                                        search_terms,
+                                                        False,
+                                                        post_search_callback)

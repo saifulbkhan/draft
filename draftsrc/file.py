@@ -24,6 +24,7 @@ from gi.repository import GtkSource, Gio, GLib
 USER_DATA_DIR = join(GLib.get_user_data_dir(), 'draft')
 BASE_TEXT_DIR = join(USER_DATA_DIR, 'texts', 'local')
 TRASH_DIR = join(USER_DATA_DIR, 'texts', '.trash')
+BASE_INDEX_DIR = join(USER_DATA_DIR, 'indices')
 
 default_encoding = 'utf-8'
 
@@ -50,6 +51,12 @@ def init_storage():
         # TODO: Failed to make directory for trashed texts or already exists
        pass
 
+    try:
+        Gio.file_new_for_path(BASE_INDEX_DIR).make_directory()
+    except Exception as e:
+        # TODO: Failed to create index directory or already exists
+        pass
+
 
 def read_file_contents(filename, parent_names, buffer, load_file_cb, in_trash=False):
     parent_dir = sep.join(parent_names)
@@ -73,6 +80,20 @@ def read_file_contents(filename, parent_names, buffer, load_file_cb, in_trash=Fa
     loader.load_async(GLib.PRIORITY_HIGH,
                       None, None, None,
                       load_finish_cb, gsf)
+
+
+def read_from_file(filename, parent_names, in_trash=False):
+    parent_dir = sep.join(parent_names)
+    f_path = join(BASE_TEXT_DIR, parent_dir, filename)
+    if in_trash:
+        f_path = join(TRASH_DIR, filename)
+
+    f = Gio.File.new_for_path(f_path)
+    success, contents, etag = f.load_contents(None)
+    if success:
+        return contents.decode()
+
+    return None
 
 
 def write_to_file(f, contents):
@@ -115,6 +136,13 @@ def create_dir(dirname, parent_names):
     parent_dir = sep.join(parent_names)
     f_path = join(BASE_TEXT_DIR, parent_dir, dirname)
     create_dir_if_not_exists(f_path)
+
+
+def create_index_dir(dirname, parent_names):
+    parent_dir = sep.join(parent_names)
+    f_path = join(BASE_INDEX_DIR, parent_dir, dirname)
+    create_dir_if_not_exists(f_path)
+    return f_path
 
 
 def create_dir_if_not_exists(f_path):
