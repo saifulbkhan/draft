@@ -590,11 +590,14 @@ class DraftTextListView(Gtk.Bin):
                 print(text_id, '\n', results[text_id])
             print("-" * 20)
 
+        group_id = None
+        in_trash = False
         if self._group_shown is not None:
             group_id = self._group_shown['id']
             in_trash = self._group_shown['in_trash']
-            search.text_finder.search_in_group_threaded(group_id,
-                                                        search_terms,
-                                                        False,
-                                                        in_trash,
-                                                        post_search_callback)
+
+        search.text_finder.search_in_group_threaded(group_id,
+                                                    search_terms,
+                                                    False,
+                                                    in_trash,
+                                                    post_search_callback)
