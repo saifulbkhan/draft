@@ -55,14 +55,14 @@ def create_index_for_group(group_id, in_trash):
 
             def add_text(text):
                 if text['in_trash'] == in_trash:
-                    writer.add_document(id=text['hash_id'],
+                    writer.add_document(id=str(text['id']),
                                         title=text['title'],
                                         tags=' '.join(text['tags']))
                     contents = file.read_from_file(text['hash_id'],
                                                    text['parents'],
                                                    in_trash)
                     if contents:
-                        writer.update_document(id=text['hash_id'],
+                        writer.update_document(id=str(text['id']),
                                                content=contents)
 
             def add_texts_in_group(id):
