@@ -23,9 +23,8 @@ from draftsrc.db import data
 
 class TextListType(object):
     GROUP_TEXTS = 0
-    TAGGED_TEXTS = 1
-    ALL_TEXTS = 2
-    RECENT_TEXTS = 3
+    ALL_TEXTS = 1
+    RECENT_TEXTS = 2
 
 
 class DraftTextListStore(Gio.ListStore):
@@ -89,7 +88,7 @@ class DraftTextListStore(Gio.ListStore):
     def __repr__(self):
         return '<DraftListStore>'
 
-    def __init__(self, list_type, parent_group=None, tag=None, trashed=False):
+    def __init__(self, list_type, parent_group=None, trashed=False):
         """Initialises a new DraftListStore of given type. For some types extra
         information like the parent group or tag need to be provided as well.
 
@@ -104,9 +103,6 @@ class DraftTextListStore(Gio.ListStore):
         if self._list_type == TextListType.GROUP_TEXTS:
             assert parent_group is not None
             self._parent_group = parent_group
-        elif self._list_type == TextListType.TAGGED_TEXTS:
-            assert tag is not None
-            self._tag = tag
 
         self._load_texts()
 
@@ -129,12 +125,6 @@ class DraftTextListStore(Gio.ListStore):
                     kwargs = {'conn': connection}
                     if self._trashed_texts_only:
                         load_orphan_trash = True
-            elif self._list_type == TextListType.TAGGED_TEXTS:
-                load_fn = data.texts_with_tag
-                kwargs = {
-                    'conn': connection,
-                    'tag_label': self._tag['keyword']
-                }
             elif self._list_type == TextListType.RECENT_TEXTS:
                 load_fn = data.texts_recently_modified
                 kwargs = {'conn': connection}
