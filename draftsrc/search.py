@@ -15,7 +15,7 @@
 
 import threading
 
-from whoosh import index, writing
+from whoosh import index, writing, highlight
 from whoosh.fields import Schema, TEXT, KEYWORD, ID
 from whoosh.analysis import StemmingAnalyzer
 from whoosh.qparser import QueryParser, OrGroup
@@ -87,6 +87,18 @@ def create_index_for_group(group_id, in_trash):
         return ix
 
 
+class CustomFormatter(highlight.Formatter):
+    """Custom formatter for the matched terms."""
+    between = '...\n'
+
+    def format_token(self, text, token, replace=False):
+        # Use the get_text function to get the text corresponding to the token
+        tokentext = highlight.get_text(text, token, replace)
+
+        # Return the text as wrapped around with custom tags
+        return "<u>%s</u>" % tokentext
+
+
 def search_in_group(group_id, search_string, search_tags=False, in_trash=False):
     """Return a dict of text_id:content or text_id:tags in the given group that
     match search_string"""
@@ -117,6 +129,8 @@ def search_in_group(group_id, search_string, search_tags=False, in_trash=False):
         content_results = {}
         with ix.searcher() as s:
             results = s.search(query, terms=True)
+            formatter = CustomFormatter()
+            results.formatter = formatter
             for hit in results:
                 id = hit['id']
                 content_results[id] = hit.highlights("content", top=2)

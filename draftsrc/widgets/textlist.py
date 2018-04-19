@@ -206,7 +206,7 @@ class DraftBaseList(Gtk.ListBox):
         self._model.set_prop_for_position(position, 'title', title)
         self.editor.current_text_data['title'] = title
 
-    def set_title_for_selection(self, widget, title):
+    def set_subtitle_for_selection(self, widget, title):
         """Set the subtitle for currently selected text, as well as write this
         to the db.
 
@@ -583,3 +583,76 @@ class DraftTextList(DraftBaseList):
             with self._model.handler_block(self._items_changed_handler_id):
                 self.delete_rows(all_rows, permanent=True)
         self.emit('text-deleted', True)
+
+
+class DraftResultList(DraftBaseList):
+    """The listbox containing results of a text search"""
+    __gtype__name__ = 'DraftTextList'
+
+    def __repr__(self):
+        return '<DraftResultList>'
+
+    def __init__(self):
+        DraftBaseList.__init__(self)
+
+    def _create_row_widget(self, text_data, user_data):
+        """Create a row widget for @text_data"""
+        data_dict = text_data.to_dict()
+        title = data_dict['title']
+        highlights = data_dict['misc']
+
+        row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        row_box.set_visible(True)
+        ctx = row_box.get_style_context()
+        ctx.add_class('draft-text-box-row')
+
+        title_label = Gtk.Label()
+        row_box.pack_start(title_label, True, False, 0)
+
+        highlights_label = Gtk.Label()
+        row_box.pack_start(highlights_label, True, False, 0)
+
+        self._set_title_label(row_box, title)
+        self._append_highlights(row_box, highlights)
+
+        return row_box
+
+    def _set_title_label(self, box, title):
+        """Set label for @label to @title"""
+        labels = box.get_children()
+        label = labels[0]
+        label.set_markup('<b>%s</b>' % title)
+        self._shape_row_label(label)
+
+    def _append_highlights(self, box, highlights):
+        """Append highlights to the row"""
+        labels = box.get_children()
+        label = labels[1]
+        label.set_markup(highlights)
+        self._shape_row_label(label)
+
+    def _shape_row_label(self, label):
+        """Perform some general adjustments on label for row widgets"""
+        label.set_ellipsize(Pango.EllipsizeMode.END)
+        label.set_justify(Gtk.Justification.LEFT)
+        label.set_halign(Gtk.Align.START)
+        label.set_visible(True)
+
+    def _on_items_changed(self, model, position, removed, added):
+        """Handler for model's `items-changed` signal"""
+        position_to_select = position
+        num_items = self._model.get_n_items()
+        if position_to_select >= num_items:
+            position_to_select = num_items - 1
+        if position_to_select < 0:
+            position_to_select = 0
+        row = self.get_row_at_index(position_to_select)
+        if row:
+            GLib.idle_add(self.select_row, row)
+
+    def set_model(self, results=None):
+        self._model = DraftTextListStore(list_type=TextListType.RESULT_TEXTS,
+                                         results=results)
+        self.bind_model(self._model, self._create_row_widget, None)
+        self._items_changed_handler_id = self._model.connect('items-changed',
+                                                             self._on_items_changed)

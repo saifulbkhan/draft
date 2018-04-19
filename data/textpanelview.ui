@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.2 -->
+<!-- Generated with glade 3.20.4 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkRevealer" id="slider">
@@ -34,19 +34,51 @@
           </packing>
         </child>
         <child>
-          <object class="GtkScrolledWindow" id="listview">
-            <property name="width_request">300</property>
+          <object class="GtkStack" id="textstack">
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="hexpand">True</property>
-            <property name="vexpand">True</property>
-            <property name="shadow_type">in</property>
+            <property name="can_focus">False</property>
+            <property name="transition_type">crossfade</property>
             <child>
-              <placeholder/>
+              <object class="GtkScrolledWindow" id="listview">
+                <property name="width_request">300</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <placeholder/>
+                </child>
+                <style>
+                  <class name="draft-panel"/>
+                </style>
+              </object>
+              <packing>
+                <property name="name">page0</property>
+                <property name="title" translatable="yes">page0</property>
+              </packing>
             </child>
-            <style>
-              <class name="draft-panel"/>
-            </style>
+            <child>
+              <object class="GtkScrolledWindow" id="resultview">
+                <property name="width_request">300</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <placeholder/>
+                </child>
+                <style>
+                  <class name="draft-panel"/>
+                </style>
+              </object>
+              <packing>
+                <property name="name">page1</property>
+                <property name="title" translatable="yes">page1</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -62,7 +94,6 @@
   </object>
   <object class="GtkPopoverMenu" id="text_menu">
     <property name="can_focus">False</property>
-    <property name="relative_to">listview</property>
     <property name="position">bottom</property>
     <child>
       <object class="GtkBox">
@@ -123,7 +154,6 @@
     <property name="can_focus">True</property>
     <property name="has_focus">True</property>
     <property name="is_focus">True</property>
-    <property name="relative_to">listview</property>
     <property name="position">bottom</property>
     <child>
       <object class="GtkBox">

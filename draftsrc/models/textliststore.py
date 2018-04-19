@@ -25,70 +25,85 @@ class TextListType(object):
     GROUP_TEXTS = 0
     ALL_TEXTS = 1
     RECENT_TEXTS = 2
+    RESULT_TEXTS = 3
+
+
+class TextRowData(GObject.Object):
+    """Represents one entry in list of texts"""
+    __gtype_name__ = 'TextRowData'
+
+    def __init__(self, title='', tags=[], last_modified='', db_id=None,
+                 hash_id='', in_trash=False, parent_id=None, parent_list=[],
+                 markup=None, subtitle=None, word_goal=None,
+                 last_edit_position=None, misc=None):
+        super().__init__()
+        self.title = title
+        self.tags = tags
+        self.last_modified = last_modified
+        self.db_id = db_id
+        self.hash_id = hash_id
+        self.in_trash = in_trash
+        self.parent_id = parent_id
+        self.parent_list = parent_list
+        self.markup = markup
+        self.subtitle = subtitle
+        self.word_goal = word_goal
+        self.last_edit_position = last_edit_position
+        self.misc = misc
+
+    @classmethod
+    def from_dict(cls, data_dict):
+        title = data_dict['title']
+        tags = data_dict['tags']
+        last_modified = data_dict['last_modified']
+        db_id = data_dict['id']
+        hash_id = data_dict['hash_id']
+        in_trash = bool(data_dict['in_trash'])
+        parent_id = data_dict['parent_id']
+        parent_list = data_dict['parents']
+        markup = data_dict['markup']
+        subtitle = data_dict['subtitle']
+
+        word_goal = 0
+        if data_dict['word_goal']:
+            word_goal = int(data_dict['word_goal'])
+
+        last_edit_position = 0
+        if data_dict['last_edit_position']:
+            last_edit_position = int(data_dict['last_edit_position'])
+
+        misc = data_dict.get('misc')
+
+        row = cls(title, tags, last_modified, db_id, hash_id, in_trash,
+                  parent_id, parent_list, markup, subtitle, word_goal,
+                  last_edit_position, misc)
+        return row
+
+    def to_dict(self):
+        return {
+            'title': self.title,
+            'tags': self.tags,
+            'last_modified': self.last_modified,
+            'id': self.db_id,
+            'hash_id': self.hash_id,
+            'in_trash': int(self.in_trash),
+            'parent_id': self.parent_id,
+            'parent_list': self.parent_list,
+            'markup': self.markup,
+            'subtitle': self.subtitle,
+            'word_goal': int(self.word_goal),
+            'last_edit_position': int(self.last_edit_position),
+            'misc': self.misc
+        }
 
 
 class DraftTextListStore(Gio.ListStore):
     """Model for a list of texts (only) from one particular text group"""
 
-    class RowData(GObject.Object):
-        """Represents one entry in list of texts"""
-        __gtype_name__ = 'RowData'
-
-        title = ''
-        tags = []
-        last_modified = ''
-        db_id = None
-        hash_id = ''
-        in_trash = False
-        parent_id = None
-        parent_list = []
-        markup = None
-        subtitle = None
-        word_goal = None
-        last_edit_position = None
-
-        def from_dict(self, data_dict):
-            self.title = data_dict['title']
-            self.tags = data_dict['tags']
-            self.last_modified = data_dict['last_modified']
-            self.db_id = data_dict['id']
-            self.hash_id = data_dict['hash_id']
-            self.in_trash = bool(data_dict['in_trash'])
-            self.parent_id = data_dict['parent_id']
-            self.parent_list = data_dict['parents']
-            self.markup = data_dict['markup']
-            self.subtitle = data_dict['subtitle']
-
-            if data_dict['word_goal']:
-                self.word_goal = int(data_dict['word_goal'])
-            else:
-                self.word_goal = 0
-
-            if data_dict['last_edit_position']:
-                self.last_edit_position = int(data_dict['last_edit_position'])
-            else:
-                self.last_edit_position = 0
-
-        def to_dict(self):
-            return {
-                'title': self.title,
-                'tags': self.tags,
-                'last_modified': self.last_modified,
-                'id': self.db_id,
-                'hash_id': self.hash_id,
-                'in_trash': int(self.in_trash),
-                'parent_id': self.parent_id,
-                'parent_list': self.parent_list,
-                'markup': self.markup,
-                'subtitle': self.subtitle,
-                'word_goal': int(self.word_goal),
-                'last_edit_position': int(self.last_edit_position)
-            }
-
     def __repr__(self):
         return '<DraftListStore>'
 
-    def __init__(self, list_type, parent_group=None, trashed=False):
+    def __init__(self, list_type, parent_group=None, results={}, trashed=False):
         """Initialises a new DraftListStore of given type. For some types extra
         information like the parent group or tag need to be provided as well.
 
@@ -96,13 +111,16 @@ class DraftTextListStore(Gio.ListStore):
         @tag: dict, sotring details of tag
         @trashed: boolean, whether the model should show trashed texts only
         """
-        Gio.ListStore.__init__(self, item_type=self.RowData.__gtype__)
+        Gio.ListStore.__init__(self, item_type=TextRowData.__gtype__)
         self._list_type = list_type
         self._trashed_texts_only = trashed
 
         if self._list_type == TextListType.GROUP_TEXTS:
             assert parent_group is not None
             self._parent_group = parent_group
+        elif self._list_type == TextListType.RESULT_TEXTS:
+            assert len(results) > 0
+            self._results = results
 
         self._load_texts()
 
@@ -128,6 +146,18 @@ class DraftTextListStore(Gio.ListStore):
             elif self._list_type == TextListType.RECENT_TEXTS:
                 load_fn = data.texts_recently_modified
                 kwargs = {'conn': connection}
+            elif self._list_type == TextListType.RESULT_TEXTS:
+
+                def texts_in_results(conn, results):
+                    for text_id in results:
+                        text_id = int(text_id)
+                        yield data.text_for_id(conn, text_id)
+
+                load_fn = texts_in_results
+                kwargs = {
+                    'conn': connection,
+                    'results': self._results
+                }
             else:
                 load_fn = data.fetch_texts
                 kwargs = {'conn': connection}
@@ -144,9 +174,11 @@ class DraftTextListStore(Gio.ListStore):
                     self.append(row)
 
     def _row_data_for_text(self, text_metadata):
-        """Create RowData for one text document. Expects a dict of metadata"""
-        row_data = self.RowData()
-        row_data.from_dict(text_metadata)
+        """Create TextRowData for one text document. Expects a dict of metadata"""
+        if self._list_type == TextListType.RESULT_TEXTS:
+            text_id = str(text_metadata['id'])
+            text_metadata['misc'] = self._results[text_id]
+        row_data = TextRowData.from_dict(text_metadata)
         return row_data
 
     def new_text_request(self):

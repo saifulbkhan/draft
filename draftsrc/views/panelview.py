@@ -19,7 +19,7 @@ from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 from draftsrc import search
 from draftsrc.widgets.collectionlist import DraftCollectionList
 from draftsrc.widgets.grouptree import DraftGroupTree
-from draftsrc.widgets.textlist import DraftTextList
+from draftsrc.widgets.textlist import DraftTextList, DraftResultList
 
 
 class DraftLibraryView(Gtk.Bin):
@@ -426,12 +426,15 @@ class DraftTextListView(Gtk.Bin):
     def _set_up_widgets(self):
         self.slider = self.builder.get_object('slider')
         self.slider.set_hexpand(False)
-        textslist = self.builder.get_object('textslist')
-        listview = self.builder.get_object('listview')
+        self.textstack = self.builder.get_object('textstack')
+        self.listview = self.builder.get_object('listview')
+        self.resultview = self.builder.get_object('resultview')
 
         self.add(self.slider)
         self.view = DraftTextList()
-        listview.add(self.view)
+        self.listview.add(self.view)
+        self.resultlistview = DraftResultList()
+        self.resultview.add(self.resultlistview)
 
         self.search_bar = self.builder.get_object('search_bar')
         self.search_entry = self.builder.get_object('search_entry')
@@ -488,8 +491,10 @@ class DraftTextListView(Gtk.Bin):
         self.parent_window.search_button_active(True)
         self.search_bar.set_search_mode(True)
         self.search_entry.grab_focus()
+        self.textstack.set_visible_child(self.resultview)
 
     def search_mode_off(self):
+        self.textstack.set_visible_child(self.listview)
         self.parent_window.search_button_active(False)
         self.search_bar.set_search_mode(False)
         self.search_entry.set_text("")
@@ -504,6 +509,7 @@ class DraftTextListView(Gtk.Bin):
 
     def set_editor(self, editor):
         self.view.set_editor(editor)
+        self.resultlistview.set_editor(editor)
 
     def new_text_request(self):
         self.view.new_text_request()
@@ -586,9 +592,9 @@ class DraftTextListView(Gtk.Bin):
         search_terms = search_entry.get_text()
 
         def post_search_callback(results):
-            for text_id in results:
-                print(text_id, '\n', results[text_id])
-            print("-" * 20)
+            if not len(results) > 0:
+                return
+            self.resultlistview.set_model(results)
 
         group_id = None
         in_trash = False
