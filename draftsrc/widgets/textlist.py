@@ -39,6 +39,7 @@ class DraftBaseList(Gtk.ListBox):
     editor = None
     _multi_row_selection_stack = []
     _double_click_in_progress = False
+    _text_view_selection_in_progress = False
     _items_changed_handler_id =None
 
     def __repr__(self):
@@ -62,6 +63,9 @@ class DraftBaseList(Gtk.ListBox):
 
     def _on_button_press(self, widget, event):
         """Handler for signal `button-press-event`"""
+        if not hasattr(self, '_model'):
+            return
+
         modifiers = Gtk.accelerator_get_default_mod_mask()
         modifiers = (event.state & modifiers)
 
@@ -114,7 +118,8 @@ class DraftBaseList(Gtk.ListBox):
 
     def _on_row_selected(self, widget, row):
         """Handler for signal `row-selected`"""
-        if not row:
+        if (not row or not hasattr(self, '_model')
+                or self._text_view_selection_in_progress):
             return
 
         def on_row_unfocused(widget, cb_data=None):
@@ -161,6 +166,9 @@ class DraftBaseList(Gtk.ListBox):
 
     def set_multi_selection_mode(self, multi_mode, escape=False):
         """Set or unset multiple selection mode for the ListView"""
+        if not hasattr(self, '_model'):
+            return
+
         if multi_mode:
             if hasattr(self, 'editor'):
                 self.editor.set_sensitive(False)
@@ -199,6 +207,9 @@ class DraftBaseList(Gtk.ListBox):
         @self: DraftTextsList
         @title: string, the title to be saved for current selection
         """
+        if not hasattr(self, '_model'):
+            return
+
         row = self.get_selected_row()
         if not row:
             return
@@ -206,13 +217,16 @@ class DraftBaseList(Gtk.ListBox):
         self._model.set_prop_for_position(position, 'title', title)
         self.editor.current_text_data['title'] = title
 
-    def set_subtitle_for_selection(self, widget, title):
+    def set_subtitle_for_selection(self, widget, subtitle):
         """Set the subtitle for currently selected text, as well as write this
         to the db.
 
         @self: DraftTextsList
         @subtitle: string, the subtitle to be saved for current selection
         """
+        if not hasattr(self, '_model'):
+            return
+
         row = self.get_selected_row()
         if not row:
             return
@@ -226,6 +240,9 @@ class DraftBaseList(Gtk.ListBox):
         @self: DraftTextsList
         @markup: string, the markup to be saved for current selection
         """
+        if not hasattr(self, '_model'):
+            return
+
         row = self.get_selected_row()
         if not row:
             return
@@ -239,6 +256,9 @@ class DraftBaseList(Gtk.ListBox):
         @self: DraftTextsList
         @markup: int, the word count goal to be saved for current selection
         """
+        if not hasattr(self, '_model'):
+            return
+
         row = self.get_selected_row()
         if not row:
             return
@@ -254,6 +274,9 @@ class DraftBaseList(Gtk.ListBox):
         @tags: list, the list of string tags which the selected text will be
                tagged with.
         """
+        if not hasattr(self, '_model'):
+            return
+
         row = self.get_selected_row()
         if not row:
             return
@@ -273,6 +296,9 @@ class DraftBaseList(Gtk.ListBox):
         @self: DraftTextsList
         @metadata: dict, contains metadata associated with a text
         """
+        if not hasattr(self, '_model'):
+            return
+
         if metadata:
             self._model.queue_final_save(metadata)
 
@@ -280,6 +306,23 @@ class DraftBaseList(Gtk.ListBox):
         """Activate selected row"""
         row = self.get_selected_row()
         row.emit('activate')
+
+    def select_for_id(self, text_id):
+        if not hasattr(self, '_model'):
+            return
+
+        position = self._model.get_position_for_id(text_id)
+        if position is not None:
+            row = self.get_row_at_index(position)
+            if row:
+                self.select_row(row)
+
+    def finish_selection_for_id(self, text_id):
+        self.select_for_id(text_id)
+        self._text_view_selection_in_progress = False
+
+    def text_view_selection_is_in_progress(self):
+        return self._text_view_selection_in_progress
 
 
 class DraftTextList(DraftBaseList):
@@ -294,6 +337,9 @@ class DraftTextList(DraftBaseList):
                          None, (GObject.TYPE_BOOLEAN,)),
         'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'selection-requested': (GObject.SignalFlags.RUN_FIRST,
+                                None,
+                                (GObject.TYPE_PYOBJECT, GObject.TYPE_PYOBJECT))
     }
 
     _texts_being_moved = []
@@ -472,6 +518,27 @@ class DraftTextList(DraftBaseList):
         selection.set(selection.get_target(), -1, bytearray(ids))
         self._texts_being_moved = ids
 
+    def _on_text_viewed(self, widget, text_metadata):
+        """Select the text in textlist for which given metadata has been
+        provided"""
+        if not hasattr(self, '_model'):
+            return
+
+        list_type, group, in_trash = self._model.get_model_attributes()
+        if list_type == TextListType.GROUP_TEXTS:
+            group_id = text_metadata['parent_id']
+            text_id = text_metadata['id']
+            self._text_view_selection_in_progress = True
+            if group['id'] != text_metadata['parent_id']:
+                self.emit('selection-requested', group_id, text_id)
+            else:
+                self.finish_selection_for_id(text_id)
+
+    def set_editor(self, editor):
+        """Set editor and connect any other signal(s)."""
+        DraftBaseList.set_editor(self, editor)
+        editor.connect('text-viewed', self._on_text_viewed)
+
     def set_model(self, collection_class=None, parent_group=None):
         self._model = None
         if parent_group:
@@ -529,12 +596,14 @@ class DraftTextList(DraftBaseList):
 
     def set_title_for_selection(self, widget, title):
         DraftBaseList.set_title_for_selection(self, widget, title)
+        row = self.get_selected_row()
         box = row.get_child().get_child()
         self._set_title_label(box, title)
         self.emit('text-title-changed', title)
 
     def set_subtitle_for_selection(self, widget, subtitle):
         DraftBaseList.set_subtitle_for_selection(self, widget, subtitle)
+        row = self.get_selected_row()
         box = row.get_child().get_child()
         self._append_subtitle_label(box, subtitle)
 

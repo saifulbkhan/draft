@@ -405,3 +405,11 @@ class DraftTextListStore(Gio.ListStore):
                 latest_position = i
 
         return latest_position
+
+    def get_model_attributes(self):
+        """Obtain details about this model."""
+        group = None
+        if self._list_type == TextListType.GROUP_TEXTS:
+            group = self._parent_group
+
+        return self._list_type, group, self._trashed_texts_only

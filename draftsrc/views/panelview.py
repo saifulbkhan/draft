@@ -453,6 +453,7 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('text-restored', self._on_text_restored)
         self.view.connect('text-title-changed', self._on_text_title_changed)
         self.view.connect('menu-requested', self._on_menu_requested)
+        self.view.connect('selection-requested', self._on_selection_requested)
 
         self.search_entry.connect('search-changed', self._on_search_changed)
         self._open_button.connect('clicked', self._on_open_clicked)
@@ -502,6 +503,8 @@ class DraftTextListView(Gtk.Bin):
     def set_model_for_group(self, group):
         self._group_shown = group
         self.view.set_model(parent_group=group)
+        if not self.view.text_view_selection_is_in_progress():
+            self.search_mode_off()
 
     def set_collection_class_type(self, collection_class_type):
         self._group_shown = None
@@ -560,6 +563,10 @@ class DraftTextListView(Gtk.Bin):
         # have to queue this in main loop, so that correct GdkRectangle is
         # selected before making menu point to it.
         GLib.idle_add(popup_menu)
+
+    def _on_selection_requested(self, widget, group_id, text_id):
+        self.parent_window.libraryview.selection_request(group_id)
+        self.view.finish_selection_for_id(text_id)
 
     def _on_open_clicked(self, widget):
         self.view.activate_selected_row()
