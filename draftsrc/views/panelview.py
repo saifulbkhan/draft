@@ -520,6 +520,8 @@ class DraftTextListView(Gtk.Bin):
 
     def new_text_request(self):
         self.view.new_text_request()
+        if self.search_mode_is_on():
+            self.search_mode_off()
 
     def set_group_for_texts(self, text_ids, group_id):
         self.view.set_group_for_ids(text_ids, group_id)
