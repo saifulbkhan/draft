@@ -430,6 +430,7 @@ class DraftTextListView(Gtk.Bin):
         self.textstack = self.builder.get_object('textstack')
         self.listview = self.builder.get_object('listview')
         self.resultview = self.builder.get_object('resultview')
+        self.empty_label = self.builder.get_object('empty_label')
 
         self.add(self.slider)
         self.view = DraftTextList()
@@ -495,7 +496,6 @@ class DraftTextListView(Gtk.Bin):
         self.search_bar.set_search_mode(True)
         self.search_entry.set_text(self._last_search_terms)
         self.search_entry.grab_focus()
-        self.textstack.set_visible_child(self.resultview)
 
     def search_mode_off(self):
         search_terms = self.search_entry.get_text()
@@ -603,10 +603,17 @@ class DraftTextListView(Gtk.Bin):
 
     def _on_search_changed(self, search_entry):
         search_terms = search_entry.get_text()
+        search_terms = search_terms.strip()
+        if not search_terms:
+            self.textstack.set_visible_child(self.listview)
+            return
 
         def post_search_callback(results):
             if not len(results) > 0:
+                self.textstack.set_visible_child(self.empty_label)
                 return
+            else:
+                self.textstack.set_visible_child(self.resultview)
             self.resultlistview.set_model(results)
 
         group_id = None
