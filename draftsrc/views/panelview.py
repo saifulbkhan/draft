@@ -411,6 +411,7 @@ class DraftTextListView(Gtk.Bin):
 
     _panel_visible = True
     _group_shown = None
+    _last_search_terms = ""
     sidebar_width = 250
 
     def __repr__(self):
@@ -438,6 +439,7 @@ class DraftTextListView(Gtk.Bin):
 
         self.search_bar = self.builder.get_object('search_bar')
         self.search_entry = self.builder.get_object('search_entry')
+        self.search_bar.connect_entry(self.search_entry)
 
         self._text_menu = self.builder.get_object('text_menu')
         self._open_button = self.builder.get_object('open_button')
@@ -491,14 +493,16 @@ class DraftTextListView(Gtk.Bin):
     def search_mode_on(self):
         self.parent_window.search_button_active(True)
         self.search_bar.set_search_mode(True)
+        self.search_entry.set_text(self._last_search_terms)
         self.search_entry.grab_focus()
         self.textstack.set_visible_child(self.resultview)
 
     def search_mode_off(self):
+        search_terms = self.search_entry.get_text()
+        self._last_search_terms = search_terms
         self.textstack.set_visible_child(self.listview)
         self.parent_window.search_button_active(False)
         self.search_bar.set_search_mode(False)
-        self.search_entry.set_text("")
 
     def set_model_for_group(self, group):
         self._group_shown = group
