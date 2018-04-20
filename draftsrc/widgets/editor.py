@@ -34,6 +34,7 @@ class DraftEditor(Gtk.Box):
     __gtype_name__ = 'DraftEditor'
 
     __gsignals__ = {
+        'text-viewed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
         'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'subtitle-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'markup-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
@@ -156,6 +157,7 @@ class DraftEditor(Gtk.Box):
             return
 
         self.current_text_data = text_data
+        self.emit('text-viewed', self.current_text_data)
 
         id = str(text_data['id'])
         scrollable = self.editor_stack.get_child_by_name(id)

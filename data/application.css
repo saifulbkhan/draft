@@ -10,6 +10,10 @@
     border-color: @borders
 }
 
+.draft-searchbar {
+    border-width: 0 1px 1px 0;
+}
+
 .draft-borderless {
     border-width: 0px;
 }
@@ -48,6 +52,7 @@
 .draft-tag-label {
     margin: 1px 8px 1px 0;
     padding: 3px 12px;
+    color: @theme_fg_color;
     border-style: solid;
     border-width: 1px;
     border-radius: 25px/25px;
@@ -118,10 +123,6 @@ list > row {
     border-bottom: 1px solid alpha(@borders, 0.3);
 }
 
-list > row label:nth-child(2) {
-    margin-top: 6px;
-}
-
 .draft-faded-treeview {
     background-color: @panel_bg_color;
 }
@@ -152,6 +153,13 @@ list > row label:nth-child(2) {
     font-size: 1.0em;
 }
 
+.draft-empty-list-title {
+    font-weight: bold;
+    font-size: 1.4em;
+    color: alpha(@theme_fg_color, 0.5);
+    background-color: @content_view_bg;
+}
+
 .draft-popup-button {
     min-width: 20px;
     padding: 0px;
@@ -171,4 +179,9 @@ list > row label:nth-child(2) {
 
 .draft-textlist-header:dir(rtl) {
     border-left: 1px solid @borders;
+}
+
+radiobutton > radio {
+    margin-right: 8px;
+    margin-left: 0px;
 }

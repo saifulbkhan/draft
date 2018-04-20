@@ -23,39 +23,30 @@ from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 
 
-class DraftTextList(Gtk.ListBox):
-    """The listbox containing all the texts in a text group"""
-    __gtype__name__ = 'DraftTextList'
+class DraftBaseList(Gtk.ListBox):
+    """A list view widget meant for displaying texts"""
+    __gtype_name__ = 'DraftBaseList'
 
     __gsignals__ = {
-        'text-moved-to-group': (GObject.SignalFlags.RUN_FIRST,
-                                None,
-                                (GObject.TYPE_PYOBJECT,)),
-        'text-deleted': (GObject.SignalFlags.RUN_FIRST,
-                         None, (GObject.TYPE_BOOLEAN,)),
-        'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'text-title-changed': (GObject.SignalFlags.RUN_FIRST,
-                        None,
-                        (GObject.TYPE_STRING,)),
+                               None,
+                               (GObject.TYPE_STRING,)),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
                            None,
                            (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN))
     }
 
     editor = None
-    _texts_being_moved = []
     _multi_row_selection_stack = []
     _double_click_in_progress = False
+    _text_view_selection_in_progress = False
     _items_changed_handler_id =None
 
     def __repr__(self):
-        return '<DraftTextList>'
+        return '<DraftBaseList>'
 
     def __init__(self):
-        """Initialize a new DraftTextsList for given @parent_group"""
         Gtk.ListBox.__init__(self)
-        self.connect('key-press-event', self._on_key_press)
         self.connect('button-press-event', self._on_button_press)
         self.connect('button-release-event', self._on_button_release)
         self._row_selected_handler_id = self.connect('row-selected',
@@ -63,78 +54,6 @@ class DraftTextList(Gtk.ListBox):
         self.connect('row-activated', self._on_row_activated)
         self.set_activate_on_single_click(False)
         self.set_selection_mode(Gtk.SelectionMode.BROWSE)
-
-    def _create_row_widget(self, text_data, user_data):
-        """Create a row widget for @text_data"""
-        data_dict = text_data.to_dict()
-        title = data_dict['title']
-        subtitle = data_dict['subtitle']
-
-        row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        row_box.set_visible(True)
-        ctx = row_box.get_style_context()
-        ctx.add_class('draft-text-box-row')
-
-        title_label = Gtk.Label()
-        row_box.pack_start(title_label, True, False, 0)
-
-        self._set_title_label(row_box, title)
-        self._append_subtitle_label(row_box, subtitle)
-
-        event_box = Gtk.EventBox()
-        event_box.add(row_box)
-        event_box.drag_source_set(Gdk.ModifierType.BUTTON1_MASK,
-                                  [TEXT_MOVE_TARGET],
-                                  Gdk.DragAction.MOVE)
-        event_box.connect('drag-data-get', self._drag_data_get)
-        event_box.connect('drag-begin', self._drag_begin)
-        return event_box
-
-    def _set_title_label(self, box, title):
-        """Set label for @label to @title"""
-        labels = box.get_children()
-        label = labels[0]
-        label.set_markup('<b>%s</b>' % title)
-        self._shape_row_label(label)
-
-    def _append_subtitle_label(self, box, subtitle):
-        """Set label for @label to @subtitle"""
-        subtitle_label = None
-        labels = box.get_children()
-
-        # check if subtitle label already exists
-        if len(labels) > 1:
-            subtitle_label = labels[1]
-        else:
-            subtitle_label = Gtk.Label()
-            box.pack_start(subtitle_label, True, False, 1)
-
-        if subtitle is None:
-            box.remove(subtitle_label)
-            return
-
-        subtitle_label.set_label(subtitle)
-        subtitle_label.set_line_wrap(True)
-        subtitle_label.set_lines(3)
-        subtitle_label.set_xalign(0.0)
-        self._shape_row_label(subtitle_label)
-
-    def _shape_row_label(self, label):
-        """Perform some general adjustments on label for row widgets"""
-        label.set_ellipsize(Pango.EllipsizeMode.END)
-        label.set_justify(Gtk.Justification.LEFT)
-        label.set_halign(Gtk.Align.START)
-        label.set_visible(True)
-
-    def _on_key_press(self, widget, event):
-        """Handler for signal `key-press-event`"""
-        modifiers = Gtk.accelerator_get_default_mod_mask()
-        event_and_modifiers = (event.state & modifiers)
-
-        if not event_and_modifiers:
-            # Delete row and file with (Del)
-            if event.keyval == Gdk.KEY_Delete:
-                self.delete_selected()
 
     def _row_at_event_coordinates(self, event):
         device = event.device
@@ -144,6 +63,9 @@ class DraftTextList(Gtk.ListBox):
 
     def _on_button_press(self, widget, event):
         """Handler for signal `button-press-event`"""
+        if not hasattr(self, '_model'):
+            return
+
         modifiers = Gtk.accelerator_get_default_mod_mask()
         modifiers = (event.state & modifiers)
 
@@ -196,7 +118,8 @@ class DraftTextList(Gtk.ListBox):
 
     def _on_row_selected(self, widget, row):
         """Handler for signal `row-selected`"""
-        if not row:
+        if (not row or not hasattr(self, '_model')
+                or self._text_view_selection_in_progress):
             return
 
         def on_row_unfocused(widget, cb_data=None):
@@ -233,6 +156,278 @@ class DraftTextList(Gtk.ListBox):
     def _on_row_activated(self, widget, row):
         GLib.idle_add(self.editor.focus_view, True)
 
+    def _set_listview_class(self, set_class):
+        listview_class = 'draft-listview'
+        ctx = self.get_style_context()
+        if set_class and not ctx.has_class(listview_class):
+            ctx.add_class(listview_class)
+        elif not set_class and ctx.has_class(listview_class):
+            ctx.remove_class(listview_class)
+
+    def set_multi_selection_mode(self, multi_mode, escape=False):
+        """Set or unset multiple selection mode for the ListView"""
+        if not hasattr(self, '_model'):
+            return
+
+        if multi_mode:
+            if hasattr(self, 'editor'):
+                self.editor.set_sensitive(False)
+            self.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
+        else:
+            if hasattr(self, 'editor'):
+                self.editor.set_sensitive(True)
+            self.set_selection_mode(Gtk.SelectionMode.BROWSE)
+            self._multi_row_selection_stack.clear()
+
+            if escape:
+                position = self._model.get_latest_modified_position()
+                if position is not None:
+                    row = self.get_row_at_index(position)
+                    self.select_row(row)
+
+    def set_editor(self, editor):
+        """Set editor for @self
+
+        @self: DraftBaseList
+        @editor: DraftEditor, the editor to display selected texts and listen
+                 for changes that need to be conveyed to the backend
+        """
+        self.editor = editor
+        editor.connect('title-changed', self.set_title_for_selection)
+        editor.connect('subtitle-changed', self.set_subtitle_for_selection)
+        editor.connect('markup-changed', self.set_markup_for_selection)
+        editor.connect('word-goal-set', self.set_word_goal_for_selection)
+        editor.connect('tags-changed', self.set_tags_for_selection)
+        editor.connect('view-changed', self.save_last_edit_data)
+
+    def set_title_for_selection(self, widget, title):
+        """Set the title for currently selected text, as well as write this to
+        the db.
+
+        @self: DraftTextsList
+        @title: string, the title to be saved for current selection
+        """
+        if not hasattr(self, '_model'):
+            return
+
+        row = self.get_selected_row()
+        if not row:
+            return
+        position = row.get_index()
+        self._model.set_prop_for_position(position, 'title', title)
+        self.editor.current_text_data['title'] = title
+
+    def set_subtitle_for_selection(self, widget, subtitle):
+        """Set the subtitle for currently selected text, as well as write this
+        to the db.
+
+        @self: DraftTextsList
+        @subtitle: string, the subtitle to be saved for current selection
+        """
+        if not hasattr(self, '_model'):
+            return
+
+        row = self.get_selected_row()
+        if not row:
+            return
+        position = row.get_index()
+        self._model.set_prop_for_position(position, 'subtitle', subtitle)
+        self.editor.current_text_data['subtitle'] = subtitle
+
+    def set_markup_for_selection(self, widget, markup):
+        """Save the markup for currently selected text to the db.
+
+        @self: DraftTextsList
+        @markup: string, the markup to be saved for current selection
+        """
+        if not hasattr(self, '_model'):
+            return
+
+        row = self.get_selected_row()
+        if not row:
+            return
+        position = row.get_index()
+        self._model.set_prop_for_position(position, 'markup', markup)
+        self.editor.current_text_data['markup'] = markup
+
+    def set_word_goal_for_selection(self, widget, goal):
+        """Save the word count goal for currently selected text to the db.
+
+        @self: DraftTextsList
+        @markup: int, the word count goal to be saved for current selection
+        """
+        if not hasattr(self, '_model'):
+            return
+
+        row = self.get_selected_row()
+        if not row:
+            return
+        position = row.get_index()
+        self._model.set_prop_for_position(position, 'word_goal', goal)
+        self.editor.current_text_data['word_goal'] = goal
+
+    def set_tags_for_selection(self, widget, tags):
+        """Ask store to make changes to the tags of the currently selected text
+        so that it can be written to db.
+
+        @self: DraftTextsList
+        @tags: list, the list of string tags which the selected text will be
+               tagged with.
+        """
+        if not hasattr(self, '_model'):
+            return
+
+        row = self.get_selected_row()
+        if not row:
+            return
+        position = row.get_index()
+        new_tags = self._model.set_tags_for_position(position, tags)
+
+        # since @new_tags might have slightly different letter case tags, we
+        # should re-update editor tags as well and then update statusbar, though
+        # this is probably not the best place to do it.
+        self.editor.current_text_data['tags'] = new_tags
+        self.editor.statusbar.update_text_data()
+
+    def save_last_edit_data(self, widget, metadata):
+        """Save last metdata that would be associated with the last edit session
+        of the text.
+
+        @self: DraftTextsList
+        @metadata: dict, contains metadata associated with a text
+        """
+        if not hasattr(self, '_model'):
+            return
+
+        if metadata:
+            self._model.queue_final_save(metadata)
+
+    def activate_selected_row(self):
+        """Activate selected row"""
+        row = self.get_selected_row()
+        row.emit('activate')
+
+    def select_for_id(self, text_id):
+        if not hasattr(self, '_model'):
+            return
+
+        position = self._model.get_position_for_id(text_id)
+        if position is not None:
+            row = self.get_row_at_index(position)
+            if row:
+                self.select_row(row)
+
+    def finish_selection_for_id(self, text_id):
+        self.select_for_id(text_id)
+        self._text_view_selection_in_progress = False
+
+    def text_view_selection_is_in_progress(self):
+        return self._text_view_selection_in_progress
+
+
+class DraftTextList(DraftBaseList):
+    """The listbox containing all the texts in a text group"""
+    __gtype__name__ = 'DraftTextList'
+
+    __gsignals__ = {
+        'text-moved-to-group': (GObject.SignalFlags.RUN_FIRST,
+                                None,
+                                (GObject.TYPE_PYOBJECT,)),
+        'text-deleted': (GObject.SignalFlags.RUN_FIRST,
+                         None, (GObject.TYPE_BOOLEAN,)),
+        'text-restored': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'selection-requested': (GObject.SignalFlags.RUN_FIRST,
+                                None,
+                                (GObject.TYPE_PYOBJECT, GObject.TYPE_PYOBJECT))
+    }
+
+    _texts_being_moved = []
+
+    def __repr__(self):
+        return '<DraftTextList>'
+
+    def __init__(self):
+        """Initialize a new DraftTextsList, without any items. Use `set_model`
+        for setting a model and populating view with items."""
+        DraftBaseList.__init__(self)
+        self.connect('key-press-event', self._on_key_press)
+        self._row_selected_handler_id = self.connect('row-selected',
+                                                     self._on_row_selected)
+
+    def _create_row_widget(self, text_data, user_data):
+        """Create a row widget for @text_data"""
+        data_dict = text_data.to_dict()
+        title = data_dict['title']
+        subtitle = data_dict['subtitle']
+
+        row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        row_box.set_visible(True)
+        ctx = row_box.get_style_context()
+        ctx.add_class('draft-text-box-row')
+
+        title_label = Gtk.Label()
+        row_box.pack_start(title_label, True, False, 0)
+
+        self._set_title_label(row_box, title)
+        self._append_subtitle_label(row_box, subtitle)
+
+        event_box = Gtk.EventBox()
+        event_box.add(row_box)
+        event_box.drag_source_set(Gdk.ModifierType.BUTTON1_MASK,
+                                  [TEXT_MOVE_TARGET],
+                                  Gdk.DragAction.MOVE)
+        event_box.connect('drag-data-get', self._on_drag_data_get)
+        event_box.connect('drag-begin', self._on_drag_begin)
+        return event_box
+
+    def _set_title_label(self, box, title):
+        """Set label for @label to @title"""
+        labels = box.get_children()
+        label = labels[0]
+        label.set_markup('<b>%s</b>' % title)
+        self._shape_row_label(label)
+
+    def _append_subtitle_label(self, box, subtitle):
+        """Set label for @label to @subtitle"""
+        subtitle_label = None
+        labels = box.get_children()
+
+        # check if subtitle label already exists
+        if len(labels) > 1:
+            subtitle_label = labels[1]
+        else:
+            subtitle_label = Gtk.Label()
+            box.pack_start(subtitle_label, True, False, 1)
+
+        if subtitle is None:
+            box.remove(subtitle_label)
+            return
+
+        subtitle_label.set_label(subtitle)
+        subtitle_label.set_line_wrap(True)
+        subtitle_label.set_lines(3)
+        subtitle_label.set_xalign(0.0)
+        subtitle_label.set_margin_top(6)
+        self._shape_row_label(subtitle_label)
+
+    def _shape_row_label(self, label):
+        """Perform some general adjustments on label for row widgets"""
+        label.set_ellipsize(Pango.EllipsizeMode.END)
+        label.set_justify(Gtk.Justification.LEFT)
+        label.set_halign(Gtk.Align.START)
+        label.set_visible(True)
+
+    def _on_key_press(self, widget, event):
+        """Handler for signal `key-press-event`"""
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            # Delete row and file with (Del)
+            if event.keyval == Gdk.KEY_Delete:
+                self.delete_selected()
+
     def _on_items_changed(self, model, position, removed, added):
         """Handler for model's `items-changed` signal"""
         position_to_select = position
@@ -245,7 +440,7 @@ class DraftTextList(Gtk.ListBox):
         if row:
             GLib.idle_add(self.select_row, row)
 
-    def _drag_begin(self, widget, drag_context):
+    def _on_drag_begin(self, widget, drag_context):
         """When drag action begins this function does several things:
         1. find the row for @widget,
         2. estimate the number of rows being moved
@@ -313,7 +508,7 @@ class DraftTextList(Gtk.ListBox):
         style_context.remove_class('draft-drag-icon')
         self.select_row(row)
 
-    def _drag_data_get(self, widget, drag_context, selection, info, time):
+    def _on_drag_data_get(self, widget, drag_context, selection, info, time):
         """Supply selection data with the db id of the row being dragged"""
         rows = self.get_selected_rows()
         positions = [row.get_index() for row in rows]
@@ -324,15 +519,28 @@ class DraftTextList(Gtk.ListBox):
         selection.set(selection.get_target(), -1, bytearray(ids))
         self._texts_being_moved = ids
 
-    def _set_listview_class(self, set_class):
-        listview_class = 'draft-listview'
-        ctx = self.get_style_context()
-        if set_class and not ctx.has_class(listview_class):
-            ctx.add_class(listview_class)
-        elif not set_class and ctx.has_class(listview_class):
-            ctx.remove_class(listview_class)
+    def _on_text_viewed(self, widget, text_metadata):
+        """Select the text in textlist for which given metadata has been
+        provided"""
+        if not hasattr(self, '_model'):
+            return
 
-    def set_model(self, collection_class=None, parent_group=None, tag=None):
+        list_type, group, in_trash = self._model.get_model_attributes()
+        if list_type == TextListType.GROUP_TEXTS:
+            group_id = text_metadata['parent_id']
+            text_id = text_metadata['id']
+            self._text_view_selection_in_progress = True
+            if group['id'] != text_metadata['parent_id']:
+                self.emit('selection-requested', group_id, text_id)
+            else:
+                self.finish_selection_for_id(text_id)
+
+    def set_editor(self, editor):
+        """Set editor and connect any other signal(s)."""
+        DraftBaseList.set_editor(self, editor)
+        editor.connect('text-viewed', self._on_text_viewed)
+
+    def set_model(self, collection_class=None, parent_group=None):
         self._model = None
         if parent_group:
             if parent_group['in_trash']:
@@ -342,9 +550,6 @@ class DraftTextList(Gtk.ListBox):
             else:
                 self._model = DraftTextListStore(list_type=TextListType.GROUP_TEXTS,
                                                  parent_group=parent_group)
-        elif tag:
-            self._model = DraftTextListStore(list_type=TextListType.TAGGED_TEXTS,
-                                             tag=tag)
         else:
             if collection_class == CollectionClassType.RECENT:
                 self._model = DraftTextListStore(list_type=TextListType.RECENT_TEXTS)
@@ -371,39 +576,6 @@ class DraftTextList(Gtk.ListBox):
                 self.select_row(row)
         self._set_listview_class(True)
 
-    def set_editor(self, editor):
-        """Set editor for @self
-
-        @self: DraftTextsList
-        @editor: DraftEditor, the editor to display selected texts and listen
-                 for changes that need to be conveyed to the backend
-        """
-        self.editor = editor
-        editor.connect('title-changed', self.set_title_for_current_selection)
-        editor.connect('subtitle-changed', self.set_subtitle_for_current_selection)
-        editor.connect('markup-changed', self.set_markup_for_current_selection)
-        editor.connect('word-goal-set', self.set_word_goal_for_current_selection)
-        editor.connect('tags-changed', self.set_tags_for_current_selection)
-        editor.connect('view-changed', self.save_last_edit_data)
-
-    def set_multi_selection_mode(self, multi_mode, escape=False):
-        """Set or unset multiple selection mode for the ListView"""
-        if multi_mode:
-            if hasattr(self, 'editor'):
-                self.editor.set_sensitive(False)
-            self.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
-        else:
-            if hasattr(self, 'editor'):
-                self.editor.set_sensitive(True)
-            self.set_selection_mode(Gtk.SelectionMode.BROWSE)
-            self._multi_row_selection_stack.clear()
-
-            if escape:
-                position = self._model.get_latest_modified_position()
-                if position is not None:
-                    row = self.get_row_at_index(position)
-                    self.select_row(row)
-
     def new_text_request(self):
         """Request for creation of a new text and append it to the list"""
         self._model.new_text_request()
@@ -423,101 +595,18 @@ class DraftTextList(Gtk.ListBox):
                                                             group)
         self.emit('text-moved-to-group', group)
 
-    def set_title_for_current_selection(self, widget, title):
-        """Set the title for currently selected text, as well as write this to
-        the db.
-
-        @self: DraftTextsList
-        @title: string, the title to be saved for current selection
-        """
+    def set_title_for_selection(self, widget, title):
+        DraftBaseList.set_title_for_selection(self, widget, title)
         row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
-        self._model.set_prop_for_position(position, 'title', title)
-        self.editor.current_text_data['title'] = title
-
         box = row.get_child().get_child()
         self._set_title_label(box, title)
         self.emit('text-title-changed', title)
 
-    def set_subtitle_for_current_selection(self, widget, subtitle):
-        """Set the subtitle for currently selected text, as well as write this
-        to the db.
-
-        @self: DraftTextsList
-        @subtitle: string, the subtitle to be saved for current selection
-        """
+    def set_subtitle_for_selection(self, widget, subtitle):
+        DraftBaseList.set_subtitle_for_selection(self, widget, subtitle)
         row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
-        self._model.set_prop_for_position(position, 'subtitle', subtitle)
-        self.editor.current_text_data['subtitle'] = subtitle
-
         box = row.get_child().get_child()
         self._append_subtitle_label(box, subtitle)
-
-    def set_markup_for_current_selection(self, widget, markup):
-        """Save the markup for currently selected text to the db.
-
-        @self: DraftTextsList
-        @markup: string, the markup to be saved for current selection
-        """
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
-        self._model.set_prop_for_position(position, 'markup', markup)
-        self.editor.current_text_data['markup'] = markup
-
-    def set_word_goal_for_current_selection(self, widget, goal):
-        """Save the word count goal for currently selected text to the db.
-
-        @self: DraftTextsList
-        @markup: int, the word count goal to be saved for current selection
-        """
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
-        self._model.set_prop_for_position(position, 'word_goal', goal)
-        self.editor.current_text_data['word_goal'] = goal
-
-    def set_tags_for_current_selection(self, widget, tags):
-        """Ask store to make changes to the tags of the currently selected text
-        so that it can be written to db.
-
-        @self: DraftTextsList
-        @tags: list, the list of string tags which the selected text will be
-               tagged with.
-        """
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
-        new_tags = self._model.set_tags_for_position(position, tags)
-
-        # since @new_tags might have slightly different letter case tags, we
-        # should re-update editor tags as well and then update statusbar, though
-        # this is probably not the best place to do it.
-        self.editor.current_text_data['tags'] = new_tags
-        self.editor.statusbar.update_text_data()
-
-    def save_last_edit_data(self, widget, metadata):
-        """Save last metdata that would be associated with the last edit session
-        of the text.
-
-        @self: DraftTextsList
-        @metadata: dict, contains metadata associated with a text
-        """
-        if metadata:
-            self._model.queue_final_save(metadata)
-
-    def activate_selected_row(self):
-        """Activate selected row"""
-        row = self.get_selected_row()
-        row.emit('activate')
 
     def delete_selected(self, permanent=False):
         """Delete currently selected texts in the list"""
@@ -564,3 +653,98 @@ class DraftTextList(Gtk.ListBox):
             with self._model.handler_block(self._items_changed_handler_id):
                 self.delete_rows(all_rows, permanent=True)
         self.emit('text-deleted', True)
+
+
+class DraftResultList(DraftBaseList):
+    """The listbox containing results of a text search"""
+    __gtype__name__ = 'DraftTextList'
+
+    _showing_tagged_results = False
+
+    def __repr__(self):
+        return '<DraftResultList>'
+
+    def __init__(self):
+        DraftBaseList.__init__(self)
+
+    def _create_row_widget(self, text_data, user_data):
+        """Create a row widget for @text_data"""
+        data_dict = text_data.to_dict()
+        title = data_dict['title']
+        highlights = data_dict['misc']
+
+        row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        row_box.set_visible(True)
+        ctx = row_box.get_style_context()
+        ctx.add_class('draft-text-box-row')
+
+        title_label = Gtk.Label()
+        row_box.pack_start(title_label, True, False, 0)
+
+        if self._showing_tagged_results:
+            tags_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            row_box.pack_start(tags_box, True, False, 0)
+        else:
+            highlights_label = Gtk.Label()
+            row_box.pack_start(highlights_label, True, False, 0)
+
+        self._set_title_label(row_box, title)
+        self._append_highlights(row_box, highlights)
+
+        return row_box
+
+    def _set_title_label(self, box, title):
+        """Set label for @label to @title"""
+        labels = box.get_children()
+        label = labels[0]
+        label.set_markup('<b>%s</b>' % title)
+        self._shape_row_label(label)
+
+    def _append_highlights(self, box, highlights):
+        """Append highlights to the row"""
+        if self._showing_tagged_results:
+            children = box.get_children()
+            tags_box = children[1]
+            tags_box.set_margin_top(6)
+            for match in highlights:
+                tag_label = match[1].decode('utf-8')
+                label = Gtk.Label(tag_label)
+                label.get_style_context().add_class('draft-tag-label')
+                tags_box.add(label)
+            tags_box.show_all()
+        else:
+            labels = box.get_children()
+            label = labels[1]
+            label.set_markup(highlights)
+            label.set_margin_top(6)
+            self._shape_row_label(label)
+
+    def _shape_row_label(self, label):
+        """Perform some general adjustments on label for row widgets"""
+        label.set_ellipsize(Pango.EllipsizeMode.END)
+        label.set_justify(Gtk.Justification.LEFT)
+        label.set_halign(Gtk.Align.START)
+        label.set_visible(True)
+
+    def _on_items_changed(self, model, position, removed, added):
+        """Handler for model's `items-changed` signal"""
+        position_to_select = position
+        num_items = self._model.get_n_items()
+        if position_to_select >= num_items:
+            position_to_select = num_items - 1
+        if position_to_select < 0:
+            position_to_select = 0
+        row = self.get_row_at_index(position_to_select)
+        if row:
+            GLib.idle_add(self.select_row, row)
+
+    def set_model(self, results=None, tagged_results=False):
+        self._model = DraftTextListStore(list_type=TextListType.RESULT_TEXTS,
+                                         results=results)
+        self._showing_tagged_results = tagged_results
+        self.bind_model(self._model, self._create_row_widget, None)
+        self._items_changed_handler_id = self._model.connect('items-changed',
+                                                             self._on_items_changed)
+
+    def set_editor(self, editor):
+        self.editor = editor

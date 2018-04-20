@@ -10,6 +10,7 @@ app_sources = [
   '__init__.py',
   'app.py',
   'file.py',
+  'search.py',
   'window.py'
 ]
 
