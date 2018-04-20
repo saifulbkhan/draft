@@ -339,7 +339,9 @@ class DraftTextList(DraftBaseList):
         'text-created': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'selection-requested': (GObject.SignalFlags.RUN_FIRST,
                                 None,
-                                (GObject.TYPE_PYOBJECT, GObject.TYPE_PYOBJECT))
+                                (GObject.TYPE_PYOBJECT,
+                                 GObject.TYPE_PYOBJECT,
+                                 GObject.TYPE_BOOLEAN))
     }
 
     _texts_being_moved = []
@@ -531,7 +533,13 @@ class DraftTextList(DraftBaseList):
             text_id = text_metadata['id']
             self._text_view_selection_in_progress = True
             if group['id'] != text_metadata['parent_id']:
-                self.emit('selection-requested', group_id, text_id)
+                if in_trash and group_id is not None:
+                    pos = self._model.get_position_for_id(text_id)
+                    _, parent_group = self._model.get_data_for_position(pos,
+                                                                        True)
+                    if not parent_group['in_trash']:
+                        group_id = None
+                self.emit('selection-requested', group_id, text_id, in_trash)
             else:
                 self.finish_selection_for_id(text_id)
 

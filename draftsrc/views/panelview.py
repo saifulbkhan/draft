@@ -344,8 +344,11 @@ class DraftLibraryView(Gtk.Bin):
         self._popover.set_pointing_to(rect)
         self._popover.popup()
 
-    def selection_request(self, group_id):
-        self.local_groups_view.select_for_id(group_id)
+    def selection_request(self, group_id, in_trash=False):
+        if in_trash:
+            self.trash_view.select_for_id(group_id)
+        else:
+            self.local_groups_view.select_for_id(group_id)
 
     def escape_selection_mode(self):
         pass
@@ -578,8 +581,8 @@ class DraftTextListView(Gtk.Bin):
         # selected before making menu point to it.
         GLib.idle_add(popup_menu)
 
-    def _on_selection_requested(self, widget, group_id, text_id):
-        self.parent_window.libraryview.selection_request(group_id)
+    def _on_selection_requested(self, widget, group_id, text_id, in_trash):
+        self.parent_window.libraryview.selection_request(group_id, in_trash)
         self.view.finish_selection_for_id(text_id)
 
     def _on_open_clicked(self, widget):
