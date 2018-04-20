@@ -638,19 +638,19 @@ class DraftTextListView(Gtk.Bin):
 
         search_tags = self._search_tags_button.get_active()
 
+        group_id = None
+        in_trash = False
+        if self._group_shown is not None:
+            group_id = self._group_shown['id']
+            in_trash = self._group_shown['in_trash']
+
         def post_search_callback(results):
             if not len(results) > 0:
                 self.textstack.set_visible_child(self.empty_label)
                 return
             else:
                 self.textstack.set_visible_child(self.resultview)
-            self.resultlistview.set_model(results, search_tags)
-
-        group_id = None
-        in_trash = False
-        if self._group_shown is not None:
-            group_id = self._group_shown['id']
-            in_trash = self._group_shown['in_trash']
+            self.resultlistview.set_model(results, search_tags, in_trash)
 
         search.text_finder.search_in_group_threaded(group_id,
                                                     search_terms,

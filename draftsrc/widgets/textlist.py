@@ -535,10 +535,11 @@ class DraftTextList(DraftBaseList):
             if group['id'] != text_metadata['parent_id']:
                 if in_trash and group_id is not None:
                     pos = self._model.get_position_for_id(text_id)
-                    _, parent_group = self._model.get_data_for_position(pos,
-                                                                        True)
-                    if not parent_group['in_trash']:
-                        group_id = None
+                    if pos is not None:
+                        _, parent_group = self._model.get_data_for_position(pos,
+                                                                            True)
+                        if not parent_group['in_trash']:
+                            group_id = None
                 self.emit('selection-requested', group_id, text_id, in_trash)
             else:
                 self.finish_selection_for_id(text_id)
@@ -746,9 +747,10 @@ class DraftResultList(DraftBaseList):
         if row:
             GLib.idle_add(self.select_row, row)
 
-    def set_model(self, results=None, tagged_results=False):
+    def set_model(self, results=None, tagged_results=False, trashed=False):
         self._model = DraftTextListStore(list_type=TextListType.RESULT_TEXTS,
-                                         results=results)
+                                         results=results,
+                                         trashed=trashed)
         self._showing_tagged_results = tagged_results
         self.bind_model(self._model, self._create_row_widget, None)
         self._items_changed_handler_id = self._model.connect('items-changed',
