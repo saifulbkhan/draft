@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+from string import whitespace
 from gettext import gettext as _
 
 from gi.repository import Gtk, GLib, GObject
@@ -194,10 +195,12 @@ class DraftStatusbar(Gtk.Bin):
 
     def _on_tag_added(self, widget, user_data=None):
         """Handle addition of a tag to the text"""
-        tag = self._new_tag_entry.get_text()
-        if tag:
-            self._editor.add_tag(tag)
-            self._new_tag_entry.set_text('')
+        tag_text = self._new_tag_entry.get_text()
+        tags = re.split(' |\t|,', tag_text)
+        for tag in tags:
+            if tag:
+                self._editor.add_tag(tag)
+        self._new_tag_entry.set_text('')
 
     def _on_tag_deleted(self, widget, label=None):
         """Handle deletion of a tag from the text"""
