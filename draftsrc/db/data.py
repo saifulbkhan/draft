@@ -215,14 +215,10 @@ def delete_orphan_tags(conn):
 
 def fetch_label(conn, label):
     """Fetch equivalent of the given label if exists, create new otherwise"""
-    # TODO: support case-insensitive matching for Unicode characters in label.
-    # sqlite `LIKE` operator only does case-insensitive matching for ASCII
-    # characters. To do case-insensitive matching for Unicode as well, maybe
-    # use ICU plugin for sqlite or filter another way.
     query = '''
         SELECT keyword
           FROM tag
-         WHERE keyword LIKE :label'''
+         WHERE keyword = :label'''
     cursor = conn.cursor()
     cursor.execute(query, {"label": label})
 
