@@ -13,16 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re, os.path
-
-from gi.repository import GLib
+import re
 
 from draftsrc.parsers.mistune import escape
 from draftsrc.parsers.mistune import Markdown, InlineLexer, BlockLexer, Renderer
 from draftsrc.parsers.webstrings import html_string
-from draftsrc.defs import DATA_DIR
 
-DRAFT_DIR = 'file://' + os.path.join(DATA_DIR, 'draft')
 
 class MathBlockLexer(BlockLexer):
     def __init__(self):
@@ -117,13 +113,12 @@ def format_code(text, lang, inlinestyles=False, linenos=False):
         text = text.strip()
         return '\n<pre><code>%s</code></pre>\n' % escape(text)
 
-def render_markdown(markup, webview):
+def render_markdown(markup):
     renderer = CustomRenderer(hard_wrap=True)
     inline_renderer = MathInlineLexer(renderer)
     block_renderer = MathBlockLexer()
     markdown = CustomMarkdown(renderer, inline_renderer, block_renderer)
 
     content = markdown(markup)
-    webview.set_editable(True)
     content = html_string % content
-    GLib.idle_add(webview.load_html, content, DRAFT_DIR)
+    return content

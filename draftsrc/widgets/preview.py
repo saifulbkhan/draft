@@ -18,8 +18,11 @@ from os import environ, path
 import gi
 gi.require_version('WebKit2', '4.0')
 gi.require_version('WkJsCore', '0.1')
+from gi.repository import Gtk, GLib, Gdk, WebKit2 as WebKit, WkJsCore
 
-from gi.repository import Gtk, Gdk, WebKit2 as WebKit, WkJsCore
+from draftsrc.defs import DATA_DIR
+
+DRAFT_DIR = 'file://' + path.join(DATA_DIR, 'draft')
 
 
 class DraftPreview(Gtk.Box):
@@ -111,3 +114,7 @@ class DraftPreview(Gtk.Box):
         if not event_and_modifiers:
             if event.keyval == Gdk.KEY_F9:
                 self.main_window.toggle_panels()
+
+    def load_html(self, html_content):
+        self.view.set_editable(True)
+        GLib.idle_add(self.view.load_html, html_content, DRAFT_DIR)
