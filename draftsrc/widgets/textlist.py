@@ -408,6 +408,7 @@ class DraftTextList(DraftBaseList):
         subtitle_label.set_line_wrap(True)
         subtitle_label.set_lines(3)
         subtitle_label.set_xalign(0.0)
+        subtitle_label.set_margin_top(6)
         self._shape_row_label(subtitle_label)
 
     def _shape_row_label(self, label):
@@ -658,6 +659,8 @@ class DraftResultList(DraftBaseList):
     """The listbox containing results of a text search"""
     __gtype__name__ = 'DraftTextList'
 
+    _showing_tagged_results = False
+
     def __repr__(self):
         return '<DraftResultList>'
 
@@ -678,8 +681,12 @@ class DraftResultList(DraftBaseList):
         title_label = Gtk.Label()
         row_box.pack_start(title_label, True, False, 0)
 
-        highlights_label = Gtk.Label()
-        row_box.pack_start(highlights_label, True, False, 0)
+        if self._showing_tagged_results:
+            tags_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            row_box.pack_start(tags_box, True, False, 0)
+        else:
+            highlights_label = Gtk.Label()
+            row_box.pack_start(highlights_label, True, False, 0)
 
         self._set_title_label(row_box, title)
         self._append_highlights(row_box, highlights)
@@ -695,10 +702,22 @@ class DraftResultList(DraftBaseList):
 
     def _append_highlights(self, box, highlights):
         """Append highlights to the row"""
-        labels = box.get_children()
-        label = labels[1]
-        label.set_markup(highlights)
-        self._shape_row_label(label)
+        if self._showing_tagged_results:
+            children = box.get_children()
+            tags_box = children[1]
+            tags_box.set_margin_top(6)
+            for match in highlights:
+                tag_label = match[1].decode('utf-8')
+                label = Gtk.Label(tag_label)
+                label.get_style_context().add_class('draft-tag-label')
+                tags_box.add(label)
+            tags_box.show_all()
+        else:
+            labels = box.get_children()
+            label = labels[1]
+            label.set_markup(highlights)
+            label.set_margin_top(6)
+            self._shape_row_label(label)
 
     def _shape_row_label(self, label):
         """Perform some general adjustments on label for row widgets"""
@@ -719,9 +738,13 @@ class DraftResultList(DraftBaseList):
         if row:
             GLib.idle_add(self.select_row, row)
 
-    def set_model(self, results=None):
+    def set_model(self, results=None, tagged_results=False):
         self._model = DraftTextListStore(list_type=TextListType.RESULT_TEXTS,
                                          results=results)
+        self._showing_tagged_results = tagged_results
         self.bind_model(self._model, self._create_row_widget, None)
         self._items_changed_handler_id = self._model.connect('items-changed',
                                                              self._on_items_changed)
+
+    def set_editor(self, editor):
+        self.editor = editor

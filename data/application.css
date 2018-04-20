@@ -46,6 +46,7 @@
 }
 
 .draft-tag-label {
+    color: @theme_fg_color;
     font-weight: bold;
     margin: 0 6px 0 0;
     padding: 3px 3px;
@@ -119,10 +120,6 @@ list > row {
     border-bottom: 1px solid alpha(@borders, 0.3);
 }
 
-list > row label:nth-child(2) {
-    margin-top: 6px;
-}
-
 .draft-faded-treeview {
     background-color: @panel_bg_color;
 }
@@ -179,4 +176,9 @@ list > row label:nth-child(2) {
 
 .draft-textlist-header:dir(rtl) {
     border-left: 1px solid @borders;
+}
+
+radiobutton > radio {
+    margin-right: 8px;
+    margin-left: 0px;
 }

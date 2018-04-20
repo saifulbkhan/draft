@@ -441,6 +441,10 @@ class DraftTextListView(Gtk.Bin):
         self.search_bar = self.builder.get_object('search_bar')
         self.search_entry = self.builder.get_object('search_entry')
         self.search_bar.connect_entry(self.search_entry)
+        self._search_menu = self.builder.get_object('search_menu')
+        self._search_options_button = self.builder.get_object('search_options_button')
+        self._search_content_button = self.builder.get_object('search_content')
+        self._search_tags_button = self.builder.get_object('search_tags')
 
         self._text_menu = self.builder.get_object('text_menu')
         self._open_button = self.builder.get_object('open_button')
@@ -459,6 +463,10 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('selection-requested', self._on_selection_requested)
 
         self.search_entry.connect('search-changed', self._on_search_changed)
+        self._search_menu.connect('closed', self._on_search_menu_closed)
+        self._search_options_button.connect('toggled', self._on_search_options_toggled)
+        self._search_content_button.connect('toggled', self._on_search_content_toggled)
+        self._search_tags_button.connect('toggled', self._on_search_tags_toggled)
         self._open_button.connect('clicked', self._on_open_clicked)
         self._trash_button.connect('clicked', self._on_trash_clicked)
         self._restore_button.connect('clicked', self._on_restore_clicked)
@@ -601,6 +609,23 @@ class DraftTextListView(Gtk.Bin):
             self.view.delete_selected(permanent=True)
         dialog.destroy()
 
+    def _on_search_options_toggled(self, widget):
+        if widget.get_active():
+            self._search_menu.popup()
+        else:
+            self._search_menu.popdown()
+
+    def _on_search_menu_closed(self, widget):
+        self._search_options_button.set_active(False)
+
+    def _on_search_content_toggled(self, widget):
+        if self._search_content_button.get_active():
+            self._on_search_changed(self.search_entry)
+
+    def _on_search_tags_toggled(self, widget):
+        if self._search_tags_button.get_active():
+            self._on_search_changed(self.search_entry)
+
     def _on_search_changed(self, search_entry):
         search_terms = search_entry.get_text()
         search_terms = search_terms.strip()
@@ -608,13 +633,15 @@ class DraftTextListView(Gtk.Bin):
             self.textstack.set_visible_child(self.listview)
             return
 
+        search_tags = self._search_tags_button.get_active()
+
         def post_search_callback(results):
             if not len(results) > 0:
                 self.textstack.set_visible_child(self.empty_label)
                 return
             else:
                 self.textstack.set_visible_child(self.resultview)
-            self.resultlistview.set_model(results)
+            self.resultlistview.set_model(results, search_tags)
 
         group_id = None
         in_trash = False
@@ -624,6 +651,6 @@ class DraftTextListView(Gtk.Bin):
 
         search.text_finder.search_in_group_threaded(group_id,
                                                     search_terms,
-                                                    False,
+                                                    search_tags,
                                                     in_trash,
                                                     post_search_callback)
