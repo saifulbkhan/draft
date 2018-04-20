@@ -344,6 +344,7 @@ class DraftGroupTree(Gtk.TreeView):
 
         def select_if_group_id_matches(model, path, treeiter, data):
             if model[treeiter][Column.ID] == group_id:
+                self.expand_to_path(path)
                 self.selection.select_path(path)
                 return True
 
