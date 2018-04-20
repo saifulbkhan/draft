@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from os import environ, path
+from subprocess import call
 
 import gi
 gi.require_version('WebKit2', '4.0')
@@ -80,7 +81,9 @@ class DraftPreview(Gtk.Box):
         if webview.is_editable():
             policy_decision.use()
             webview.set_editable(False)
-        else:
+        elif decision_type == WebKit.PolicyDecisionType.RESPONSE:
+            uri = webview.get_uri()
+            self.open_link(uri)
             policy_decision.ignore()
         return True
 
@@ -118,3 +121,9 @@ class DraftPreview(Gtk.Box):
     def load_html(self, html_content):
         self.view.set_editable(True)
         GLib.idle_add(self.view.load_html, html_content, DRAFT_DIR)
+
+    @staticmethod
+    def open_link(link):
+        """Opens a URL in default browser, assumes `xdg-open` command is
+        available"""
+        call(['xdg-open', link])
