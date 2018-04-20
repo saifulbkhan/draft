@@ -314,7 +314,7 @@ class DraftBaseList(Gtk.ListBox):
         position = self._model.get_position_for_id(text_id)
         if position is not None:
             row = self.get_row_at_index(position)
-            if row:
+            if row and not row.is_selected():
                 self.select_row(row)
 
     def finish_selection_for_id(self, text_id):
