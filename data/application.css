@@ -76,6 +76,10 @@
     opacity: 1.0;
 }
 
+.draft-menu-box {
+    margin: 12px;
+}
+
 .draft-menu-title {
     color: @title_color;
     font-weight: bold;

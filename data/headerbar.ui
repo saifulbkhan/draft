@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.2 -->
+<!-- Generated with glade 3.20.4 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkImage" id="add_icon">
@@ -59,6 +59,11 @@
     <property name="can_focus">False</property>
     <property name="icon_name">pan-down-symbolic</property>
   </object>
+  <object class="GtkImage" id="search_icon">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="icon_name">edit-find-symbolic</property>
+  </object>
   <object class="GtkHeaderBar" id="list_header">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -117,11 +122,6 @@
     <style>
       <class name="draft-textlist-header"/>
     </style>
-  </object>
-  <object class="GtkImage" id="search_icon">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="icon_name">edit-find-symbolic</property>
   </object>
   <object class="GtkImage" id="toggle_panel_icon">
     <property name="visible">True</property>
@@ -191,10 +191,6 @@
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="margin_left">12</property>
-        <property name="margin_right">12</property>
-        <property name="margin_top">12</property>
-        <property name="margin_bottom">12</property>
         <property name="orientation">vertical</property>
         <property name="spacing">6</property>
         <child>
@@ -239,6 +235,9 @@
             <property name="position">2</property>
           </packing>
         </child>
+        <style>
+          <class name="draft-menu-box"/>
+        </style>
       </object>
       <packing>
         <property name="submenu">main</property>

@@ -149,10 +149,6 @@
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="margin_left">12</property>
-        <property name="margin_right">12</property>
-        <property name="margin_top">12</property>
-        <property name="margin_bottom">12</property>
         <property name="orientation">vertical</property>
         <property name="spacing">6</property>
         <child>
@@ -202,9 +198,13 @@
             <property name="position">2</property>
           </packing>
         </child>
+        <style>
+          <class name="draft-menu-box"/>
+        </style>
       </object>
       <packing>
         <property name="submenu">main</property>
+        <property name="position">1</property>
       </packing>
     </child>
   </object>
@@ -217,10 +217,6 @@
         <property name="can_focus">True</property>
         <property name="has_focus">True</property>
         <property name="is_focus">True</property>
-        <property name="margin_left">12</property>
-        <property name="margin_right">12</property>
-        <property name="margin_top">12</property>
-        <property name="margin_bottom">12</property>
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkModelButton" id="open_button">
@@ -259,6 +255,9 @@
             <property name="position">2</property>
           </packing>
         </child>
+        <style>
+          <class name="draft-menu-box"/>
+        </style>
       </object>
       <packing>
         <property name="submenu">main</property>
@@ -275,10 +274,6 @@
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="margin_left">12</property>
-        <property name="margin_right">12</property>
-        <property name="margin_top">12</property>
-        <property name="margin_bottom">12</property>
         <property name="orientation">vertical</property>
         <child>
           <object class="GtkModelButton" id="restore_button">
@@ -306,6 +301,9 @@
             <property name="position">1</property>
           </packing>
         </child>
+        <style>
+          <class name="draft-menu-box"/>
+        </style>
       </object>
       <packing>
         <property name="submenu">main</property>
