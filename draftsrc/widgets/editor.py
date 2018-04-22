@@ -272,6 +272,8 @@ class DraftEditor(Gtk.Box):
 
 class DraftTextView(GtkSource.View):
     __gtype_name__ = 'DraftTextView'
+
+    _context_menu = None
     scroll_duration = 150
 
     def __repr__(self):
@@ -279,6 +281,8 @@ class DraftTextView(GtkSource.View):
 
     def __init__(self):
         GtkSource.View.__init__(self)
+        self.connect('event', self._on_event)
+
         self.cached_char_height = 0
         self.cached_char_width = 0
         self.scroll_offset = 0
@@ -515,3 +519,110 @@ class DraftTextView(GtkSource.View):
     def do_size_allocate(self, allocation):
         GtkSource.View.do_size_allocate(self, allocation)
         self.refresh_overscroll()
+
+    def _on_event(self, widget, event):
+        key_pressed, key = event.get_keyval()
+        menu_requested = (key_pressed
+                          and (key == Gdk.KEY_Menu
+                               or key == Gdk.KEY_MenuPB
+                               or key == Gdk.KEY_MenuKB))
+        if event.triggers_context_menu() or menu_requested:
+            self._popup_context_menu(event)
+            return True
+
+    def _popup_context_menu(self, event):
+        clipboard = self.get_clipboard(Gdk.SELECTION_CLIPBOARD)
+        clipboard.wait_for_text()
+        target = Gdk.Atom.intern_static_string("TARGETS")
+        clipboard.request_contents(target, self._popup_targets_recieved, event)
+
+    def _popup_targets_recieved(self, clipboard, selection_data, user_data):
+        self._context_menu = Gtk.PopoverMenu()
+        self._context_menu.set_relative_to(self)
+
+        item_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self._context_menu.add(item_box)
+
+        buffer = self.get_buffer()
+        editable = self.get_editable()
+        event = user_data
+
+        have_selection = False
+        sel_start = None
+        sel_end = None
+        selection = buffer.get_selection_bounds()
+        if selection:
+            sel_start, sel_end = selection
+            have_selection = True
+
+        text_iter = buffer.get_iter_at_mark(buffer.get_insert())
+
+        can_insert = text_iter.can_insert(editable)
+        can_paste = selection_data.targets_include_text()
+
+        def range_contains_editable_text(start, end, default_editability):
+            iter = start
+            while iter.compare(end) < 0:
+                if iter.editable(default_editability):
+                    return True
+
+                iter.forward_to_tag_toggle(None)
+
+            return False
+
+        def on_cut(widget):
+            self.emit('cut-clipboard')
+
+        def on_copy(widget):
+            self.emit('copy-clipboard')
+
+        def on_paste(widget):
+            self.emit('paste-clipboard')
+
+        cut_button = Gtk.ModelButton()
+        cut_button.set_label(_("Cut"))
+        cut_button.connect('clicked', on_cut)
+        cut_button.set_sensitive(have_selection
+                                 and range_contains_editable_text(sel_start,
+                                                                  sel_end,
+                                                                  editable))
+
+        copy_button = Gtk.ModelButton()
+        copy_button.set_label(_("Copy"))
+        copy_button.connect('clicked', on_copy)
+        copy_button.set_sensitive(have_selection)
+
+        paste_button = Gtk.ModelButton()
+        paste_button.set_label(_("Paste"))
+        paste_button.connect('clicked', on_paste)
+        paste_button.set_sensitive(can_insert and can_paste)
+
+        for button in [cut_button, copy_button, paste_button]:
+            item_box.add(button)
+            label = button.get_child()
+            label.set_halign(Gtk.Align.START)
+
+        item_box.show_all()
+        item_box.get_style_context().add_class("draft-menu-box")
+
+        if event.triggers_context_menu():
+            __, x, y = event.get_coords()
+            rect = self.get_allocation()
+            rect.x, rect.y, rect.height, rect.width = x, y, 0, 0
+            self._context_menu.set_pointing_to(rect)
+        else:
+            visible = GtkSource.View.get_visible_rect(self)
+            rect = self.get_iter_location(text_iter)
+            if self._gdk_rectangle_contains(visible, rect):
+                rect.x, rect.y = self.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
+                                                              rect.x, rect.y)
+                self._context_menu.set_pointing_to(rect)
+            else:
+                visible = self.get_allocation()
+                rect.x = int((visible.x + visible.width) / 2)
+                rect.y = int((visible.y + visible.height) / 2)
+                rect.width, rect.height = 0, 0
+                self._context_menu.set_pointing_to(rect)
+
+        self._context_menu.set_position(Gtk.PositionType.BOTTOM)
+        self._context_menu.popup()
