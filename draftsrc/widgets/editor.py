@@ -579,6 +579,9 @@ class DraftTextView(GtkSource.View):
         def on_paste(widget):
             self.emit('paste-clipboard')
 
+        def on_select_all(widget):
+            self.emit('select-all', True)
+
         cut_button = Gtk.ModelButton()
         cut_button.set_label(_("Cut"))
         cut_button.connect('clicked', on_cut)
@@ -597,10 +600,25 @@ class DraftTextView(GtkSource.View):
         paste_button.connect('clicked', on_paste)
         paste_button.set_sensitive(can_insert and can_paste)
 
-        for button in [cut_button, copy_button, paste_button]:
-            item_box.add(button)
-            label = button.get_child()
-            label.set_halign(Gtk.Align.START)
+        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+
+        select_all_button = Gtk.ModelButton()
+        select_all_button.set_label(_("Select All"))
+        select_all_button.connect('clicked', on_select_all)
+        select_all_button.set_sensitive(buffer.get_char_count() > 0)
+
+        menu_items = [
+            cut_button,
+            copy_button,
+            paste_button,
+            separator,
+            select_all_button
+        ]
+        for item in menu_items:
+            item_box.add(item)
+            if isinstance(item, Gtk.Button):
+                label = item.get_child()
+                label.set_halign(Gtk.Align.START)
 
         item_box.show_all()
         item_box.get_style_context().add_class("draft-menu-box")
