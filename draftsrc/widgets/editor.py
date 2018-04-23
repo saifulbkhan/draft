@@ -582,6 +582,24 @@ class DraftTextView(GtkSource.View):
         def on_select_all(widget):
             self.emit('select-all', True)
 
+        def on_undo(widget):
+            self.emit('undo')
+
+        def on_redo(widget):
+            self.emit('redo')
+
+        undo_button = Gtk.ModelButton()
+        undo_button.set_label(_("Undo"))
+        undo_button.connect('clicked', on_undo)
+        undo_button.set_sensitive(buffer.can_undo())
+
+        redo_button = Gtk.ModelButton()
+        redo_button.set_label(_("Redo"))
+        redo_button.connect('clicked', on_redo)
+        redo_button.set_sensitive(buffer.can_redo())
+
+        separator_1 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+
         cut_button = Gtk.ModelButton()
         cut_button.set_label(_("Cut"))
         cut_button.connect('clicked', on_cut)
@@ -600,7 +618,7 @@ class DraftTextView(GtkSource.View):
         paste_button.connect('clicked', on_paste)
         paste_button.set_sensitive(can_insert and can_paste)
 
-        separator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        separator_2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
 
         select_all_button = Gtk.ModelButton()
         select_all_button.set_label(_("Select All"))
@@ -608,10 +626,13 @@ class DraftTextView(GtkSource.View):
         select_all_button.set_sensitive(buffer.get_char_count() > 0)
 
         menu_items = [
+            undo_button,
+            redo_button,
+            separator_1,
             cut_button,
             copy_button,
             paste_button,
-            separator,
+            separator_2,
             select_all_button
         ]
         for item in menu_items:
