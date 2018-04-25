@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import re
 from collections import OrderedDict
 from gettext import gettext as _
 from string import whitespace
@@ -28,6 +29,8 @@ from draftsrc.widgets.statusbar import DraftStatusbar
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
 GObject.type_ensure(GObject.GType(GtkSource.View))
+
+_invis_tag_name = "invisible"
 
 
 class DraftEditor(Gtk.Box):
@@ -88,7 +91,11 @@ class DraftEditor(Gtk.Box):
 
     def _prep_buffer(self, markup='markdown'):
         buffer = self.view.get_buffer()
+        if not buffer.get_tag_table().lookup(_invis_tag_name):
+            buffer.create_tag(_invis_tag_name, size=0, editable=False)
         buffer.connect('modified-changed', self._on_modified_changed)
+        buffer.connect('bracket-matched', self._on_bracket_matched)
+        buffer.connect('paste-done', self._on_maybe_links_inserted)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
         self.set_markup(markup)
@@ -119,11 +126,17 @@ class DraftEditor(Gtk.Box):
         self._set_last_modified()
         self.emit('view-changed', self.current_text_data)
 
+    def _on_bracket_matched(self, buffer, text_iter, state):
+        self._on_maybe_links_inserted(buffer)
+
+    def _on_maybe_links_inserted(self, buffer, clipboard=None):
+        self._get_links_in_buffer(buffer)
+
     def get_text(self):
         buffer = self.view.get_buffer()
         start = buffer.get_start_iter()
         end = buffer.get_end_iter()
-        text = buffer.get_text(start, end, False)
+        text = buffer.get_text(start, end, True)
         return text
 
     def add_tag(self, tag):
@@ -206,6 +219,7 @@ class DraftEditor(Gtk.Box):
             self.parent.preview_content()
 
         self.statusbar.update_state()
+        self._get_links_in_buffer(buffer)
 
     def focus_view(self, scroll_to_insert=False):
         self.view.grab_focus()
@@ -268,6 +282,13 @@ class DraftEditor(Gtk.Box):
             return title, subtitle
 
         return title, None
+
+    def _get_links_in_buffer(self, buffer):
+        detector = LinkDetector()
+        detector.set_buffer(buffer)
+        num_occurences = detector.obtain_link_occurences()
+        for i in range(num_occurences):
+            GLib.idle_add(detector.obtain_link_iters)
 
 
 class DraftTextView(GtkSource.View):
@@ -502,9 +523,25 @@ class DraftTextView(GtkSource.View):
         self.set_bottom_margin(new_margin)
 
     def do_move_cursor(self, step, count, extend_selection):
+        buffer = self.get_buffer()
+        insert_mark = buffer.get_insert()
+        self.scroll_mark_onscreen(insert_mark)
+
+        editable = self.get_editable()
+        insert = buffer.get_iter_at_mark(insert_mark)
+        if not insert.can_insert(editable):
+            start = buffer.get_start_iter()
+            end = buffer.get_end_iter()
+            if count > 0:
+                while not insert.can_insert(editable) and insert.compare(end) < 0:
+                    insert.forward_char()
+                    count += 1
+            else:
+                while not insert.can_insert(editable) and insert.compare(start) > 0:
+                    insert.backward_char()
+                    count -= 1
+
         GtkSource.View.do_move_cursor(self, step, count, extend_selection)
-        insert = self.get_buffer().get_insert()
-        self.scroll_mark_onscreen(insert)
 
     def do_style_updated(self):
         GtkSource.View.do_style_updated(self)
@@ -665,3 +702,39 @@ class DraftTextView(GtkSource.View):
 
         self._context_menu.set_position(Gtk.PositionType.BOTTOM)
         self._context_menu.popup()
+
+
+class LinkDetector(object):
+    _buffer = None
+    _search_mark = None
+    _search_context = None
+    _link_regex = r'''(!?\[[^\]]*?\]\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\))|\[[^\]]*?\]:\s+(<[^\s>]+>|[^\s]+)\s+("[^"]*?"|'[^']*?'|\([^\)]*?\))'''
+    _link_text_regex = r'''\[[^\]]*?\]'''
+
+    def set_buffer(self, buffer):
+        self._buffer = buffer
+        self._search_mark = Gtk.TextMark()
+        buffer.add_mark(self._search_mark, buffer.get_start_iter())
+        self._search_context = GtkSource.SearchContext(buffer=self._buffer)
+
+    def obtain_link_occurences(self):
+        start_iter = self._buffer.get_start_iter()
+        end_iter = self._buffer.get_end_iter()
+        matches = re.findall(self._link_regex,
+                             self._buffer.get_text(start_iter, end_iter, True))
+        return len(matches)
+
+    def obtain_link_iters(self):
+        search_settings = self._search_context.get_settings()
+        search_settings.set_regex_enabled(True)
+        search_settings.set_search_text(str(self._link_regex))
+        search_settings.set_wrap_around(False)
+
+        search_iter = self._buffer.get_iter_at_mark(self._search_mark)
+        found, start, end, wrapped = self._search_context.forward2(search_iter)
+        if found:
+            search_settings.set_search_text(str(self._link_text_regex))
+            search_iter = start
+            found, text_start, text_end, wrapped = self._search_context.forward2(search_iter)
+            self._buffer.apply_tag_by_name(_invis_tag_name, text_end, end)
+            self._buffer.move_mark(self._search_mark, end)
