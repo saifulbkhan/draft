@@ -536,6 +536,7 @@ class DraftTextView(GtkSource.View):
         self.set_bottom_margin(new_margin)
 
     def do_move_cursor(self, step, count, extend_selection):
+        GtkSource.View.do_move_cursor(self, step, count, extend_selection)
         buffer = self.get_buffer()
         insert_mark = buffer.get_insert()
         self.scroll_mark_onscreen(insert_mark)
@@ -544,26 +545,28 @@ class DraftTextView(GtkSource.View):
         insert = buffer.get_iter_at_mark(insert_mark)
 
         link_start = insert.copy()
-        if count > 0 and step == Gtk.MovementStep.VISUAL_POSITIONS:
-            insert.forward_char()
-        elif count < 0 and step == Gtk.MovementStep.VISUAL_POSITIONS:
-            insert.backward_char()
-
-        if not insert.can_insert(editable) and step == Gtk.MovementStep.VISUAL_POSITIONS:
+        link_end = insert.copy()
+        if not insert.can_insert(editable):
             start = buffer.get_start_iter()
             end = buffer.get_end_iter()
-            if count > 0:
-                while not insert.can_insert(editable) and insert.compare(end) < 0:
-                    insert.forward_char()
-                    count += 1
-            else:
-                while not insert.can_insert(editable) and insert.compare(start) > 0:
-                    insert.backward_char()
-                    count -= 1
-            link_end = insert
-            self._popup_link_editor(link_start, link_end, backward=(count<0))
+            while not link_end.can_insert(editable) and link_end.compare(end) < 0:
+                link_end.forward_char()
+            while not link_start.can_insert(editable) and link_start.compare(start) > 0:
+                link_start.backward_char()
 
-        GtkSource.View.do_move_cursor(self, step, count, extend_selection)
+            if extend_selection:
+                sel_start, sel_end = buffer.get_selection_bounds()
+                if count > 0:
+                    buffer.select_range(sel_start, link_end)
+                else:
+                    buffer.select_range(sel_end, link_start)
+            else:
+                if count > 0:
+                    buffer.place_cursor(link_end)
+                else:
+                    buffer.place_cursor(link_start)
+
+            self._popup_link_editor(link_start, link_end)
 
     def do_style_updated(self):
         GtkSource.View.do_style_updated(self)
@@ -893,14 +896,6 @@ class LinkDetector(object):
 
 
 detector = LinkDetector()
-
-# TODO: when cursor approaches link structure, popup the link editor.
-
-# TODO: if buffer last modified position is within a text, then wrong
-#       popup entries are loaded.
-
-# TODO: anything other than VISUAL_POSITIONS movement actually enters
-#       the uneditable text.
 
 # TODO: when user clicks on link in textview and cursor enters link
 #       structure, popup link editor and when popup is closed move
