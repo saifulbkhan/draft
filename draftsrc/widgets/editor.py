@@ -30,9 +30,6 @@ from draftsrc.widgets.statusbar import DraftStatusbar
 # Ensure that GtkBuilder actually recognises SourceView in UI file
 GObject.type_ensure(GObject.GType(GtkSource.View))
 
-_invis_tag_name = "invisible"
-_unedit_tag_name = "uneditable"
-
 
 class DraftEditor(Gtk.Box):
     __gtype_name__ = 'DraftEditor'
@@ -92,13 +89,7 @@ class DraftEditor(Gtk.Box):
 
     def _prep_buffer(self, markup='markdown'):
         buffer = self.view.get_buffer()
-        if not buffer.get_tag_table().lookup(_invis_tag_name):
-            buffer.create_tag(_invis_tag_name, size=0)
-        if not buffer.get_tag_table().lookup(_unedit_tag_name):
-            buffer.create_tag(_unedit_tag_name, editable=False)
         buffer.connect('modified-changed', self._on_modified_changed)
-        buffer.connect('bracket-matched', self._on_bracket_matched)
-        buffer.connect('paste-done', self._on_maybe_links_inserted)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
         self.set_markup(markup)
@@ -128,12 +119,6 @@ class DraftEditor(Gtk.Box):
         self._set_insert_offset(buffer)
         self._set_last_modified()
         self.emit('view-changed', self.current_text_data)
-
-    def _on_bracket_matched(self, buffer, text_iter, state):
-        self._on_maybe_links_inserted(buffer)
-
-    def _on_maybe_links_inserted(self, buffer, clipboard=None):
-        self._get_links_in_buffer(buffer)
 
     def get_text(self):
         buffer = self.view.get_buffer()
@@ -287,10 +272,10 @@ class DraftEditor(Gtk.Box):
         return title, None
 
     def _get_links_in_buffer(self, buffer):
-        detector.set_buffer(buffer)
-        num_occurences = detector.obtain_link_occurences()
+        buffer.prep_for_search()
+        num_occurences = buffer.obtain_link_occurences()
         for i in range(num_occurences):
-            GLib.idle_add(detector.hide_links)
+            GLib.idle_add(buffer.hide_links)
 
 
 class DraftTextView(GtkSource.View):
@@ -306,6 +291,7 @@ class DraftTextView(GtkSource.View):
 
     def __init__(self):
         GtkSource.View.__init__(self)
+        self.set_buffer(DraftTextBuffer())
         builder = Gtk.Builder()
         builder.add_from_resource('/org/gnome/Draft/editor.ui')
 
@@ -730,8 +716,7 @@ class DraftTextView(GtkSource.View):
 
     def _popup_link_editor(self, start, end, backward=False):
         buffer = self.get_buffer()
-        detector.set_buffer(buffer)
-        bounds, reflink = detector.obtain_link_bounds(start, end, backward)
+        bounds, reflink = buffer.obtain_link_bounds(start, end, backward)
         url_iters = bounds.get('url')
         if not url_iters:
             return
@@ -810,8 +795,10 @@ class DraftTextView(GtkSource.View):
         self._title_entry.disconnect(self._title_change_id)
 
 
-class LinkDetector(object):
-    _buffer = None
+class DraftTextBuffer(GtkSource.Buffer):
+    _invis_tag_name = "invisible"
+    _unedit_tag_name = "uneditable"
+    _link_tag_name = "benign"
     _search_mark = None
     _search_context = None
     _link_regex = r'''(\[[^\]]*?\]\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\))|\[[^\]]*?\](:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)\s+("[^"]*?"|'[^']*?'|\([^\)]*?\))(?!\))'''
@@ -819,23 +806,37 @@ class LinkDetector(object):
     _link_regular_url_regex = r'''\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\)'''
     _link_reference_url_regex = r'''(:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)\s+("[^"]*?"|'[^']*?'|\([^\)]*?\))(?!\))'''
 
-    def set_buffer(self, buffer):
-        self._buffer = buffer
+    def __init__(self):
+        GtkSource.Buffer.__init__(self)
+
         self._search_mark = Gtk.TextMark()
-        buffer.add_mark(self._search_mark, buffer.get_start_iter())
-        self._search_context = GtkSource.SearchContext(buffer=self._buffer)
+        self.add_mark(self._search_mark, self.get_start_iter())
+        self._search_context = GtkSource.SearchContext(buffer=self)
+        self._search_context.set_highlight(False)
 
-    def obtain_link_occurences(self):
-        start_iter = self._buffer.get_start_iter()
-        end_iter = self._buffer.get_end_iter()
-        matches = re.findall(self._link_regex,
-                             self._buffer.get_text(start_iter, end_iter, True))
-        return len(matches)
-
-    def obtain_link_bounds(self, start, end, backward=False):
         search_settings = self._search_context.get_settings()
         search_settings.set_regex_enabled(True)
         search_settings.set_wrap_around(False)
+
+        if not self.get_tag_table().lookup(self._invis_tag_name):
+            self.create_tag(self._invis_tag_name, size=0)
+        if not self.get_tag_table().lookup(self._unedit_tag_name):
+            self.create_tag(self._unedit_tag_name, editable=False)
+        if not self.get_tag_table().lookup(self._link_tag_name):
+            self.create_tag(self._link_tag_name)
+
+    def obtain_link_occurences(self):
+        start_iter = self.get_start_iter()
+        end_iter = self.get_end_iter()
+        matches = re.findall(self._link_regex,
+                             self.get_text(start_iter, end_iter, True))
+        return len(matches)
+
+    def prep_for_search(self):
+        self.move_mark(self._search_mark, self.get_start_iter())
+
+    def obtain_link_bounds(self, start, end, backward=False):
+        search_settings = self._search_context.get_settings()
 
         bounds = {}
 
@@ -852,7 +853,7 @@ class LinkDetector(object):
         reflink = False
         text_end_copy = text_end.copy()
         text_end.forward_char()
-        if self._buffer.get_slice(text_end_copy, text_end, True) == ':':
+        if self.get_slice(text_end_copy, text_end, True) == ':':
             reflink = True
         text_end = text_end_copy
 
@@ -880,22 +881,21 @@ class LinkDetector(object):
 
     def hide_links(self):
         search_settings = self._search_context.get_settings()
-        search_settings.set_regex_enabled(True)
         search_settings.set_search_text(str(self._link_regex))
-        search_settings.set_wrap_around(False)
 
-        search_iter = self._buffer.get_iter_at_mark(self._search_mark)
+        search_iter = self.get_iter_at_mark(self._search_mark)
         found, start, end, wrapped = self._search_context.forward2(search_iter)
         if found:
-            search_settings.set_search_text(str(self._link_text_regex))
+            self.apply_tag_by_name(self._link_tag_name, start, end)
             search_iter = start
+            search_settings.set_search_text(str(self._link_text_regex))
             found, text_start, text_end, wrapped = self._search_context.forward2(search_iter)
-            # self._buffer.apply_tag_by_name(_invis_tag_name, text_end, end)
-            self._buffer.apply_tag_by_name(_unedit_tag_name, start, end)
-            self._buffer.move_mark(self._search_mark, end)
+            if found:
+                self.apply_tag_by_name(self._invis_tag_name, text_end, end)
+                self.apply_tag_by_name(self._unedit_tag_name, text_end, end)
 
+            self.move_mark(self._search_mark, end)
 
-detector = LinkDetector()
 
 # TODO: when user clicks on link in textview and cursor enters link
 #       structure, popup link editor and when popup is closed move
