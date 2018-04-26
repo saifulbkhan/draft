@@ -31,6 +31,7 @@ from draftsrc.widgets.statusbar import DraftStatusbar
 GObject.type_ensure(GObject.GType(GtkSource.View))
 
 _invis_tag_name = "invisible"
+_unedit_tag_name = "uneditable"
 
 
 class DraftEditor(Gtk.Box):
@@ -92,7 +93,9 @@ class DraftEditor(Gtk.Box):
     def _prep_buffer(self, markup='markdown'):
         buffer = self.view.get_buffer()
         if not buffer.get_tag_table().lookup(_invis_tag_name):
-            buffer.create_tag(_invis_tag_name, size=0, editable=False)
+            buffer.create_tag(_invis_tag_name, size=0)
+        if not buffer.get_tag_table().lookup(_unedit_tag_name):
+            buffer.create_tag(_unedit_tag_name, editable=False)
         buffer.connect('modified-changed', self._on_modified_changed)
         buffer.connect('bracket-matched', self._on_bracket_matched)
         buffer.connect('paste-done', self._on_maybe_links_inserted)
@@ -284,17 +287,18 @@ class DraftEditor(Gtk.Box):
         return title, None
 
     def _get_links_in_buffer(self, buffer):
-        detector = LinkDetector()
         detector.set_buffer(buffer)
         num_occurences = detector.obtain_link_occurences()
         for i in range(num_occurences):
-            GLib.idle_add(detector.obtain_link_iters)
+            GLib.idle_add(detector.hide_links)
 
 
 class DraftTextView(GtkSource.View):
     __gtype_name__ = 'DraftTextView'
 
     _context_menu = None
+    _url_change_id = None
+    _title_change_id = None
     scroll_duration = 150
 
     def __repr__(self):
@@ -302,7 +306,16 @@ class DraftTextView(GtkSource.View):
 
     def __init__(self):
         GtkSource.View.__init__(self)
+        builder = Gtk.Builder()
+        builder.add_from_resource('/org/gnome/Draft/editor.ui')
+
+        self._link_editor = builder.get_object('link_editor')
+        self._link_editor.set_relative_to(self)
+        self._url_entry = builder.get_object('url_entry')
+        self._title_entry = builder.get_object('title_entry')
+
         self.connect('event', self._on_event)
+        self._link_editor.connect('closed', self._on_link_editor_closed)
 
         self.cached_char_height = 0
         self.cached_char_width = 0
@@ -529,7 +542,14 @@ class DraftTextView(GtkSource.View):
 
         editable = self.get_editable()
         insert = buffer.get_iter_at_mark(insert_mark)
-        if not insert.can_insert(editable):
+
+        link_start = insert.copy()
+        if count > 0 and step == Gtk.MovementStep.VISUAL_POSITIONS:
+            insert.forward_char()
+        elif count < 0 and step == Gtk.MovementStep.VISUAL_POSITIONS:
+            insert.backward_char()
+
+        if not insert.can_insert(editable) and step == Gtk.MovementStep.VISUAL_POSITIONS:
             start = buffer.get_start_iter()
             end = buffer.get_end_iter()
             if count > 0:
@@ -540,6 +560,8 @@ class DraftTextView(GtkSource.View):
                 while not insert.can_insert(editable) and insert.compare(start) > 0:
                     insert.backward_char()
                     count -= 1
+            link_end = insert
+            self._popup_link_editor(link_start, link_end, backward=(count<0))
 
         GtkSource.View.do_move_cursor(self, step, count, extend_selection)
 
@@ -703,13 +725,96 @@ class DraftTextView(GtkSource.View):
         self._context_menu.set_position(Gtk.PositionType.BOTTOM)
         self._context_menu.popup()
 
+    def _popup_link_editor(self, start, end, backward=False):
+        buffer = self.get_buffer()
+        detector.set_buffer(buffer)
+        bounds, reflink = detector.obtain_link_bounds(start, end, backward)
+        url_iters = bounds.get('url')
+        if not url_iters:
+            return
+
+        url_start, url_end = url_iters
+        url_mark_start = buffer.create_mark(None, url_start, False)
+        url_mark_end = buffer.create_mark(None, url_end, False)
+
+        self._url_entry.set_text("")
+        self._title_entry.set_text("")
+
+        title_delimiter = ""
+        if not reflink:
+            # make iterators enter within brackets
+            url_start.forward_char()
+            url_end.backward_char()
+            url_string = buffer.get_slice(url_start, url_end, True)
+            parts = url_string.split(maxsplit=1)
+            if len(parts) > 0:
+                self._url_entry.set_text(parts[0])
+            if len(parts) > 1:
+                title = parts[1]
+                title = title.strip()
+                if ((title.startswith('"') and title.endswith('"'))
+                        or title.startswith("'") and title.endswith("'")):
+                    self._title_entry.set_text(title[1:-1])
+        else:
+            url_string = buffer.get_slice(url_start, url_end, True)
+            url_string = url_string[1:]
+            url_string = url_string.strip()
+            parts = url_string.split(maxsplit=1)
+            if len(parts) > 0:
+                self._url_entry.set_text(parts[0])
+            if len(parts) > 1:
+                title = parts[1]
+                title = title.strip()
+                title_delimiter = title[-1]
+                if ((title.startswith('"') and title.endswith('"'))
+                        or (title.startswith("'") and title.endswith("'"))
+                        or (title.startswith('(') and title.endswith(')'))):
+                    self._title_entry.set_text(title[1:-1])
+
+        def clear_url_space():
+            start = buffer.get_iter_at_mark(url_mark_start)
+            end = buffer.get_iter_at_mark(url_mark_end)
+            start.forward_char()
+            end.backward_char()
+            buffer.delete(start, end)
+
+        def insert_into_url_space(string):
+            start = buffer.get_iter_at_mark(url_mark_start)
+            start.forward_char()
+            buffer.insert(start, string)
+
+        def on_url_changed(widget, user_data=None):
+            url = self._url_entry.get_text()
+            url = url.strip()
+            title = self._title_entry.get_text()
+            title = title.strip()
+            clear_url_space()
+            if not reflink:
+                if title:
+                    url += ' "' + title + '"'
+            else:
+                url = ' ' + url
+                if title:
+                    url = url + ' ' + title_delimiter + title
+            insert_into_url_space(url)
+
+        self._url_change_id = self._url_entry.connect('changed', on_url_changed)
+        self._title_change_id = self._title_entry.connect('changed', on_url_changed)
+        self._link_editor.popup()
+
+    def _on_link_editor_closed(self, widget):
+        self._url_entry.disconnect(self._url_change_id)
+        self._title_entry.disconnect(self._title_change_id)
+
 
 class LinkDetector(object):
     _buffer = None
     _search_mark = None
     _search_context = None
-    _link_regex = r'''(!?\[[^\]]*?\]\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\))|\[[^\]]*?\]:\s+(<[^\s>]+>|[^\s]+)\s+("[^"]*?"|'[^']*?'|\([^\)]*?\))'''
+    _link_regex = r'''(\[[^\]]*?\]\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\))|\[[^\]]*?\](:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)\s+("[^"]*?"|'[^']*?'|\([^\)]*?\))(?!\))'''
     _link_text_regex = r'''\[[^\]]*?\]'''
+    _link_regular_url_regex = r'''\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\)'''
+    _link_reference_url_regex = r'''(:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)\s+("[^"]*?"|'[^']*?'|\([^\)]*?\))(?!\))'''
 
     def set_buffer(self, buffer):
         self._buffer = buffer
@@ -724,7 +829,53 @@ class LinkDetector(object):
                              self._buffer.get_text(start_iter, end_iter, True))
         return len(matches)
 
-    def obtain_link_iters(self):
+    def obtain_link_bounds(self, start, end, backward=False):
+        search_settings = self._search_context.get_settings()
+        search_settings.set_regex_enabled(True)
+        search_settings.set_wrap_around(False)
+
+        bounds = {}
+
+        search_iter = start
+        search_fn = self._search_context.forward2
+        if backward:
+            search_fn = self._search_context.backward2
+
+        search_settings.set_search_text(str(self._link_text_regex))
+        found, text_start, text_end, wrapped = search_fn(search_iter)
+        if not found:
+            return bounds, False
+
+        reflink = False
+        text_end_copy = text_end.copy()
+        text_end.forward_char()
+        if self._buffer.get_slice(text_end_copy, text_end, True) == ':':
+            reflink = True
+        text_end = text_end_copy
+
+        bounds['text'] = [text_start, text_end]
+
+        if reflink:
+            search_settings.set_search_text(self._link_reference_url_regex)
+            found, url_start, url_end, wrapped = search_fn(search_iter)
+            if not found:
+                return bounds, False
+
+            # moving iters one step forward for ref links since there is no
+            # bracket delimiters to mark begin and end
+            bounds['url'] = [url_start, url_end]
+            return bounds, True
+
+        search_settings.set_search_text(self._link_regular_url_regex)
+        found, url_start, url_end, wrapped = search_fn(search_iter)
+        if not found:
+            return bounds, False
+
+        bounds['url'] = [url_start, url_end]
+
+        return bounds, False
+
+    def hide_links(self):
         search_settings = self._search_context.get_settings()
         search_settings.set_regex_enabled(True)
         search_settings.set_search_text(str(self._link_regex))
@@ -736,5 +887,32 @@ class LinkDetector(object):
             search_settings.set_search_text(str(self._link_text_regex))
             search_iter = start
             found, text_start, text_end, wrapped = self._search_context.forward2(search_iter)
-            self._buffer.apply_tag_by_name(_invis_tag_name, text_end, end)
+            # self._buffer.apply_tag_by_name(_invis_tag_name, text_end, end)
+            self._buffer.apply_tag_by_name(_unedit_tag_name, start, end)
             self._buffer.move_mark(self._search_mark, end)
+
+
+detector = LinkDetector()
+
+# TODO: when cursor approaches link structure, popup the link editor.
+
+# TODO: if buffer last modified position is within a text, then wrong
+#       popup entries are loaded.
+
+# TODO: anything other than VISUAL_POSITIONS movement actually enters
+#       the uneditable text.
+
+# TODO: when user clicks on link in textview and cursor enters link
+#       structure, popup link editor and when popup is closed move
+#       cursor outside of link structure.
+
+# TODO: listen to 'delete-from-cursor' and backspace events and delete
+#       links if needed.
+
+# TODO: unhide and make text editable if link structure was broken.
+#       (can it be broken?)
+
+# TODO: when user inserts square brackets into the buffer, popup the
+#       link editor.
+
+# TODO: do not trigger popups on false positives -- check for \[ and \].
