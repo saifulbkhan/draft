@@ -715,7 +715,7 @@ class DraftTextView(GtkSource.View):
 
     def _popup_link_editor(self, start, end, backward=False):
         buffer = self.get_buffer()
-        bounds, reflink = buffer.obtain_link_bounds(start, end, backward)
+        bounds = buffer.obtain_link_bounds(start, end, backward)
         url_iters = bounds.get('url')
         if not url_iters:
             return
@@ -728,35 +728,19 @@ class DraftTextView(GtkSource.View):
         self._title_entry.set_text("")
 
         title_delimiter = ""
-        if not reflink:
-            # make iterators enter within brackets
-            url_start.forward_char()
-            url_end.backward_char()
-            url_string = buffer.get_slice(url_start, url_end, True)
-            parts = url_string.split(maxsplit=1)
-            if len(parts) > 0:
-                self._url_entry.set_text(parts[0])
-            if len(parts) > 1:
-                title = parts[1]
-                title = title.strip()
-                if ((title.startswith('"') and title.endswith('"'))
-                        or title.startswith("'") and title.endswith("'")):
-                    self._title_entry.set_text(title[1:-1])
-        else:
-            url_string = buffer.get_slice(url_start, url_end, True)
-            url_string = url_string[1:]
-            url_string = url_string.strip()
-            parts = url_string.split(maxsplit=1)
-            if len(parts) > 0:
-                self._url_entry.set_text(parts[0])
-            if len(parts) > 1:
-                title = parts[1]
-                title = title.strip()
-                title_delimiter = title[-1]
-                if ((title.startswith('"') and title.endswith('"'))
-                        or (title.startswith("'") and title.endswith("'"))
-                        or (title.startswith('(') and title.endswith(')'))):
-                    self._title_entry.set_text(title[1:-1])
+        # make iterators enter within brackets
+        url_start.forward_char()
+        url_end.backward_char()
+        url_string = buffer.get_slice(url_start, url_end, True)
+        parts = url_string.split(maxsplit=1)
+        if len(parts) > 0:
+            self._url_entry.set_text(parts[0])
+        if len(parts) > 1:
+            title = parts[1]
+            title = title.strip()
+            if ((title.startswith('"') and title.endswith('"'))
+                    or title.startswith("'") and title.endswith("'")):
+                self._title_entry.set_text(title[1:-1])
 
         def clear_url_space():
             start = buffer.get_iter_at_mark(url_mark_start)
@@ -801,10 +785,13 @@ class DraftTextBuffer(GtkSource.Buffer):
     _link_marks = {}
     _search_mark = None
     _search_context = None
-    _link_regex = r'''(\[[^\]]*?\]\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\))|\[[^\]]*?\](:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\n'''
+
+    _link_regex = r'''(\[[^\]]*?\]\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\))'''
+    _ref_link_regex = r'''\n\s+\[[^\]]*?\](:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\s+\n'''
     _link_text_regex = r'''\[[^\]]*?\]'''
-    _link_regular_url_regex = r'''\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\)'''
-    _link_reference_url_regex = r'''(:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\n'''
+    _ref_link_text_regex = r'''\n\s+\[[^\]]*?\]'''
+    _link_url_regex = r'''\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\)'''
+    _ref_link_url_regex = r'''(:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\n'''
 
     def __init__(self):
         GtkSource.Buffer.__init__(self)
@@ -851,38 +838,18 @@ class DraftTextBuffer(GtkSource.Buffer):
         search_settings.set_search_text(str(self._link_text_regex))
         found, text_start, text_end, wrapped = search_fn(search_iter)
         if not found or text_start.compare(end) > 0 or text_end.compare(end) > 0:
-            return bounds, False
-
-        reflink = False
-        text_end_copy = text_end.copy()
-        text_end.forward_char()
-        if self.get_slice(text_end_copy, text_end, True) == ':':
-            reflink = True
-        text_end = text_end_copy
+            return bounds
 
         bounds['text'] = [text_start, text_end]
 
-        if reflink:
-            search_settings.set_search_text(self._link_reference_url_regex)
-            found, url_start, url_end, wrapped = search_fn(search_iter)
-            if not found or not url_start.equal(text_end):
-                return bounds, False
-
-            # moving iters one step forward for ref links since there is no
-            # bracket delimiters to mark begin and end
-            bounds['url'] = [url_start, url_end]
-            return bounds, True
-
-        search_settings.set_search_text(self._link_regular_url_regex)
+        search_settings.set_search_text(self._link_url_regex)
         found, url_start, url_end, wrapped = search_fn(search_iter)
         if not found or not url_start.equal(text_end):
-            return bounds, False
+            return bounds
 
-        # have to go backward once to not match the newline character.
-        url_end.backward_char()
         bounds['url'] = [url_start, url_end]
 
-        return bounds, False
+        return bounds
 
     def hide_links(self):
         self.prep_for_search()
@@ -901,11 +868,6 @@ class DraftTextBuffer(GtkSource.Buffer):
             search_settings.set_search_text(str(self._link_text_regex))
             found, text_start, text_end, wrapped = self._search_context.forward2(search_iter)
             if found:
-                text_end_copy = text_end.copy()
-                text_end_copy.forward_char()
-                if self.get_slice(text_end, text_end_copy, True) == ':':
-                    end.backward_char()
-
                 self.apply_tag_by_name(self._invis_tag_name, text_end, end)
                 self.apply_tag_by_name(self._unedit_tag_name, text_end, end)
 
@@ -930,7 +892,7 @@ class DraftTextBuffer(GtkSource.Buffer):
                     self.remove_tag_by_name(self._invis_tag_name, start, end)
                     self.remove_tag_by_name(self._unedit_tag_name, start, end)
                 else:
-                    bounds, reflink = self.obtain_link_bounds(start, end)
+                    bounds = self.obtain_link_bounds(start, end)
                     if not bounds.get('text') or not bounds.get('url'):
                         self.remove_tag_by_name(self._invis_tag_name, start, end)
                         self.remove_tag_by_name(self._unedit_tag_name, start, end)
@@ -943,15 +905,5 @@ class DraftTextBuffer(GtkSource.Buffer):
 
 # TODO: listen to 'delete-from-cursor' and backspace events and delete
 #       links if needed.
-
-# TODO: unhide and make text editable if link structure was broken.
-#       Also when a range is deleted containing a link, delete uneditable
-#       link stuff as well.
-
-# TODO: only support regular links; reference links look good as they are
-#       and at the bottom of the document.
-
-# TODO: when user inserts square brackets into the buffer (listen to the signal
-#       `insert-text` for buffer) then trigger link searching and hiding.
 
 # TODO: do not trigger popups on false positives -- check for \[ and \].
