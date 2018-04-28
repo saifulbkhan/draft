@@ -942,6 +942,13 @@ class DraftTextBuffer(GtkSource.Buffer):
         search_iter = self.get_iter_at_mark(self._search_mark)
         found, start, end, wrapped = self._search_context.forward2(search_iter)
         if found:
+            # check if backslash inactivated
+            backiter = start.copy()
+            backiter.backward_char()
+            if self.get_slice(backiter, start, True) == '\\':
+                self.move_mark(self._search_mark, end)
+                return
+
             search_iter = start
             search_settings.set_search_text(str(self._link_text_regex))
             found, text_start, text_end, wrapped = self._search_context.forward2(search_iter)
@@ -974,6 +981,14 @@ class DraftTextBuffer(GtkSource.Buffer):
                     if not bounds.get('text') or not bounds.get('url'):
                         self.remove_tag_by_name(self._invis_tag_name, start, end)
                         self.remove_tag_by_name(self._unedit_tag_name, start, end)
+                    else:
+                        # check if backslash inactivated
+                        # move forward (left gravity source mark)
+                        backiter = start.copy()
+                        backiter.forward_char()
+                        if self.get_slice(backiter, start, True) == '\\':
+                            self.remove_tag_by_name(self._invis_tag_name, start, end)
+                            self.remove_tag_by_name(self._unedit_tag_name, start, end)
 
         self.hide_links()
 
@@ -988,5 +1003,3 @@ class DraftTextBuffer(GtkSource.Buffer):
                 return True, start, end
 
         return False, None, None
-
-# TODO: do not trigger popups on false positives -- check for \[ and \].
