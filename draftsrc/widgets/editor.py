@@ -302,6 +302,7 @@ class DraftTextView(GtkSource.View):
         self.cached_char_height = 0
         self.cached_char_width = 0
         self.scroll_offset = 0
+        self.set_has_tooltip(True)
 
         # Variables for scroll animation setup
         self._tick_id = 0
@@ -805,6 +806,30 @@ class DraftTextView(GtkSource.View):
         self._url_entry.disconnect(self._url_change_id)
         self._title_entry.disconnect(self._title_change_id)
         self.set_editable(True)
+
+    def do_query_tooltip(self, x, y, keyboard_mode, tooltip):
+        if self._link_editor.get_visible():
+            return False
+
+        buffer = self.get_buffer()
+
+        on_link, start, end = buffer.cursor_is_on_link()
+        if on_link:
+            start_rect = self.get_iter_location(start)
+            end_rect = self.get_iter_location(end)
+            x1, y1 = self.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
+                                                  start_rect.x,
+                                                  start_rect.y)
+            x2, y2 = self.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
+                                                  end_rect.x,
+                                                  end_rect.y)
+            y2 += end_rect.height
+            if ((x > x1 and x < x2) and
+                    (y > y1 - start_rect.height and y < y2 + end_rect.height)):
+                tooltip.set_markup(_("Press <b>Alt</b> + <b>Enter</b> to Edit Link"))
+                return True
+
+        return False
 
 
 class DraftTextBuffer(GtkSource.Buffer):
