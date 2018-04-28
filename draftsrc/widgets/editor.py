@@ -555,6 +555,21 @@ class DraftTextView(GtkSource.View):
                 else:
                     buffer.place_cursor(link_start)
 
+    def do_backspace(self):
+        buffer = self.get_buffer()
+        insert_mark = buffer.get_insert()
+        insert = buffer.get_iter_at_mark(insert_mark)
+        insert.backward_char()
+        editable = self.get_editable()
+
+        if not insert.can_insert(editable):
+            start = buffer.get_start_iter()
+            while not insert.can_insert(editable) and insert.compare(start) > 0:
+                insert.backward_char()
+            buffer.place_cursor(insert)
+
+        GtkSource.View.do_backspace(self)
+
     def do_style_updated(self):
         GtkSource.View.do_style_updated(self)
 
@@ -969,8 +984,5 @@ class DraftTextBuffer(GtkSource.Buffer):
                 return True, start, end
 
         return False, None, None
-
-# TODO: listen to 'delete-from-cursor' and backspace events and delete
-#       links if needed.
 
 # TODO: do not trigger popups on false positives -- check for \[ and \].
