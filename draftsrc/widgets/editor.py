@@ -790,6 +790,15 @@ class DraftTextView(GtkSource.View):
 
         self._url_change_id = self._url_entry.connect('changed', on_url_changed)
         self._title_change_id = self._title_entry.connect('changed', on_url_changed)
+
+        insert = buffer.get_iter_at_mark(buffer.get_insert())
+        insert_rect = self.get_iter_location(insert)
+        x, y = self.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
+                                            insert_rect.x,
+                                            insert_rect.y)
+        insert_rect.x, insert_rect.y = x, y
+        self._link_editor.set_pointing_to(insert_rect)
+
         self._link_editor.popup()
 
     def _on_link_editor_closed(self, widget):
@@ -930,10 +939,6 @@ class DraftTextBuffer(GtkSource.Buffer):
                 return True, start, end
 
         return False, None, None
-
-
-# TODO: when user presses "Alt+Enter" keys inside the link structure, show
-#       link editing popup. Also add option in context menu.
 
 # TODO: listen to 'delete-from-cursor' and backspace events and delete
 #       links if needed.
