@@ -770,17 +770,21 @@ class DraftTextView(GtkSource.View):
         url_start.forward_char()
         url_end.backward_char()
         url_string = buffer.get_slice(url_start, url_end, True)
-        parts = url_string.split(maxsplit=1)
-        if len(url_string) > 0 and url_string[0] == " ":
-            parts.insert(0, "")
-        if len(parts) > 0:
-            self._url_entry.set_text(parts[0])
-        if len(parts) > 1:
-            title = parts[1]
-            title = title.strip()
-            if ((title.startswith('"') and title.endswith('"'))
-                    or title.startswith("'") and title.endswith("'")):
-                self._title_entry.set_text(title[1:-1])
+        url_string = url_string.strip()
+
+        idx = -1
+        if url_string.endswith('"'):
+            idx = url_string.rfind('"', 0, -1)
+        elif url_string.endswith("'"):
+            idx = url_string.rfind("'", 0, -1)
+
+        if idx != -1:
+            url = url_string[:idx]
+            title = url_string[idx+1:-1]
+            self._url_entry.set_text(url)
+            self._title_entry.set_text(title)
+        else:
+            self._url_entry.set_text(url_string)
 
         def clear_url_space():
             start = buffer.get_iter_at_mark(url_mark_start)
@@ -860,11 +864,11 @@ class DraftTextBuffer(GtkSource.Buffer):
     _search_mark = None
     _search_context = None
 
-    _link_regex = r'''(\[[^\]]*?\]\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\))'''
+    _link_regex = r'''\[((?:\[[^^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*)\]\([^\)"']*?(\s("[^"]*?"|'[^']*?'))?\)'''
+    _link_text_regex = r'''\[((?:\[[^^\]]*\]|[^\[\]]|\](?=[^\[]*\]))*)\]'''
+    _link_url_regex = r'''\([^\)"']*?(\s("[^"]*?"|'[^']*?'))?\)'''
     _ref_link_regex = r'''\n\s+\[[^\]]*?\](:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\s+\n'''
-    _link_text_regex = r'''\[[^\]]*?\]'''
     _ref_link_text_regex = r'''\n\s+\[[^\]]*?\]'''
-    _link_url_regex = r'''\([^\)\s"']*?(\s("[^"]*?"|'[^']*?'))?\)'''
     _ref_link_url_regex = r'''(:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\n'''
 
     def __init__(self):
