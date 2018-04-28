@@ -789,8 +789,13 @@ class DraftTextView(GtkSource.View):
                 url += ' "' + title + '"'
             insert_into_url_space(url)
 
+        def on_activated(widget, user_data=None):
+            self._link_editor.popdown()
+
         self._url_change_id = self._url_entry.connect('changed', on_url_changed)
         self._title_change_id = self._title_entry.connect('changed', on_url_changed)
+        self._url_entry.connect('activate', on_activated)
+        self._title_entry.connect('activate', on_activated)
 
         insert = buffer.get_iter_at_mark(buffer.get_insert())
         insert_rect = self.get_iter_location(insert)
