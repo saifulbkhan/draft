@@ -296,6 +296,7 @@ class DraftTextView(GtkSource.View):
         self._title_entry = builder.get_object('title_entry')
 
         self.connect('event', self._on_event)
+        self.connect('key-press-event', self._on_key_press)
         self._link_editor.connect('closed', self._on_link_editor_closed)
 
         self.cached_char_height = 0
@@ -577,6 +578,26 @@ class DraftTextView(GtkSource.View):
             self._popup_context_menu(event)
             return True
 
+    def _on_key_press(self, widget, event):
+        key = event.keyval
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        modifiers = (event.state & modifiers)
+
+        if modifiers:
+            control_mask = Gdk.ModifierType.CONTROL_MASK
+            shift_mask = Gdk.ModifierType.SHIFT_MASK
+            alt_mask = Gdk.ModifierType.MOD1_MASK
+
+            if ((key == Gdk.KEY_Return
+                    or key == Gdk.KEY_KP_Enter
+                    or key == Gdk.KEY_ISO_Enter)
+                    and modifiers == alt_mask):
+                buffer = self.get_buffer()
+                on_link, start, end = buffer.cursor_is_on_link()
+                if on_link:
+                    self.set_editable(False)
+                    self._popup_link_editor(start, end)
+
     def _popup_context_menu(self, event):
         clipboard = self.get_clipboard(Gdk.SELECTION_CLIPBOARD)
         clipboard.wait_for_text()
@@ -718,6 +739,7 @@ class DraftTextView(GtkSource.View):
         bounds = buffer.obtain_link_bounds(start, end, backward)
         url_iters = bounds.get('url')
         if not url_iters:
+            self.set_editable(True)
             return
 
         url_start, url_end = url_iters
@@ -733,6 +755,8 @@ class DraftTextView(GtkSource.View):
         url_end.backward_char()
         url_string = buffer.get_slice(url_start, url_end, True)
         parts = url_string.split(maxsplit=1)
+        if len(url_string) > 0 and url_string[0] == " ":
+            parts.insert(0, "")
         if len(parts) > 0:
             self._url_entry.set_text(parts[0])
         if len(parts) > 1:
@@ -760,13 +784,8 @@ class DraftTextView(GtkSource.View):
             title = self._title_entry.get_text()
             title = title.strip()
             clear_url_space()
-            if not reflink:
-                if title:
-                    url += ' "' + title + '"'
-            else:
-                url = ' ' + url
-                if title:
-                    url = url + ' ' + title_delimiter + title
+            if title:
+                url += ' "' + title + '"'
             insert_into_url_space(url)
 
         self._url_change_id = self._url_entry.connect('changed', on_url_changed)
@@ -776,6 +795,7 @@ class DraftTextView(GtkSource.View):
     def _on_link_editor_closed(self, widget):
         self._url_entry.disconnect(self._url_change_id)
         self._title_entry.disconnect(self._title_change_id)
+        self.set_editable(True)
 
 
 class DraftTextBuffer(GtkSource.Buffer):
@@ -790,7 +810,7 @@ class DraftTextBuffer(GtkSource.Buffer):
     _ref_link_regex = r'''\n\s+\[[^\]]*?\](:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\s+\n'''
     _link_text_regex = r'''\[[^\]]*?\]'''
     _ref_link_text_regex = r'''\n\s+\[[^\]]*?\]'''
-    _link_url_regex = r'''\([^\)\s]*?(\s("[^"]*?"|'[^']*?'))?\)'''
+    _link_url_regex = r'''\([^\)\s"']*?(\s("[^"]*?"|'[^']*?'))?\)'''
     _ref_link_url_regex = r'''(:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\n'''
 
     def __init__(self):
@@ -898,6 +918,18 @@ class DraftTextBuffer(GtkSource.Buffer):
                         self.remove_tag_by_name(self._unedit_tag_name, start, end)
 
         self.hide_links()
+
+    def cursor_is_on_link(self):
+        insert_mark = self.get_insert()
+        insert = self.get_iter_at_mark(insert_mark)
+
+        for source_mark in self._link_marks:
+            start = self.get_iter_at_mark(source_mark)
+            end = self.get_iter_at_mark(self._link_marks[source_mark])
+            if insert.compare(start) > 0 and insert.compare(end) < 0:
+                return True, start, end
+
+        return False, None, None
 
 
 # TODO: when user presses "Alt+Enter" keys inside the link structure, show
