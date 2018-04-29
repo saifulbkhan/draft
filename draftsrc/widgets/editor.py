@@ -781,7 +781,7 @@ class DraftTextView(GtkSource.View):
         if idx != -1:
             url = url_string[:idx]
             title = url_string[idx+1:-1]
-            self._url_entry.set_text(url)
+            self._url_entry.set_text(url.strip())
             self._title_entry.set_text(title)
         else:
             self._url_entry.set_text(url_string)
@@ -858,7 +858,6 @@ class DraftTextView(GtkSource.View):
 
 class DraftTextBuffer(GtkSource.Buffer):
     _invis_tag_name = "invisible"
-    _unedit_tag_name = "uneditable"
     _link_mark_category = "link"
     _link_marks = {}
     _search_mark = None
@@ -885,9 +884,7 @@ class DraftTextBuffer(GtkSource.Buffer):
         search_settings.set_wrap_around(False)
 
         if not self.get_tag_table().lookup(self._invis_tag_name):
-            self.create_tag(self._invis_tag_name, size=0)
-        if not self.get_tag_table().lookup(self._unedit_tag_name):
-            self.create_tag(self._unedit_tag_name, editable=False)
+            self.create_tag(self._invis_tag_name, size=0, editable=False)
 
     def obtain_link_occurences(self):
         start_iter = self.get_start_iter()
@@ -954,7 +951,6 @@ class DraftTextBuffer(GtkSource.Buffer):
             found, text_start, text_end, wrapped = self._search_context.forward2(search_iter)
             if found:
                 self.apply_tag_by_name(self._invis_tag_name, text_end, end)
-                self.apply_tag_by_name(self._unedit_tag_name, text_end, end)
 
             start_mark = self.create_source_mark(None,
                                                  self._link_mark_category,
@@ -975,12 +971,10 @@ class DraftTextBuffer(GtkSource.Buffer):
                 end_mark = self.get_source_marks_at_iter(end, self._link_mark_category)[0]
                 if not self._link_marks[start_mark] == end_mark:
                     self.remove_tag_by_name(self._invis_tag_name, start, end)
-                    self.remove_tag_by_name(self._unedit_tag_name, start, end)
                 else:
                     bounds = self.obtain_link_bounds(start, end)
                     if not bounds.get('text') or not bounds.get('url'):
                         self.remove_tag_by_name(self._invis_tag_name, start, end)
-                        self.remove_tag_by_name(self._unedit_tag_name, start, end)
                     else:
                         # check if backslash inactivated
                         # move forward (left gravity source mark)
@@ -988,7 +982,6 @@ class DraftTextBuffer(GtkSource.Buffer):
                         backiter.forward_char()
                         if self.get_slice(backiter, start, True) == '\\':
                             self.remove_tag_by_name(self._invis_tag_name, start, end)
-                            self.remove_tag_by_name(self._unedit_tag_name, start, end)
 
         self.hide_links()
 
