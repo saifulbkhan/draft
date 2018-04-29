@@ -607,7 +607,7 @@ class DraftTextView(GtkSource.View):
             if ((key == Gdk.KEY_Return
                     or key == Gdk.KEY_KP_Enter
                     or key == Gdk.KEY_ISO_Enter)
-                    and modifiers == alt_mask):
+                    and modifiers == control_mask):
                 buffer = self.get_buffer()
                 on_link, start, end = buffer.cursor_is_on_link()
                 if on_link:
@@ -850,7 +850,7 @@ class DraftTextView(GtkSource.View):
             y2 += end_rect.height
             if ((x > x1 and x < x2) and
                     (y > y1 - start_rect.height and y < y2 + end_rect.height)):
-                tooltip.set_markup(_("Press <b>Alt</b> + <b>Enter</b> to Edit Link"))
+                tooltip.set_markup(_("<b>Ctrl+Enter</b> to Edit Link"))
                 return True
 
         return False
