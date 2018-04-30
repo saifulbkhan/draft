@@ -14,6 +14,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import cairo
+from math import pi as PI
 from collections import OrderedDict
 from gettext import gettext as _
 from string import whitespace
@@ -279,6 +281,8 @@ class DraftTextView(GtkSource.View):
     _context_menu = None
     _url_change_id = None
     _title_change_id = None
+    _hint_label = ""
+    _hint_label_margin = 12
     scroll_duration = 150
 
     def __repr__(self):
@@ -294,10 +298,20 @@ class DraftTextView(GtkSource.View):
         self._link_editor.set_relative_to(self)
         self._url_entry = builder.get_object('url_entry')
         self._title_entry = builder.get_object('title_entry')
+        self._hint_window = builder.get_object('hint_window')
+
+        screen = self._hint_window.get_screen()
+        visual = screen.get_rgba_visual()
+        if visual is not None and screen.is_composited():
+            self._hint_window.set_visual(visual)
+        self._hint_window.set_app_paintable(True)
 
         self.connect('event', self._on_event)
         self.connect('key-press-event', self._on_key_press)
+        self.connect('focus-in-event', self._on_focus_in)
+        self.connect('focus-out-event', self._on_focus_out)
         self._link_editor.connect('closed', self._on_link_editor_closed)
+        self._hint_window.connect('draw', self._on_hint_window_draw)
 
         self.cached_char_height = 0
         self.cached_char_width = 0
@@ -554,6 +568,8 @@ class DraftTextView(GtkSource.View):
                     buffer.place_cursor(link_end)
                 else:
                     buffer.place_cursor(link_start)
+
+        self._show_hint_window()
 
     def do_backspace(self):
         buffer = self.get_buffer()
@@ -831,29 +847,89 @@ class DraftTextView(GtkSource.View):
         self._title_entry.disconnect(self._title_change_id)
         self.set_editable(True)
 
-    def do_query_tooltip(self, x, y, keyboard_mode, tooltip):
-        if self._link_editor.get_visible():
-            return False
-
+    def _show_hint_window(self):
         buffer = self.get_buffer()
-
         on_link, start, end = buffer.cursor_is_on_link()
         if on_link:
-            start_rect = self.get_iter_location(start)
-            end_rect = self.get_iter_location(end)
-            x1, y1 = self.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
-                                                  start_rect.x,
-                                                  start_rect.y)
-            x2, y2 = self.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
-                                                  end_rect.x,
-                                                  end_rect.y)
-            y2 += end_rect.height
-            if ((x > x1 and x < x2) and
-                    (y > y1 - start_rect.height and y < y2 + end_rect.height)):
-                tooltip.set_markup(_("<b>Ctrl+Enter</b> to Edit Link"))
-                return True
+            self._hint_label = _("Ctrl+Enter to Edit Link")
+            self._hint_window.set_visible(True)
+            insert = buffer.get_iter_at_mark(buffer.get_insert())
+            rect = self.get_iter_location(insert)
+            x, y = self.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
+                                                rect.x,
+                                                rect.y)
 
-        return False
+            toplevel = self.get_toplevel()
+            res = self.translate_coordinates(toplevel, x, y)
+            if res:
+                x, y = res
+
+            window = toplevel.get_window()
+            off_x, off_y = window.get_position()
+
+            alloc = self._hint_window.get_allocation()
+            width_offset = (alloc.width / 2) - (self._hint_label_margin * 2)
+            height_offset = rect.height
+
+            self._hint_window.move(x + off_x - width_offset,
+                                   y + off_y + height_offset)
+        else:
+            self._hint_window.set_visible(False)
+
+    def _on_hint_window_draw(self, widget, ctx):
+        style_ctx = self._hint_window.get_style_context()
+        font = style_ctx.get_font(style_ctx.get_state())
+        border_success, border_color = style_ctx.lookup_color('borders')
+        bg_success, bg_color = style_ctx.lookup_color('theme_bg_color')
+        fg_success, fg_color = style_ctx.lookup_color('theme_fg_color')
+
+        font_size = int((font.get_size() / Pango.SCALE) * 96 / 72)
+        ctx.set_font_size(font_size)
+        font_family = font.get_family()
+        ctx.select_font_face(font_family,
+                             cairo.FontSlant.NORMAL,
+                             cairo.FontWeight.NORMAL)
+        offset = self._hint_label_margin * 96 / 72
+        text = self._hint_label
+        extents = ctx.text_extents(text)
+
+        ctx.set_source_rgb(border_color.red,
+                           border_color.green,
+                           border_color.blue)
+        self._draw_rounded_rectangle(ctx, 0, 0,
+                                     extents.width + (offset * 2),
+                                     extents.height + (offset * 2),
+                                     3)
+        ctx.clip()
+        ctx.paint()
+
+        ctx.set_source_rgb(bg_color.red, bg_color.green, bg_color.blue)
+        self._draw_rounded_rectangle(ctx, 1, 1,
+                                     extents.width + (offset * 2) - 2,
+                                     extents.height + (offset * 2) - 2,
+                                     2)
+        ctx.fill()
+
+        ctx.set_source_rgb(fg_color.red, fg_color.green, fg_color.blue)
+        ctx.move_to(offset, offset + extents.height - 1)
+        ctx.show_text(text)
+
+    @staticmethod
+    def _draw_rounded_rectangle(ctx, x, y, width, height, radius):
+        degrees = PI / 180.0
+
+        ctx.new_sub_path()
+        ctx.arc(x + width - radius, y + radius, radius, -90 * degrees, 0 * degrees)
+        ctx.arc(x + width - radius, y + height - radius, radius, 0 * degrees, 90 * degrees)
+        ctx.arc(x + radius, y + height - radius, radius, 90 * degrees, 180 * degrees)
+        ctx.arc(x + radius, y + radius, radius, 180 * degrees, 270 * degrees)
+        ctx.close_path()
+
+    def _on_focus_in(self, widget, cb_data):
+        self._show_hint_window()
+
+    def _on_focus_out(self, widget, cb_data):
+        self._hint_window.set_visible(False)
 
 
 class DraftTextBuffer(GtkSource.Buffer):
