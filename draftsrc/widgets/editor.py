@@ -295,10 +295,16 @@ class DraftTextView(GtkSource.View):
         builder.add_from_resource('/org/gnome/Draft/editor.ui')
 
         self._link_editor = builder.get_object('link_editor')
-        self._link_editor.set_relative_to(self)
         self._url_entry = builder.get_object('url_entry')
         self._title_entry = builder.get_object('title_entry')
+        self._img_editor = builder.get_object('img_editor')
+        self._img_url_entry = builder.get_object('img_url_entry')
+        self._img_title_entry = builder.get_object('img_title_entry')
+        self._browse_images_button = builder.get_object('browse_images_button')
         self._hint_window = builder.get_object('hint_window')
+
+        self._link_editor.set_relative_to(self)
+        self._img_editor.set_relative_to(self)
 
         screen = self._hint_window.get_screen()
         visual = screen.get_rgba_visual()
@@ -311,6 +317,8 @@ class DraftTextView(GtkSource.View):
         self.connect('focus-in-event', self._on_focus_in)
         self.connect('focus-out-event', self._on_focus_out)
         self._link_editor.connect('closed', self._on_link_editor_closed)
+        self._img_editor.connect('closed', self._on_link_editor_closed)
+        self._browse_images_button.connect('clicked', self._on_browse_images)
         self._hint_window.connect('draw', self._on_hint_window_draw)
 
         self.cached_char_height = 0
@@ -625,10 +633,10 @@ class DraftTextView(GtkSource.View):
                     or key == Gdk.KEY_ISO_Enter)
                     and modifiers == control_mask):
                 buffer = self.get_buffer()
-                on_link, start, end = buffer.cursor_is_on_link()
+                on_link, is_image, start, end = buffer.cursor_is_on_link()
                 if on_link:
                     self.set_editable(False)
-                    self._popup_link_editor(start, end)
+                    self._popup_link_editor(start, end, is_image)
 
     def _popup_context_menu(self, event):
         clipboard = self.get_clipboard(Gdk.SELECTION_CLIPBOARD)
@@ -766,7 +774,7 @@ class DraftTextView(GtkSource.View):
         self._context_menu.set_position(Gtk.PositionType.BOTTOM)
         self._context_menu.popup()
 
-    def _popup_link_editor(self, start, end, backward=False):
+    def _popup_link_editor(self, start, end, is_image=False, backward=False):
         buffer = self.get_buffer()
         bounds = buffer.obtain_link_bounds(start, end, backward)
         url_iters = bounds.get('url')
@@ -778,8 +786,16 @@ class DraftTextView(GtkSource.View):
         url_mark_start = buffer.create_mark(None, url_start, False)
         url_mark_end = buffer.create_mark(None, url_end, False)
 
-        self._url_entry.set_text("")
-        self._title_entry.set_text("")
+        link_editor = self._link_editor
+        url_entry = self._url_entry
+        title_entry = self._title_entry
+        if is_image:
+            link_editor = self._img_editor
+            url_entry = self._img_url_entry
+            title_entry = self._img_title_entry
+
+        url_entry.set_text("")
+        title_entry.set_text("")
 
         title_delimiter = ""
         # make iterators enter within brackets
@@ -797,10 +813,10 @@ class DraftTextView(GtkSource.View):
         if idx != -1:
             url = url_string[:idx]
             title = url_string[idx+1:-1]
-            self._url_entry.set_text(url.strip())
-            self._title_entry.set_text(title)
+            url_entry.set_text(url.strip())
+            title_entry.set_text(title)
         else:
-            self._url_entry.set_text(url_string)
+            url_entry.set_text(url_string)
 
         def clear_url_space():
             start = buffer.get_iter_at_mark(url_mark_start)
@@ -815,9 +831,9 @@ class DraftTextView(GtkSource.View):
             buffer.insert(start, string)
 
         def on_url_changed(widget, user_data=None):
-            url = self._url_entry.get_text()
+            url = url_entry.get_text()
             url = url.strip()
-            title = self._title_entry.get_text()
+            title = title_entry.get_text()
             title = title.strip()
             clear_url_space()
             if title:
@@ -825,12 +841,12 @@ class DraftTextView(GtkSource.View):
             insert_into_url_space(url)
 
         def on_activated(widget, user_data=None):
-            self._link_editor.popdown()
+            link_editor.popdown()
 
-        self._url_change_id = self._url_entry.connect('changed', on_url_changed)
-        self._title_change_id = self._title_entry.connect('changed', on_url_changed)
-        self._url_entry.connect('activate', on_activated)
-        self._title_entry.connect('activate', on_activated)
+        self._url_change_id = url_entry.connect('changed', on_url_changed)
+        self._title_change_id = title_entry.connect('changed', on_url_changed)
+        url_entry.connect('activate', on_activated)
+        title_entry.connect('activate', on_activated)
 
         insert = buffer.get_iter_at_mark(buffer.get_insert())
         insert_rect = self.get_iter_location(insert)
@@ -838,20 +854,67 @@ class DraftTextView(GtkSource.View):
                                             insert_rect.x,
                                             insert_rect.y)
         insert_rect.x, insert_rect.y = x, y
-        self._link_editor.set_pointing_to(insert_rect)
+        link_editor.set_pointing_to(insert_rect)
 
-        self._link_editor.popup()
+        link_editor.popup()
 
     def _on_link_editor_closed(self, widget):
-        self._url_entry.disconnect(self._url_change_id)
-        self._title_entry.disconnect(self._title_change_id)
+        url_entry = self._url_entry
+        title_entry = self._title_entry
+        if widget == self._img_editor:
+            url_entry = self._img_url_entry
+            title_entry = self._img_title_entry
+        url_entry.disconnect(self._url_change_id)
+        title_entry.disconnect(self._title_change_id)
         self.set_editable(True)
+
+    def _on_browse_images(self, widget):
+        builder = Gtk.Builder()
+        builder.add_from_resource('/org/gnome/Draft/editor.ui')
+        image_chooser_dialog = builder.get_object('image_chooser_dialog')
+        cancel_browse_button = builder.get_object('cancel_browse_button')
+        open_image_button = builder.get_object('open_image_button')
+
+        def on_cancel_browse(widget):
+            image_chooser_dialog.response(Gtk.ResponseType.DELETE_EVENT)
+
+        def on_open_image(widget):
+            image_chooser_dialog.response(Gtk.ResponseType.ACCEPT)
+
+        def on_dialog_selection_changed(widget):
+            uri = image_chooser_dialog.get_uri()
+            if uri is None:
+                open_image_button.set_sensitive(False)
+            else:
+                open_image_button.set_sensitive(True)
+
+        cancel_browse_button.connect('clicked', on_cancel_browse)
+        open_image_button.connect('clicked', on_open_image)
+        image_chooser_dialog.connect('selection-changed',
+                                     on_dialog_selection_changed)
+        image_chooser_dialog.connect('file-activated', on_open_image)
+
+        image_chooser_dialog.set_transient_for(self.get_toplevel())
+        response = image_chooser_dialog.run()
+        if response == Gtk.ResponseType.ACCEPT:
+            f = image_chooser_dialog.get_file()
+            if f:
+                self._img_url_entry.set_text(f.get_uri())
+                name = f.get_basename()
+                dot = name.rfind('.')
+                if dot != -1:
+                    name = name[:dot]
+                self._img_title_entry.set_text(name)
+
+        image_chooser_dialog.destroy()
 
     def _show_hint_window(self):
         buffer = self.get_buffer()
-        on_link, start, end = buffer.cursor_is_on_link()
+        on_link, is_image, start, end = buffer.cursor_is_on_link()
         if on_link:
             self._hint_label = _("Ctrl+Enter to Edit Link")
+            if is_image:
+                self._hint_label = _("Ctrl+Enter to Edit Image")
             self._hint_window.set_visible(True)
             insert = buffer.get_iter_at_mark(buffer.get_insert())
             rect = self.get_iter_location(insert)
@@ -1069,6 +1132,12 @@ class DraftTextBuffer(GtkSource.Buffer):
             start = self.get_iter_at_mark(source_mark)
             end = self.get_iter_at_mark(self._link_marks[source_mark])
             if insert.compare(start) > 0 and insert.compare(end) < 0:
-                return True, start, end
+                # check if is an image link
+                backiter = start.copy()
+                backiter.backward_char()
+                if self.get_slice(backiter, start, True) == '!':
+                    return True, True, start, end
+                else:
+                    return True, False, start, end
 
-        return False, None, None
+        return False, False, None, None
