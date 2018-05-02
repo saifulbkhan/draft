@@ -20,6 +20,12 @@ db_sources = [
   'db/migrations.py'
 ]
 
+editor_sources = [
+  'widgets/editor/__init__.py',
+  'widgets/editor/sourcebuffer.py',
+  'widgets/editor/sourceview.py'
+]
+
 models_sources = [
   'models/grouptreestore.py',
   'models/collectionliststore.py',
@@ -39,7 +45,6 @@ views_sources = [
 ]
 
 widgets_sources = [
-  'widgets/editor.py',
   'widgets/grouptree.py',
   'widgets/__init__.py',
   'widgets/collectionlist.py',
@@ -50,6 +55,7 @@ widgets_sources = [
 
 install_data(app_sources, install_dir: draftsrcdir)
 install_data(db_sources, install_dir: draftsrcdir + '/db')
+install_data(editor_sources, install_dir: draftsrcdir + '/widgets/editor')
 install_data(models_sources, install_dir: draftsrcdir + '/models')
 install_data(parsers_sources, install_dir: draftsrcdir + '/parsers')
 install_data(views_sources, install_dir: draftsrcdir + '/views')
