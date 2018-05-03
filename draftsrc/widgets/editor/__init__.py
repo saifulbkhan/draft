@@ -19,8 +19,9 @@ from string import whitespace
 
 import gi
 gi.require_version('GtkSource', '3.0')
+gi.require_version('GtkSpell', '3.0')
 
-from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, Pango
+from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, GtkSpell
 
 from draftsrc import file
 from draftsrc import db
@@ -51,6 +52,7 @@ class DraftEditor(Gtk.Box):
     _current_file = None
     _open_files = {}
     _load_in_progress = False
+    _spell_checker = GtkSpell.Checker()
 
     def __repr__(self):
         return '<Editor>'
@@ -74,6 +76,11 @@ class DraftEditor(Gtk.Box):
     def _prep_view(self, view):
         self.view = view
         self.view.get_style_context().add_class('draft-editor')
+
+        self._spell_checker.detach()
+        self._spell_checker.set_language('en_US')
+        self._spell_checker.attach(view)
+
         self._prep_buffer()
 
     def _prep_buffer(self, markup='markdown'):
