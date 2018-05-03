@@ -76,6 +76,7 @@ class DraftSourceView(GtkSource.View):
         self.scroll_offset = 0
         self.set_has_tooltip(True)
 
+        # visual margins and offsets
         self.set_visible(True)
         self.set_pixels_above_lines(6)
         self.set_pixels_below_lines(6)
@@ -85,6 +86,14 @@ class DraftSourceView(GtkSource.View):
         self.set_top_margin(10)
         self.scroll_offset = 3
         self.overscroll_num_lines = 3
+
+        # formatting specific options
+        self.set_auto_indent(True)
+        self.set_indent_on_tab(True)
+        self.set_insert_spaces_instead_of_tabs(True)
+        self.set_indent_width(4)
+        self.set_smart_backspace(True)
+        self.set_highlight_current_line(True)
 
         # Variables for scroll animation setup
         self._tick_id = 0
