@@ -73,18 +73,7 @@ class DraftEditor(Gtk.Box):
 
     def _prep_view(self, view):
         self.view = view
-
-        self.view.set_visible(True)
-        self.view.set_pixels_above_lines(6)
-        self.view.set_pixels_below_lines(6)
-        self.view.set_wrap_mode(Gtk.WrapMode.WORD)
-        self.view.set_left_margin(24)
-        self.view.set_right_margin(24)
-        self.view.set_top_margin(10)
-        self.view.scroll_offset = 3
-        self.view.overscroll_num_lines = 3
         self.view.get_style_context().add_class('draft-editor')
-
         self._prep_buffer()
 
     def _prep_buffer(self, markup='markdown'):

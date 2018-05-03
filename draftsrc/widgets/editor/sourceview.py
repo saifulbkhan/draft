@@ -76,6 +76,16 @@ class DraftSourceView(GtkSource.View):
         self.scroll_offset = 0
         self.set_has_tooltip(True)
 
+        self.set_visible(True)
+        self.set_pixels_above_lines(6)
+        self.set_pixels_below_lines(6)
+        self.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.set_left_margin(24)
+        self.set_right_margin(24)
+        self.set_top_margin(10)
+        self.scroll_offset = 3
+        self.overscroll_num_lines = 3
+
         # Variables for scroll animation setup
         self._tick_id = 0
         self._source = 0.0
