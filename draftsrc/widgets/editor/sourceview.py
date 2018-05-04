@@ -472,6 +472,8 @@ class DraftSourceView(GtkSource.View):
 
             return False, None, None, None
 
+        suggestions_needed, word, word_start, word_end = spelling_suggestions_needed()
+
         def on_cut(widget):
             self.emit('cut-clipboard')
 
@@ -490,40 +492,61 @@ class DraftSourceView(GtkSource.View):
         def on_redo(widget):
             self.emit('redo')
 
-        suggestions_needed, word, word_start, word_end = spelling_suggestions_needed()
-
-        def on_suggestion_clicked(widget):
+        def on_suggestion_selected(widget):
             label = widget.get_child()
             correct_spelling = label.get_label()
             if word_start and word_end:
-                buffer.replace_text_between(word_start, word_end, correct_spelling)
+                buffer.replace_text_between(word_start,
+                                            word_end,
+                                            correct_spelling)
                 buffer.place_cursor(word_start)
 
+        def on_add_to_dictionary(widget):
+            self._spell_checker.add_to_dictionary(word)
+
+        def on_ignore(widget):
+            self._spell_checker.ignore_word(word)
+
+        menu_items = []
         if suggestions_needed:
             suggestions = self._spell_checker.get_suggestions(word)
             suggestions = suggestions[0:3]
             for suggested in suggestions:
                 suggestion_button = Gtk.ModelButton()
                 suggestion_button.set_label(suggested)
-                suggestion_button.connect('clicked', on_suggestion_clicked)
-                item_box.add(suggestion_button)
-                label = suggestion_button.get_child()
-                label.set_halign(Gtk.Align.START)
+                suggestion_button.connect('clicked', on_suggestion_selected)
+                menu_items.append(suggestion_button)
 
             separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-            item_box.add(separator_0)
+            menu_items.append(separator_0)
+
+            add_to_dictionary_button = Gtk.ModelButton()
+            add_to_dictionary_button.set_label(_("Add “%s” to dictionary") % word)
+            add_to_dictionary_button.connect('clicked', on_add_to_dictionary)
+            menu_items.append(add_to_dictionary_button)
+
+            ignore_button = Gtk.ModelButton()
+            ignore_button.set_label(_("Ignore"))
+            ignore_button.connect('clicked', on_ignore)
+            menu_items.append(ignore_button)
+
+            separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+            menu_items.append(separator_0)
 
         undo_button = Gtk.ModelButton()
         undo_button.set_label(_("Undo"))
         undo_button.connect('clicked', on_undo)
         undo_button.set_sensitive(buffer.can_undo())
+        menu_items.append(undo_button)
 
         redo_button = Gtk.ModelButton()
         redo_button.set_label(_("Redo"))
         redo_button.connect('clicked', on_redo)
         redo_button.set_sensitive(buffer.can_redo())
+        menu_items.append(redo_button)
 
         separator_1 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        menu_items.append(separator_1)
 
         cut_button = Gtk.ModelButton()
         cut_button.set_label(_("Cut"))
@@ -532,34 +555,29 @@ class DraftSourceView(GtkSource.View):
                                  and range_contains_editable_text(sel_start,
                                                                   sel_end,
                                                                   editable))
+        menu_items.append(cut_button)
 
         copy_button = Gtk.ModelButton()
         copy_button.set_label(_("Copy"))
         copy_button.connect('clicked', on_copy)
         copy_button.set_sensitive(have_selection)
+        menu_items.append(copy_button)
 
         paste_button = Gtk.ModelButton()
         paste_button.set_label(_("Paste"))
         paste_button.connect('clicked', on_paste)
         paste_button.set_sensitive(can_insert and can_paste)
+        menu_items.append(paste_button)
 
         separator_2 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        menu_items.append(separator_2)
 
         select_all_button = Gtk.ModelButton()
         select_all_button.set_label(_("Select All"))
         select_all_button.connect('clicked', on_select_all)
         select_all_button.set_sensitive(buffer.get_char_count() > 0)
+        menu_items.append(select_all_button)
 
-        menu_items = [
-            undo_button,
-            redo_button,
-            separator_1,
-            cut_button,
-            copy_button,
-            paste_button,
-            separator_2,
-            select_all_button
-        ]
         for item in menu_items:
             item_box.add(item)
             if isinstance(item, Gtk.Button):
