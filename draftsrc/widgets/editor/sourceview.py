@@ -28,6 +28,7 @@ from draftsrc.widgets.editor.sourcebuffer import DraftSourceBuffer
 class DraftSourceView(GtkSource.View):
     __gtype_name__ = 'DraftSourceView'
 
+    _spell_checker = None
     _context_menu = None
     _url_change_id = None
     _title_change_id = None
@@ -384,7 +385,7 @@ class DraftSourceView(GtkSource.View):
                                or key == Gdk.KEY_MenuPB
                                or key == Gdk.KEY_MenuKB))
         if event.triggers_context_menu() or menu_requested:
-            self._popup_context_menu(event)
+            self._popup_context_menu(event, menu_requested)
             return True
 
     def _on_key_press(self, widget, event):
@@ -407,11 +408,13 @@ class DraftSourceView(GtkSource.View):
                     self.set_editable(False)
                     self._popup_link_editor(start, end, is_image)
 
-    def _popup_context_menu(self, event):
+    def _popup_context_menu(self, event, menu_requested):
         clipboard = self.get_clipboard(Gdk.SELECTION_CLIPBOARD)
         clipboard.wait_for_text()
         target = Gdk.Atom.intern_static_string("TARGETS")
-        clipboard.request_contents(target, self._popup_targets_recieved, event)
+        clipboard.request_contents(target,
+                                   self._popup_targets_recieved,
+                                   (event, menu_requested))
 
     def _popup_targets_recieved(self, clipboard, selection_data, user_data):
         self._context_menu = Gtk.PopoverMenu()
@@ -422,7 +425,7 @@ class DraftSourceView(GtkSource.View):
 
         buffer = self.get_buffer()
         editable = self.get_editable()
-        event = user_data
+        event, key_press_menu_request = user_data
 
         have_selection = False
         sel_start = None
@@ -447,6 +450,28 @@ class DraftSourceView(GtkSource.View):
 
             return False
 
+        def spelling_suggestions_needed():
+            if key_press_menu_request:
+                insert_mark = buffer.get_insert()
+                insert = buffer.get_iter_at_mark(insert_mark)
+                word, word_start, word_end = buffer.get_word_at_iter(insert)
+                if word:
+                    correctly_spelled = self._spell_checker.check_word(word)
+                    if not correctly_spelled:
+                        return True, word, word_end, word_start
+
+                return False, None, None, None
+
+            textiter = self._get_iter_at_event(event)
+            if textiter:
+                word, word_start, word_end = buffer.get_word_at_iter(textiter)
+                if word:
+                    correctly_spelled = self._spell_checker.check_word(word)
+                    if not correctly_spelled:
+                        return True, word, word_start, word_end
+
+            return False, None, None, None
+
         def on_cut(widget):
             self.emit('cut-clipboard')
 
@@ -464,6 +489,29 @@ class DraftSourceView(GtkSource.View):
 
         def on_redo(widget):
             self.emit('redo')
+
+        suggestions_needed, word, word_start, word_end = spelling_suggestions_needed()
+
+        def on_suggestion_clicked(widget):
+            label = widget.get_child()
+            correct_spelling = label.get_label()
+            if word_start and word_end:
+                buffer.replace_text_between(word_start, word_end, correct_spelling)
+                buffer.place_cursor(word_start)
+
+        if suggestions_needed:
+            suggestions = self._spell_checker.get_suggestions(word)
+            suggestions = suggestions[0:3]
+            for suggested in suggestions:
+                suggestion_button = Gtk.ModelButton()
+                suggestion_button.set_label(suggested)
+                suggestion_button.connect('clicked', on_suggestion_clicked)
+                item_box.add(suggestion_button)
+                label = suggestion_button.get_child()
+                label.set_halign(Gtk.Align.START)
+
+            separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+            item_box.add(separator_0)
 
         undo_button = Gtk.ModelButton()
         undo_button.set_label(_("Undo"))
@@ -762,3 +810,12 @@ class DraftSourceView(GtkSource.View):
 
     def _on_focus_out(self, widget, cb_data):
         self._hint_window.set_visible(False)
+
+    def _get_iter_at_event(self, event):
+        _, x, y = event.get_coords()
+        bx, by = self.window_to_buffer_coords(Gtk.TextWindowType.WIDGET, x, y)
+        is_over_text, textiter = self.get_iter_at_location(bx, by)
+        if is_over_text:
+            return textiter
+
+        return None

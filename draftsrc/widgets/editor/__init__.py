@@ -80,6 +80,7 @@ class DraftEditor(Gtk.Box):
         self._spell_checker.detach()
         self._spell_checker.set_language('en_US')
         self._spell_checker.attach(view)
+        view._spell_checker = self._spell_checker
 
         self._prep_buffer()
 

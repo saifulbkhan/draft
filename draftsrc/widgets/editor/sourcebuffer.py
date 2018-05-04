@@ -170,3 +170,30 @@ class DraftSourceBuffer(GtkSource.Buffer):
                     return True, False, start, end
 
         return False, False, None, None
+
+    def get_word_at_iter(self, textiter):
+        start = None
+        end = None
+        if textiter.starts_word():
+            start = textiter
+            end = textiter.copy()
+            end.forward_word_end()
+        elif textiter.ends_word():
+            start = textiter.copy()
+            start.backward_word_start()
+            end = textiter
+        elif textiter.inside_word():
+            start = textiter.copy()
+            end = textiter.copy()
+            start.backward_word_start()
+            end.forward_word_end()
+
+        if start and end:
+            word = self.get_slice(start, end, True)
+            return word, start, end
+
+        return None, start, end
+
+    def replace_text_between(self, start, end, new_text):
+        self.delete(start, end)
+        self.insert(start, new_text)
