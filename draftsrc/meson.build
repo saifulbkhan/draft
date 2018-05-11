@@ -11,6 +11,7 @@ app_sources = [
   'app.py',
   'file.py',
   'search.py',
+  'thesaurus.py',
   'window.py'
 ]
 
