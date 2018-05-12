@@ -345,6 +345,8 @@ LANGUAGES = {
     "na": "Nauru",
     "ne": "Nepali",
     "no": "Norwegian",
+    "nb": "Norwegian Bokmål",
+    "nn": "Norwegian Nynorsk",
     "oc": "Occitan",
     "or": "Oriya",
     "om": "Oromo (Afan, Galla)",
