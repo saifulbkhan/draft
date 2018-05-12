@@ -533,8 +533,6 @@ def get_synonymous_words(word, language_tag):
         for i in range(int(num_senses)):
             synset = dat_file.readline().strip().split('|')
             pos = synset.pop(0)
-            pos = pos.strip('()')
-            pos = pos.split()
             synsets.append((pos, synset))
 
         return synsets
