@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, math
+import os, math, unicodedata
 
 DEFAULT_THESAURUS_PATH = '/usr/share/mythes'
 
@@ -459,6 +459,41 @@ def thes_file_encoding(fpath):
         return f.readline().strip()
 
 
+def normalize_caseless(text):
+    '''Normalize a string using NFKD algorithm and then casefold -- suitable for
+    caseless unicode comparison.'''
+    return unicodedata.normalize("NFKD", text.casefold())
+
+
+def compare_caseless(left, right):
+    '''Compares two strings in case-insensitive and accent-insensitive way.'''
+    assert isinstance(left, str) and isinstance(right, str)
+
+    caseless_left = normalize_caseless(left)
+    caseless_right = normalize_caseless(right)
+
+    if caseless_left == caseless_right:
+        return 0
+    elif caseless_left > caseless_right:
+        return 1
+    elif caseless_left < caseless_right:
+        return -1
+
+    return None
+
+
+def less_than(left, right):
+    return compare_caseless(left, right) < 0
+
+
+def greater_than(left, right):
+    return compare_caseless(left, right) > 0
+
+
+def is_equal(left, right):
+    return compare_caseless(left, right) == 0
+
+
 def byte_offset_for_word(word, index_path):
     '''Returns the byte offset in data file for given word. This involves
     performing a binary search in the index file whose path is provided.'''
@@ -495,14 +530,14 @@ def byte_offset_for_word(word, index_path):
         while left < right:
             middle = math.ceil((left + right) / 2)
             word_at_middle, _ = word_and_byte_at(middle)
-            if word_at_middle > word:
+            if greater_than(word_at_middle, word):
                 right = middle - 1
-            elif word_at_middle <= word:
+            elif less_than(word_at_middle, word) or is_equal(word_at_middle, word):
                 left = middle
 
         # left and right should be same now, can check for either
         final_word, byte_offset = word_and_byte_at(right)
-        if final_word == word:
+        if is_equal(final_word, word):
             return byte_offset
 
         return -1
@@ -526,7 +561,7 @@ def get_synonymous_words(word, language_tag):
     with open(data_file_path, 'r', encoding=encoding) as dat_file:
         dat_file.seek(byte_offset)
         word_at_offset, num_senses = dat_file.readline().strip().split('|', 1)
-        if not word_at_offset == word:
+        if not is_equal(word_at_offset, word):
             return None
 
         synsets = []
