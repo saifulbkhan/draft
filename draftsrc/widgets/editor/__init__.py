@@ -183,6 +183,7 @@ class DraftEditor(Gtk.Box):
         if self._load_in_progress:
             return
 
+        self.util_revealer.set_reveal_child(False)
         self.current_text_data = text_data
         self.emit('text-viewed', self.current_text_data)
 
