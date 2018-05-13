@@ -51,7 +51,8 @@ widgets_sources = [
   'widgets/collectionlist.py',
   'widgets/preview.py',
   'widgets/statusbar.py',
-  'widgets/textlist.py'
+  'widgets/textlist.py',
+  'widgets/thesaurusbox.py'
 ]
 
 install_data(app_sources, install_dir: draftsrcdir)

@@ -20,13 +20,21 @@ from gettext import gettext as _
 import gi
 gi.require_version('GtkSource', '3.0')
 
-from gi.repository import Gtk, GtkSource, Gdk, Pango
+from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango
 
 from draftsrc.widgets.editor.sourcebuffer import DraftSourceBuffer
 
 
 class DraftSourceView(GtkSource.View):
     __gtype_name__ = 'DraftSourceView'
+
+    __gsignals__ = {
+        'thesaurus-requested': (GObject.SignalFlags.RUN_FIRST,
+                                None,
+                                (GObject.TYPE_STRING,
+                                 GObject.TYPE_PYOBJECT,
+                                 GObject.TYPE_PYOBJECT))
+    }
 
     _spell_checker = None
     _context_menu = None
@@ -450,6 +458,19 @@ class DraftSourceView(GtkSource.View):
 
             return False
 
+        def only_one_selected_word():
+            # return True when nothing is selected because cursor would be
+            # within or on the fringes of a word. Whether if its actually on
+            # a word needs to be checked separately
+            if not have_selection:
+                return True
+
+            selected_text = buffer.get_text(sel_start, sel_end, True)
+            if len(selected_text.split()) > 1:
+                return False
+
+            return True
+
         def spelling_suggestions_needed():
             if key_press_menu_request:
                 insert_mark = buffer.get_insert()
@@ -459,6 +480,8 @@ class DraftSourceView(GtkSource.View):
                     correctly_spelled = self._spell_checker.check_word(word)
                     if not correctly_spelled:
                         return True, word, word_end, word_start
+                    else:
+                        return False, word, word_end, word_start
 
                 return False, None, None, None
 
@@ -469,6 +492,8 @@ class DraftSourceView(GtkSource.View):
                     correctly_spelled = self._spell_checker.check_word(word)
                     if not correctly_spelled:
                         return True, word, word_start, word_end
+                    else:
+                        return False, word, word_end, word_start
 
             return False, None, None, None
 
@@ -507,6 +532,9 @@ class DraftSourceView(GtkSource.View):
         def on_ignore(widget):
             self._spell_checker.ignore_word(word)
 
+        def on_reveal_thesaurus(widget):
+            self.emit('thesaurus-requested', word, word_start, word_end)
+
         menu_items = []
         if suggestions_needed:
             suggestions = self._spell_checker.get_suggestions(word)
@@ -529,6 +557,15 @@ class DraftSourceView(GtkSource.View):
             ignore_button.set_label(_("Ignore"))
             ignore_button.connect('clicked', on_ignore)
             menu_items.append(ignore_button)
+
+            separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+            menu_items.append(separator_0)
+        elif word and only_one_selected_word():
+            # if spelt correctly provide option to look for synonyms
+            reveal_thesaurus_button = Gtk.ModelButton()
+            reveal_thesaurus_button.set_label(_("Find synonyms for “%s”") % word)
+            reveal_thesaurus_button.connect('clicked', on_reveal_thesaurus)
+            menu_items.append(reveal_thesaurus_button)
 
             separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
             menu_items.append(separator_0)

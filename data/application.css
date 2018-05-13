@@ -189,3 +189,22 @@ radiobutton > radio {
     margin-right: 8px;
     margin-left: 0px;
 }
+
+.draft-synbox {
+    margin: 12px;
+}
+
+.draft-synonym {
+    padding: 4px 6px;
+    border: 1px solid @borders;
+    border-radius: 3px;
+}
+
+.draft-synonym:selected {
+    background-color: @theme_selected_bg_color;
+    border: 1px solid @theme_selected_bg_color;
+}
+
+.draft-thesaurus-box {
+    border-bottom: 1px solid @borders;
+}

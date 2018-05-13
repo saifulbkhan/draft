@@ -26,6 +26,7 @@ from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, GtkSpell
 from draftsrc import file
 from draftsrc import db
 from draftsrc.widgets.statusbar import DraftStatusbar
+from draftsrc.widgets.thesaurusbox import DraftThesaurusBox
 from draftsrc.widgets.editor.sourceview import DraftSourceView
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
@@ -53,6 +54,7 @@ class DraftEditor(Gtk.Box):
     _open_files = {}
     _load_in_progress = False
     _spell_checker = GtkSpell.Checker()
+    _synonym_word_bounds = ()
 
     def __repr__(self):
         return '<Editor>'
@@ -64,6 +66,12 @@ class DraftEditor(Gtk.Box):
         self._set_up_widgets()
 
     def _set_up_widgets(self):
+        self.util_revealer = Gtk.Revealer()
+        self.pack_start(self.util_revealer, False, False, 0)
+
+        self.thesaurus_box = DraftThesaurusBox()
+        self.util_revealer.add(self.thesaurus_box)
+
         self.editor_stack = Gtk.Stack()
         self.pack_start(self.editor_stack, True, True, 0)
 
@@ -71,6 +79,8 @@ class DraftEditor(Gtk.Box):
         self.pack_start(self.statusbar, False, False, 0)
 
         self.statusbar.connect('word-goal-set', self._on_word_goal_set)
+        self.thesaurus_box.connect('cancel-synonym', self._on_cancel_synonym)
+        self.thesaurus_box.connect('apply-synonym', self._on_apply_synonym)
         self.connect('key-press-event', self._on_key_press)
 
     def _prep_view(self, view):
@@ -81,6 +91,7 @@ class DraftEditor(Gtk.Box):
         self._spell_checker.set_language('en_US')
         self._spell_checker.attach(view)
         view._spell_checker = self._spell_checker
+        view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
         self._prep_buffer()
 
@@ -117,6 +128,23 @@ class DraftEditor(Gtk.Box):
         self._set_insert_offset(buffer)
         self._set_last_modified()
         self.emit('view-changed', self.current_text_data)
+
+    def _on_thesaurus_requested(self, widget, word, word_start, word_end):
+        self._synonym_word_bounds = (word_start, word_end)
+        self.util_revealer.set_reveal_child(True)
+        self.thesaurus_box.update_for_word(word)
+
+    def _on_cancel_synonym(self, widget):
+        self.util_revealer.set_reveal_child(False)
+        self.view.grab_focus()
+
+    def _on_apply_synonym(self, widget, word):
+        start, end = self._synonym_word_bounds
+        buffer = self.view.get_buffer()
+        buffer.delete(start, end)
+        buffer.insert(start, word)
+        self.util_revealer.set_reveal_child(False)
+        self.view.grab_focus()
 
     def get_text(self):
         buffer = self.view.get_buffer()
