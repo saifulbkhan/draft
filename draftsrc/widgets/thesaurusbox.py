@@ -91,10 +91,16 @@ class DraftThesaurusBox(Gtk.Box):
         for child in children:
             self._synset_box.remove(child)
 
-        self._title_label.set_markup(_("<big><big>Synonyms for <b>“%s”</b></big></big>") % word)
         synsets = thesaurus.get_synonymous_words(word, self._language_tag)
         if synsets is None:
+            self._scrolled.set_visible(False)
+            self._title_label.set_markup(_("<big><big>No synonyms found for <b>“%s”</b></big></big>") % word)
+            self._apply_button.set_visible(False)
             return
+
+        self._scrolled.set_visible(True)
+        self._title_label.set_markup(_("<big><big>Synonyms for <b>“%s”</b></big></big>") % word)
+        self._apply_button.set_visible(True)
 
         for synset in synsets:
             pos, words = synset
