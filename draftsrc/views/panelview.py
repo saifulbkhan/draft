@@ -25,6 +25,7 @@ from draftsrc.widgets.textlist import DraftTextList, DraftResultList
 class DraftLibraryView(Gtk.Bin):
     """A container bounding a GtkTreeView that allows for slider based hiding
     and resizing"""
+    collection_class_selected = None
     _panel_visible = True
     _creation_state = False
 
@@ -129,11 +130,14 @@ class DraftLibraryView(Gtk.Bin):
         self.local_groups_view.selection.unselect_all()
         self.trash_view.selection.unselect_all()
         self.parent_window.textlistview.set_collection_class_type(collection_class_type)
+        self.collection_class_selected = collection_class_type
+        self.parent_window.update_content_view_and_headerbar()
 
     def _on_group_selected(self, widget, group):
         """Handler for `group-selected` signal from DraftsTreeView. Calls on
         TextListView to reload its model with texts from selected group"""
         self.collection_list.selection.unselect_all()
+        self.collection_class_selected = None
 
         if widget == self.local_groups_view:
             self.trash_view.selection.unselect_all()
@@ -544,6 +548,9 @@ class DraftTextListView(Gtk.Bin):
     def delete_all_texts_permanently(self):
         # warning: assuming the user has been already informed by library view.
         self.view.delete_all_rows_permanently()
+
+    def get_num_items(self):
+        return self.view.get_num_items()
 
     def _on_text_moved_to_group(self, widget, group_id):
         self.parent_window.libraryview.selection_request(group_id)

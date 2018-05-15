@@ -18,6 +18,7 @@ from gettext import gettext as _
 
 from draftsrc.views.panelview import DraftTextListView, DraftLibraryView
 from draftsrc.views.contentview import ContentView
+from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.parsers.markup import MarkdownSymbols
 
 
@@ -215,12 +216,27 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.set_content_title("")
             self.hide_headerbar_elements()
             self.hide_library_panel()
-            self.lock_text_panel = True
+            self.lock_library_panel = True
             self.hide_text_panel()
             self.lock_text_panel = True
+        elif self.libraryview.collection_class_selected:
+            if (self.libraryview.collection_class_selected == CollectionClassType.RECENT
+                    and self.textlistview.get_num_items() == 0):
+                self.set_content_title("")
+                self.contentview.set_empty_recent_state()
+                self.show_headerbar_elements(disallow_creation=True)
+                self.partial_headerbar_interaction()
+                self.hide_text_panel()
+                self.lock_text_panel = True
+            else:
+                self.show_headerbar_elements(disallow_creation=True)
+                self.complete_headerbar_interaction()
+                self.lock_text_panel = False
+                self.reveal_text_panel()
+                self.contentview.set_last_content_state()
         elif self.libraryview.selected_group_has_no_texts():
             if self.libraryview.selected_group_is_in_trash():
-                self.show_headerbar_elements(in_trash=True)
+                self.show_headerbar_elements(disallow_creation=True)
                 if self.libraryview.trash_is_empty():
                     self.contentview.set_empty_trash_state()
                 elif (self.libraryview.trash_has_no_texts() and
@@ -229,7 +245,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
                 else:
                     self.contentview.set_empty_trashed_group_state()
             else:
-                self.show_headerbar_elements(in_trash=False)
+                self.show_headerbar_elements()
                 self.contentview.set_empty_group_state()
 
             if self.textlistview.search_mode_is_on():
@@ -241,12 +257,13 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.lock_text_panel = True
         else:
             if self.libraryview.selected_group_is_in_trash():
-                self.show_headerbar_elements(in_trash=True)
+                self.show_headerbar_elements(disallow_creation=True)
+                self.partial_headerbar_interaction()
             else:
-                self.show_headerbar_elements(in_trash=False)
+                self.show_headerbar_elements()
+                self.complete_headerbar_interaction()
 
             self.contentview.set_last_content_state()
-            self.complete_headerbar_interaction()
             self.lock_library_panel = False
             self.lock_text_panel = False
             self.reveal_text_panel()
@@ -255,18 +272,20 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         headerbar = self.get_titlebar()
         headerbar.set_elements_visible(False)
 
-    def show_headerbar_elements(self, in_trash=False):
+    def show_headerbar_elements(self, disallow_creation=False):
         headerbar = self.get_titlebar()
-        new_text_button_visible = not in_trash
+        new_text_button_visible = not disallow_creation
         headerbar.set_elements_visible(True, new_text_button_visible)
 
     def partial_headerbar_interaction(self):
         headerbar = self.get_titlebar()
         headerbar.set_preview_button_sensitive(False)
+        headerbar.set_markup_button_sensitive(False)
 
     def complete_headerbar_interaction(self):
         headerbar = self.get_titlebar()
         headerbar.set_preview_button_sensitive(True)
+        headerbar.set_markup_button_sensitive(True)
 
     def search_button_active(self, active):
         headerbar = self.get_titlebar()
@@ -484,6 +503,9 @@ class _DraftHeaderBar(Gtk.Box):
 
     def set_preview_button_sensitive(self, sensitive):
         self._preview_button.set_sensitive(sensitive)
+
+    def set_markup_button_sensitive(self, sensitive):
+        self._markup_button.set_sensitive(sensitive)
 
     def set_search_button_active(self, active):
         self._search_button.set_active(active)

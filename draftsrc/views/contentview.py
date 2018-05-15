@@ -89,6 +89,15 @@ class ContentView(Gtk.Bin):
                 self._last_content_state = current_state
             self.content_stack.set_visible_child_name('empty')
 
+    def set_empty_recent_state(self):
+        self.empty_state.update_labels(empty_recent=True)
+
+        if self.content_stack.get_visible_child_name() != 'empty':
+            current_state = self.content_stack.get_visible_child_name()
+            if current_state in ['editor', 'preview']:
+                self._last_content_state = current_state
+            self.content_stack.set_visible_child_name('empty')
+
     def set_empty_trashed_group_state(self):
         self.empty_trash_state.update_labels()
 
@@ -141,17 +150,25 @@ class _DraftEmptyView(Gtk.Bin):
 
         self.title_label = self._builder.get_object('title_label')
         self.info_label = self._builder.get_object('info_label')
-        new_group_button = self._builder.get_object('new_group_button')
-        new_text_button = self._builder.get_object('new_text_button')
+        self.new_group_button = self._builder.get_object('new_group_button')
+        self.new_text_button = self._builder.get_object('new_text_button')
 
         self.add(util_box)
 
-    def update_labels(self, empty_collection=False):
+    def update_labels(self, empty_collection=False, empty_recent=False):
+        self.new_group_button.set_visible(True)
+        self.new_text_button.set_visible(True)
+
         title_text = _("No Texts in this Group")
         info_text = _("Create a subgroup or add a text and start writing")
         if empty_collection:
             title_text = _("Collection is empty")
             info_text = _("Create a group to organize your work or create a text to start writing")
+        elif empty_recent:
+            self.new_group_button.set_visible(False)
+            self.new_text_button.set_visible(False)
+            title_text = _("Nothing here yet")
+            info_text = _("No recently edited texts were found")
 
         self.title_label.set_label(title_text)
         self.info_label.set_label(info_text)

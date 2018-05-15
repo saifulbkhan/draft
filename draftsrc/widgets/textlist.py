@@ -324,6 +324,11 @@ class DraftBaseList(Gtk.ListBox):
     def text_view_selection_is_in_progress(self):
         return self._text_view_selection_in_progress
 
+    def get_num_items(self):
+        if self._model is not None:
+            return self._model.get_n_items()
+        return 0
+
 
 class DraftTextList(DraftBaseList):
     """The listbox containing all the texts in a text group"""
