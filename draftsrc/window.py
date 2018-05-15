@@ -18,6 +18,7 @@ from gettext import gettext as _
 
 from draftsrc.views.panelview import DraftTextListView, DraftLibraryView
 from draftsrc.views.contentview import ContentView
+from draftsrc.parsers.markup import MarkdownSymbols
 
 
 class ApplicationWindow(Gtk.ApplicationWindow):
@@ -95,6 +96,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self._content_hsize_group.add_widget(self.contentview)
         # TODO: make this switchable, when supporting side-by-side editing
         self.textlistview.set_editor(self.contentview.content_editor)
+        headerbar = self.get_titlebar()
+        headerbar.set_editor(self.contentview.content_editor)
 
     def _new_text_request(self, action, param):
         self.textlistview.new_text_request()
@@ -364,6 +367,8 @@ class _DraftHeaderBar(Gtk.Box):
         'preview-toggled': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
+    _editor = None
+
     def __repr__(self):
         return '<DraftHeaderBar>'
 
@@ -399,6 +404,9 @@ class _DraftHeaderBar(Gtk.Box):
         self._toggle_popup_menu = self._builder.get_object('toggle_panel_popup')
         self._toggle_popup_menu.connect('closed', self._on_toggle_popup_closed)
 
+        self._cheatsheet_popover = self._builder.get_object('cheatsheet_popover')
+        self._cheatsheet_popover.connect('closed', self._on_cheatsheet_popover_closed)
+
         self._text_only_button = self._builder.get_object('texts_only_button')
         self._show_both_button = self._builder.get_object('show_both_button')
         self._hide_both_button = self._builder.get_object('hide_both_button')
@@ -409,6 +417,8 @@ class _DraftHeaderBar(Gtk.Box):
         self._preview_button.connect('toggled', self._on_preview_toggled)
         self._new_button = self._builder.get_object('new_button')
         self._content_title_label = self._builder.get_object('content_title_label')
+        self._markup_button = self._builder.get_object('markup_button')
+        self._markup_button.connect('clicked', self._on_request_markup_cheatsheet)
 
         self._library_buttons = self._builder.get_object('library_buttons')
         self._content_button_box = self._builder.get_object('content_button_box')
@@ -458,6 +468,12 @@ class _DraftHeaderBar(Gtk.Box):
 
     def _on_preview_toggled(self, widget):
         self.emit('preview-toggled')
+
+    def _on_request_markup_cheatsheet(self, widget):
+        self._cheatsheet_popover.popup()
+
+    def _on_cheatsheet_popover_closed(self, widget):
+        self._markup_button.set_active(False)
 
     def set_elements_visible(self, visible, new_button_visible=True):
         self._toggle_panel_button.set_visible(visible)
@@ -563,3 +579,71 @@ class _DraftHeaderBar(Gtk.Box):
 
         if not alt_set:
             alt_header.props.decoration_layout = tokens[0]
+
+    def set_editor(self, editor):
+        self._editor = editor
+        self.populate_cheatsheet()
+
+    def populate_cheatsheet(self, markup_type='markdown'):
+        entries = []
+
+        # these lists could be automated, but each markup would have its
+        # own quirks and support different types of formatting, therefore
+        # it makes sense to build one exclusive for each type.
+        if markup_type == 'markdown':
+            entries= [
+                ('<span fgalpha="75%"><b><i>#</i></b></span> Heading 1', 'h1'),
+                ('<span fgalpha="75%"><b><i>##</i></b></span> Heading 2', 'h2'),
+                ('<span fgalpha="75%"><b><i>###</i></b></span> Heading 3', 'h3'),
+                ('<span fgalpha="75%"><b><i>####</i></b></span> Heading 4', 'h4'),
+                ('<span fgalpha="75%"><b><i>#####</i></b></span> Heading 5', 'h5'),
+                ('<span fgalpha="75%"><b><i>######</i></b></span> Heading 6', 'h6'),
+                'sep',
+                ('<span fgalpha="75%"><b>---</b></span> Divider', 'divider'),
+                'sep',
+                ('<span fgalpha="75%"><b>**</b></span>Strong<span fgalpha="75%"><b>**</b></span>', 'strong'),
+                ('<span fgalpha="75%"><b>*</b></span>Emphasis<span fgalpha="75%"><b>*</b></span>', 'emphasis'),
+                'sep',
+                ('<span fgalpha="75%"><b>1.</b></span> Ordered List', 'ordered_list'),
+                ('<span fgalpha="75%"><b>-</b></span> Unordered List', 'unordered_list'),
+                ('<span fgalpha="75%"><b>&gt;</b></span> Block Quote', 'block_quote'),
+                'sep',
+                ('<span fgalpha="75%"><b>[</b></span>Link<span fgalpha="75%"><b>]</b></span>', 'link'),
+                ('<span fgalpha="75%"><b>![</b></span>Image<span fgalpha="75%"><b>]</b></span>', 'image'),
+                ('<span fgalpha="75%"><b>[^</b></span>Footnote<span fgalpha="75%"><b>]</b></span>', 'footnote'),
+                'sep',
+                ('<span fgalpha="75%"><b>`</b></span>Code<span fgalpha="75%"><b>`</b></span>', 'code'),
+                ('<span fgalpha="75%"><b>```</b></span>Code Block<span fgalpha="75%"><b>```</b></span>', 'code_block')
+            ]
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        for i, entry in enumerate(entries):
+            if entry != 'sep':
+                model_button = Gtk.ModelButton(entry[0])
+                model_button.connect('clicked',
+                                     self._editor.handle_generic_insert,
+                                     entry[1])
+                if not i+1 >= len(entries) and entries[i+1] == 'sep':
+                    model_button.set_margin_bottom(12)
+                box.add(model_button)
+
+        # FIXME: move this to stylesheets when restyling all popovers.
+        box.set_size_request(160, -1)
+        box.set_margin_top(12)
+        box.set_margin_bottom(12)
+        box.set_margin_left(12)
+        box.set_margin_right(12)
+        self._cheatsheet_popover.add(box)
+
+        # make cheatsheet buttons use markup enabled GtkLabels
+        for button in box.get_children():
+            label = button.get_child()
+            label.set_halign(Gtk.Align.START)
+            label.set_use_markup(True)
+
+        title_label = Gtk.Label(_("Insert Markup"))
+        title_label.set_margin_bottom(12)
+        title_label.get_style_context().add_class('draft-menu-title')
+        box.add(title_label)
+        box.reorder_child(title_label, 0)
+        box.show_all()

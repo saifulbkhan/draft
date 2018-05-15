@@ -25,6 +25,7 @@ from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, GtkSpell
 
 from draftsrc import file
 from draftsrc import db
+from draftsrc.parsers.markup import MarkdownSymbols
 from draftsrc.widgets.statusbar import DraftStatusbar
 from draftsrc.widgets.thesaurusbox import DraftThesaurusBox
 from draftsrc.widgets.editor.sourceview import DraftSourceView
@@ -55,6 +56,7 @@ class DraftEditor(Gtk.Box):
     _load_in_progress = False
     _spell_checker = GtkSpell.Checker()
     _synonym_word_bounds = ()
+    _markup_symbols = None
 
     def __repr__(self):
         return '<Editor>'
@@ -110,7 +112,7 @@ class DraftEditor(Gtk.Box):
         if event_and_modifiers:
             if (event.keyval == Gdk.KEY_s
                     and event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
-                pass
+                self.insert_ordered_list()
 
     def _on_word_goal_set(self, widget, goal):
         if self.current_text_data['word_goal'] != goal:
@@ -172,10 +174,14 @@ class DraftEditor(Gtk.Box):
 
     def set_markup(self, markup):
         self.markup_type = markup
+        if markup == 'markdown':
+            self._markup_symbols = MarkdownSymbols()
+
         language_manager = GtkSource.LanguageManager.get_default()
         language = language_manager.get_language(markup)
         buffer = self.view.get_buffer()
         buffer.set_language(language)
+
         if self.current_text_data['markup'] != markup:
             self.emit('markup-changed', markup)
 
@@ -297,3 +303,94 @@ class DraftEditor(Gtk.Box):
             return title, subtitle
 
         return title, None
+
+    def _insert_markup_element(self, text_to_insert, block_level=0, is_list=False):
+        buffer = self.view.get_buffer()
+        insert_mark = buffer.get_insert()
+        insert = buffer.get_iter_at_mark(insert_mark)
+
+        if block_level:
+            if buffer.is_on_empty_line(insert) and block_level == 2:
+                buffer.insert(insert, '\n')
+            else:
+                buffer.insert(insert, '\n' * block_level)
+
+        if is_list:
+            # if already on a list item, create a sub-list.
+            on_list_item, para_indentation = buffer.is_on_list_item(insert)
+            if on_list_item:
+                buffer.insert(insert, ' ' * para_indentation)
+
+        left, right = text_to_insert.split(self._markup_symbols.cursor_string,
+                                           maxsplit=1)
+        chars_back = len(right)
+        buffer.insert(insert, left+right)
+        insert.backward_chars(chars_back)
+        buffer.place_cursor(insert)
+
+    def insert_heading(self, level=1):
+        text_to_insert = getattr(self._markup_symbols, 'h' + str(level))
+        self._insert_markup_element(text_to_insert, block_level=2)
+
+    def insert_divider(self):
+        text_to_insert = self._markup_symbols.divider
+        self._insert_markup_element(text_to_insert, block_level=2)
+
+    def insert_strong(self):
+        text_to_insert = self._markup_symbols.bold
+        self._insert_markup_element(text_to_insert)
+
+    def insert_emphasis(self):
+        text_to_insert = self._markup_symbols.italics
+        self._insert_markup_element(text_to_insert)
+
+    def insert_ordered_list(self):
+        text_to_insert = self._markup_symbols.ordered_list
+        self._insert_markup_element(text_to_insert, block_level=1, is_list=True)
+
+    def insert_unordered_list(self):
+        text_to_insert = self._markup_symbols.unordered_list
+        self._insert_markup_element(text_to_insert, block_level=1, is_list=True)
+
+    def insert_block_quote(self):
+        text_to_insert = self._markup_symbols.block_quote
+        self._insert_markup_element(text_to_insert, block_level=1)
+
+    def insert_link(self):
+        text_to_insert = self._markup_symbols.link
+        self._insert_markup_element(text_to_insert)
+
+    def insert_image(self):
+        text_to_insert = self._markup_symbols.image
+        self._insert_markup_element(text_to_insert, block_level=2)
+
+    def insert_footnote(self):
+        text_to_insert = self._markup_symbols.footnote
+        self._insert_markup_element(text_to_insert)
+
+    def insert_code(self):
+        text_to_insert = self._markup_symbols.code
+        self._insert_markup_element(text_to_insert)
+
+    def insert_code_block(self):
+        text_to_insert = self._markup_symbols.code_block
+        self._insert_markup_element(text_to_insert, block_level=2)
+
+    def handle_generic_insert(self, button, identifier):
+        if identifier == 'h1':
+            self.insert_heading(1)
+        elif identifier == 'h2':
+            self.insert_heading(2)
+        elif identifier == 'h3':
+            self.insert_heading(3)
+        elif identifier == 'h4':
+            self.insert_heading(4)
+        elif identifier == 'h5':
+            self.insert_heading(5)
+        elif identifier == 'h6':
+            self.insert_heading(6)
+        else:
+            insert_fn = getattr(self, 'insert_' + identifier)
+            insert_fn()
+
+        self.view.grab_focus()

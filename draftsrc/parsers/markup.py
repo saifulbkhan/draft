@@ -20,6 +20,32 @@ from draftsrc.parsers.mistune import Markdown, InlineLexer, BlockLexer, Renderer
 from draftsrc.parsers.webstrings import html_string
 
 
+# one class for each markup, storing starting symbols. Every class should have
+# a variable storing the string that notifies cursor position. This string while
+# present in each symbol set, should not itself be inserted into the buffer but
+# is to notify where the cursor should be, for user's ease
+class MarkdownSymbols(object):
+    cursor_string = 'cursor'
+
+    h1 = '# cursor'
+    h2 = '## cursor'
+    h3 = '### cursor'
+    h4 = '#### cursor'
+    h5 = '##### cursor'
+    h6 = '###### cursor'
+    divider = '---\n\ncursor'
+    bold = '**cursor**'
+    italics = '*cursor*'
+    unordered_list = '  - cursor'
+    ordered_list = ' 1. cursor'
+    block_quote = '> cursor'
+    link = '[cursor]()'
+    image = '![cursor]()'
+    footnote = '[^cursor]'
+    code = '`cursor`'
+    code_block = '```\ncursor\n```'
+
+
 class MathBlockLexer(BlockLexer):
     def __init__(self):
         super(MathBlockLexer, self).__init__()

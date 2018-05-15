@@ -31,9 +31,13 @@ class DraftSourceBuffer(GtkSource.Buffer):
     _link_regex = r'''\[((?:\[[^^\]]*\]|[^\[\]]|(?=[^\[]*\]))*)\]\([^\)"']*?(\s("[^"]*?"|'[^']*?'))?\)'''
     _link_text_regex = r'''\[((?:\[[^^\]]*\]|[^\[\]]|(?=[^\[]*\]))*)\]'''
     _link_url_regex = r'''\([^\)"']*?(\s("[^"]*?"|'[^']*?'))?\)'''
+
     _ref_link_regex = r'''\n\s+\[[^\]]*?\](:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\s+\n'''
     _ref_link_text_regex = r'''\n\s+\[[^\]]*?\]'''
     _ref_link_url_regex = r'''(:\s+)(<[^\s<>\(\)\[\]]+>|[^\s\(\)<>\[\]]+)(\s+"[^"]*?"|'[^']*?'|\([^\)]*?\))?(?!\))\n'''
+
+    _list_item_regex = '''^( *)([*+-]|\d+\.) [\s\S]+?(?:\n+(?=\1?(?:[-*_] *){3,}(?:\n+|$))|\n{2,}(?! )(?!\1(?:[*+-]|\d+\.) )\n*|\s*$)'''
+    _list_bullet_regex = '''^ *(?:[*+-]|\d+\.) +'''
 
     def __repr__(self):
         return '<DraftSourceBuffer>'
@@ -137,7 +141,7 @@ class DraftSourceBuffer(GtkSource.Buffer):
                 end = it.copy()
                 start_mark = self.get_source_marks_at_iter(start, self._link_mark_category)[0]
                 end_mark = self.get_source_marks_at_iter(end, self._link_mark_category)[0]
-                if not self._link_marks[start_mark] == end_mark:
+                if not self._link_marks.get(start_mark) == end_mark:
                     self.remove_tag_by_name(self._invis_tag_name, start, end)
                 else:
                     bounds = self.obtain_link_bounds(start, end)
@@ -197,3 +201,26 @@ class DraftSourceBuffer(GtkSource.Buffer):
     def replace_text_between(self, start, end, new_text):
         self.delete(start, end)
         self.insert(start, new_text)
+
+    def is_on_empty_line(self, textiter):
+        return textiter.starts_line() and textiter.ends_line()
+
+    def is_on_list_item(self, textiter):
+        start = textiter.copy()
+        end = textiter.copy()
+        if not end.ends_line():
+            end.forward_to_line_end()
+        # assuming iterator is not on a line outside buffer bounds.
+        start.backward_line()
+
+        item_regex = re.compile(self._list_item_regex)
+        bullet_regex = re.compile(self._list_bullet_regex)
+
+        item = self.get_slice(start, end, True)
+        match = item_regex.match(item)
+        if match is not None:
+            bullet_match = bullet_regex.match(item)
+            if bullet_match is not None:
+                return True, (bullet_match.end() - bullet_match.start())
+
+        return False, -1
