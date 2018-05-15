@@ -50,35 +50,39 @@ class DraftSourceView(GtkSource.View):
     def __init__(self):
         GtkSource.View.__init__(self)
         self.set_buffer(DraftSourceBuffer())
-        builder = Gtk.Builder()
-        builder.add_from_resource('/org/gnome/Draft/editor.ui')
 
-        self._link_editor = builder.get_object('link_editor')
-        self._url_entry = builder.get_object('url_entry')
-        self._title_entry = builder.get_object('title_entry')
-        self._img_editor = builder.get_object('img_editor')
-        self._img_url_entry = builder.get_object('img_url_entry')
-        self._img_title_entry = builder.get_object('img_title_entry')
-        self._browse_images_button = builder.get_object('browse_images_button')
-        self._hint_window = builder.get_object('hint_window')
+        # TODO: Disabling this for now. These elements should not be created
+        #       for every SourceView. Make DraftEditor own them.
+        # builder = Gtk.Builder()
+        # builder.add_from_resource('/org/gnome/Draft/editor.ui')
 
-        self._link_editor.set_relative_to(self)
-        self._img_editor.set_relative_to(self)
+        # self._link_editor = builder.get_object('link_editor')
+        # self._url_entry = builder.get_object('url_entry')
+        # self._title_entry = builder.get_object('title_entry')
+        # self._img_editor = builder.get_object('img_editor')
+        # self._img_url_entry = builder.get_object('img_url_entry')
+        # self._img_title_entry = builder.get_object('img_title_entry')
+        # self._browse_images_button = builder.get_object('browse_images_button')
+        # self._hint_window = builder.get_object('hint_window')
 
-        screen = self._hint_window.get_screen()
-        visual = screen.get_rgba_visual()
-        if visual is not None and screen.is_composited():
-            self._hint_window.set_visual(visual)
-        self._hint_window.set_app_paintable(True)
+        # self._link_editor.set_relative_to(self)
+        # self._img_editor.set_relative_to(self)
+
+        # screen = self._hint_window.get_screen()
+        # visual = screen.get_rgba_visual()
+        # if visual is not None and screen.is_composited():
+        #     self._hint_window.set_visual(visual)
+        # self._hint_window.set_app_paintable(True)
 
         self.connect('event', self._on_event)
         self.connect('key-press-event', self._on_key_press)
         self.connect('focus-in-event', self._on_focus_in)
         self.connect('focus-out-event', self._on_focus_out)
-        self._link_editor.connect('closed', self._on_link_editor_closed)
-        self._img_editor.connect('closed', self._on_link_editor_closed)
-        self._browse_images_button.connect('clicked', self._on_browse_images)
-        self._hint_window.connect('draw', self._on_hint_window_draw)
+
+        # self._link_editor.connect('closed', self._on_link_editor_closed)
+        # self._img_editor.connect('closed', self._on_link_editor_closed)
+        # self._browse_images_button.connect('clicked', self._on_browse_images)
+        # self._hint_window.connect('draw', self._on_hint_window_draw)
 
         self.cached_char_height = 0
         self.cached_char_width = 0
@@ -324,51 +328,53 @@ class DraftSourceView(GtkSource.View):
         insert_mark = buffer.get_insert()
         self.scroll_mark_onscreen(insert_mark)
 
-        editable = self.get_editable()
-        insert = buffer.get_iter_at_mark(insert_mark)
+        # TODO: Disabling this until link editor is stable.
+        # editable = self.get_editable()
+        # insert = buffer.get_iter_at_mark(insert_mark)
 
-        if count > 0:
-            insert.forward_char()
+        # if count > 0:
+        #     insert.forward_char()
 
-        link_start = insert.copy()
-        link_end = insert.copy()
-        if not insert.can_insert(editable):
-            start = buffer.get_start_iter()
-            end = buffer.get_end_iter()
-            while not link_end.can_insert(editable) and link_end.compare(end) < 0:
-                link_end.forward_char()
-            while not link_start.can_insert(editable) and link_start.compare(start) > 0:
-                link_start.backward_char()
+        # link_start = insert.copy()
+        # link_end = insert.copy()
+        # if not insert.can_insert(editable):
+        #     start = buffer.get_start_iter()
+        #     end = buffer.get_end_iter()
+        #     while not link_end.can_insert(editable) and link_end.compare(end) < 0:
+        #         link_end.forward_char()
+        #     while not link_start.can_insert(editable) and link_start.compare(start) > 0:
+        #         link_start.backward_char()
 
-            # one final forward/backward towards regular text
-            link_start.backward_char()
+        #     # one final forward/backward towards regular text
+        #     link_start.backward_char()
 
-            if extend_selection:
-                sel_start, sel_end = buffer.get_selection_bounds()
-                if count > 0:
-                    buffer.select_range(link_end, sel_start)
-                else:
-                    buffer.select_range(link_start, sel_end)
-            else:
-                if count > 0:
-                    buffer.place_cursor(link_end)
-                else:
-                    buffer.place_cursor(link_start)
+        #     if extend_selection:
+        #         sel_start, sel_end = buffer.get_selection_bounds()
+        #         if count > 0:
+        #             buffer.select_range(link_end, sel_start)
+        #         else:
+        #             buffer.select_range(link_start, sel_end)
+        #     else:
+        #         if count > 0:
+        #             buffer.place_cursor(link_end)
+        #         else:
+        #             buffer.place_cursor(link_start)
 
-        self._show_hint_window()
+        # self._show_hint_window()
 
     def do_backspace(self):
-        buffer = self.get_buffer()
-        insert_mark = buffer.get_insert()
-        insert = buffer.get_iter_at_mark(insert_mark)
-        insert.backward_char()
-        editable = self.get_editable()
+        # TODO: Disabling this until link editor is stable.
+        # buffer = self.get_buffer()
+        # insert_mark = buffer.get_insert()
+        # insert = buffer.get_iter_at_mark(insert_mark)
+        # insert.backward_char()
+        # editable = self.get_editable()
 
-        if not insert.can_insert(editable):
-            start = buffer.get_start_iter()
-            while not insert.can_insert(editable) and insert.compare(start) > 0:
-                insert.backward_char()
-            buffer.place_cursor(insert)
+        # if not insert.can_insert(editable):
+        #     start = buffer.get_start_iter()
+        #     while not insert.can_insert(editable) and insert.compare(start) > 0:
+        #         insert.backward_char()
+        #     buffer.place_cursor(insert)
 
         GtkSource.View.do_backspace(self)
 
@@ -406,15 +412,16 @@ class DraftSourceView(GtkSource.View):
             shift_mask = Gdk.ModifierType.SHIFT_MASK
             alt_mask = Gdk.ModifierType.MOD1_MASK
 
-            if ((key == Gdk.KEY_Return
-                    or key == Gdk.KEY_KP_Enter
-                    or key == Gdk.KEY_ISO_Enter)
-                    and modifiers == control_mask):
-                buffer = self.get_buffer()
-                on_link, is_image, start, end = buffer.cursor_is_on_link()
-                if on_link:
-                    self.set_editable(False)
-                    self._popup_link_editor(start, end, is_image)
+            # TODO: Hiding this until link editing/hiding is more stable.
+            # if ((key == Gdk.KEY_Return
+            #         or key == Gdk.KEY_KP_Enter
+            #         or key == Gdk.KEY_ISO_Enter)
+            #         and modifiers == control_mask):
+            #     buffer = self.get_buffer()
+            #     on_link, is_image, start, end = buffer.cursor_is_on_link()
+            #     if on_link:
+            #         self._popup_link_editor(start, end, is_image)
+            pass
 
     def _popup_context_menu(self, event, menu_requested):
         clipboard = self.get_clipboard(Gdk.SELECTION_CLIPBOARD)
@@ -647,6 +654,7 @@ class DraftSourceView(GtkSource.View):
         self._context_menu.popup()
 
     def _popup_link_editor(self, start, end, is_image=False, backward=False):
+        self.set_editable(False)
         buffer = self.get_buffer()
         bounds = buffer.obtain_link_bounds(start, end, backward)
         url_iters = bounds.get('url')

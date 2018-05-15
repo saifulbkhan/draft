@@ -127,7 +127,6 @@ class DraftEditor(Gtk.Box):
         self.view.scroll_mark_onscreen(insert)
 
     def _on_buffer_changed(self, buffer):
-        buffer.update_links()
         self._write_current_buffer()
         self._update_title_and_subtitle()
         self.statusbar.update_word_count()
@@ -244,7 +243,6 @@ class DraftEditor(Gtk.Box):
             self.parent.preview_content()
 
         self.statusbar.update_state()
-        buffer.hide_links()
 
     def focus_view(self, scroll_to_insert=False):
         self.view.grab_focus()
