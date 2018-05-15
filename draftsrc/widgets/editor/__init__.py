@@ -109,10 +109,14 @@ class DraftEditor(Gtk.Box):
         event_and_modifiers = (event.state & modifiers)
 
         # TODO: Add shortcuts to textview
-        if event_and_modifiers:
-            if (event.keyval == Gdk.KEY_s
-                    and event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
-                self.insert_ordered_list()
+        if (event_and_modifiers and
+                event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
+            if event.keyval == Gdk.KEY_b:
+                self.insert_strong()
+            elif event.keyval == Gdk.KEY_i:
+                self.insert_emphasis()
+            elif event.keyval ==Gdk.KEY_k:
+                self.insert_link()
 
     def _on_word_goal_set(self, widget, goal):
         if self.current_text_data['word_goal'] != goal:
