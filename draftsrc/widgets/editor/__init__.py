@@ -340,11 +340,23 @@ class DraftEditor(Gtk.Box):
 
     def insert_strong(self):
         text_to_insert = self._markup_symbols.bold
-        self._insert_markup_element(text_to_insert)
+        buffer = self.view.get_buffer()
+        selected = buffer.get_selection_bounds()
+        if selected:
+            start, end = selected
+            self.strong_wrap_selected(buffer, start, end)
+        else:
+            self._insert_markup_element(text_to_insert)
 
     def insert_emphasis(self):
         text_to_insert = self._markup_symbols.italics
-        self._insert_markup_element(text_to_insert)
+        buffer = self.view.get_buffer()
+        selected = buffer.get_selection_bounds()
+        if selected:
+            start, end = selected
+            self.emphasis_wrap_selected(buffer, start, end)
+        else:
+            self._insert_markup_element(text_to_insert)
 
     def insert_ordered_list(self):
         text_to_insert = self._markup_symbols.ordered_list
@@ -360,7 +372,13 @@ class DraftEditor(Gtk.Box):
 
     def insert_link(self):
         text_to_insert = self._markup_symbols.link
-        self._insert_markup_element(text_to_insert)
+        buffer = self.view.get_buffer()
+        selected = buffer.get_selection_bounds()
+        if selected:
+            start, end = selected
+            self.link_wrap_selected(buffer, start, end)
+        else:
+            self._insert_markup_element(text_to_insert)
 
     def insert_image(self):
         text_to_insert = self._markup_symbols.image
@@ -396,3 +414,31 @@ class DraftEditor(Gtk.Box):
             insert_fn()
 
         self.view.grab_focus()
+
+    @staticmethod
+    def _wrap_with_elements(buffer, start, end, left, right):
+        # before inserting, preserve the end position
+        mark = buffer.create_mark(None, end)
+
+        buffer.begin_user_action()
+        buffer.insert(start, left)
+        end = buffer.get_iter_at_mark(mark)
+        buffer.insert(end, right)
+        buffer.end_user_action()
+
+        buffer.select_range(end, end)
+
+    def strong_wrap_selected(self, buffer, start, end):
+        text_to_insert = self._markup_symbols.bold
+        left, right = text_to_insert.split(self._markup_symbols.cursor_string)
+        self._wrap_with_elements(buffer, start, end, left, right)
+
+    def emphasis_wrap_selected(self, buffer, start, end):
+        text_to_insert = self._markup_symbols.italics
+        left, right = text_to_insert.split(self._markup_symbols.cursor_string)
+        self._wrap_with_elements(buffer, start, end, left, right)
+
+    def link_wrap_selected(self, buffer, start, end):
+        text_to_insert = self._markup_symbols.link
+        left, right = text_to_insert.split(self._markup_symbols.cursor_string)
+        self._wrap_with_elements(buffer, start, end, left, right)
