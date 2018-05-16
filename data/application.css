@@ -5,9 +5,19 @@
 
 .draft-panel {
     background-color: @panel_bg_color;
-    border-width: 0 1px 0 0;
-    border-style: solid;
-    border-color: @borders
+    border-width: 0px;
+}
+
+.draft-panel:dir(ltr) {
+    border-right: 1px solid @borders;
+}
+
+.draft-panel:dir(rtl) {
+    border-left: 1px solid @borders;
+}
+
+.draft-panel-titlebar {
+    border-bottom: 1px solid @borders;
 }
 
 .draft-searchbar {
@@ -117,6 +127,13 @@
 
 .draft-listview > row:selected:not(:focus) {
     background-color: @unfocused_selection_color;
+}
+
+.draft-list-title{
+    color: @title_color;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin: 6px 14px;
 }
 
 .draft-text-box-row {

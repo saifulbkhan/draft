@@ -17,6 +17,7 @@ from gettext import gettext as _
 from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
 from draftsrc import search
+from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.widgets.collectionlist import DraftCollectionList
 from draftsrc.widgets.grouptree import DraftGroupTree
 from draftsrc.widgets.textlist import DraftTextList, DraftResultList
@@ -413,9 +414,7 @@ class DraftLibraryView(Gtk.Bin):
         self.parent_window.textlistview.set_model_for_group(group)
 
 
-# TODO: Make this a stack for storing multiple DraftTextsList
 class DraftTextListView(Gtk.Bin):
-
     _panel_visible = True
     _group_shown = None
     _last_search_terms = ""
@@ -452,6 +451,7 @@ class DraftTextListView(Gtk.Bin):
         self._search_options_button = self.builder.get_object('search_options_button')
         self._search_content_button = self.builder.get_object('search_content')
         self._search_tags_button = self.builder.get_object('search_tags')
+        self._title_label = self.builder.get_object('title_label')
 
         self._text_menu = self.builder.get_object('text_menu')
         self._open_button = self.builder.get_object('open_button')
@@ -521,12 +521,17 @@ class DraftTextListView(Gtk.Bin):
 
     def set_model_for_group(self, group):
         self._group_shown = group
+        self._title_label.set_label(group.get('name'))
         self.view.set_model(parent_group=group)
         if not self.view.text_view_selection_is_in_progress():
             self.search_mode_off()
 
     def set_collection_class_type(self, collection_class_type):
         self._group_shown = None
+        if collection_class_type == CollectionClassType.ALL:
+            self._title_label.set_label(_("All Texts"))
+        elif collection_class_type == CollectionClassType.RECENT:
+            self._title_label.set_label(_("Recently Edited Texts"))
         self.view.set_model(collection_class_type)
 
     def set_editor(self, editor):
