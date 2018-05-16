@@ -552,8 +552,10 @@ class DraftSourceView(GtkSource.View):
                 suggestion_button.connect('clicked', on_suggestion_selected)
                 menu_items.append(suggestion_button)
 
-            separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
-            menu_items.append(separator_0)
+            # add a separator only if there is a suggestion section
+            if suggestions:
+                separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+                menu_items.append(separator_0)
 
             add_to_dictionary_button = Gtk.ModelButton()
             add_to_dictionary_button.set_label(_("Add “%s” to dictionary") % word)
