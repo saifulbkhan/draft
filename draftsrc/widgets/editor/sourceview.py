@@ -19,8 +19,9 @@ from gettext import gettext as _
 
 import gi
 gi.require_version('GtkSource', '3.0')
+gi.require_version('Gspell', '1')
 
-from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango
+from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango, Gspell
 
 from draftsrc.widgets.editor.sourcebuffer import DraftSourceBuffer
 
@@ -36,7 +37,6 @@ class DraftSourceView(GtkSource.View):
                                  GObject.TYPE_PYOBJECT))
     }
 
-    _spell_checker = None
     _context_menu = None
     _url_change_id = None
     _title_change_id = None
@@ -50,6 +50,13 @@ class DraftSourceView(GtkSource.View):
     def __init__(self):
         GtkSource.View.__init__(self)
         self.set_buffer(DraftSourceBuffer())
+
+        self._spell_checker = Gspell.Checker()
+        buffer = self.get_buffer()
+        gspell_buffer = Gspell.TextBuffer.get_from_gtk_text_buffer(buffer)
+        gspell_buffer.set_spell_checker(self._spell_checker)
+        gspell_view = Gspell.TextView.get_from_gtk_text_view(self)
+        gspell_view.set_inline_spell_checking(True)
 
         # TODO: Disabling this for now. These elements should not be created
         #       for every SourceView. Make DraftEditor own them.
@@ -484,7 +491,7 @@ class DraftSourceView(GtkSource.View):
                 insert = buffer.get_iter_at_mark(insert_mark)
                 word, word_start, word_end = buffer.get_word_at_iter(insert)
                 if word:
-                    correctly_spelled = self._spell_checker.check_word(word)
+                    correctly_spelled = self._spell_checker.check_word(word, -1)
                     if not correctly_spelled:
                         return True, word, word_end, word_start
                     else:
@@ -496,7 +503,7 @@ class DraftSourceView(GtkSource.View):
             if textiter:
                 word, word_start, word_end = buffer.get_word_at_iter(textiter)
                 if word:
-                    correctly_spelled = self._spell_checker.check_word(word)
+                    correctly_spelled = self._spell_checker.check_word(word, -1)
                     if not correctly_spelled:
                         return True, word, word_start, word_end
                     else:
@@ -534,17 +541,17 @@ class DraftSourceView(GtkSource.View):
                 buffer.place_cursor(word_start)
 
         def on_add_to_dictionary(widget):
-            self._spell_checker.add_to_dictionary(word)
+            self._spell_checker.add_word_to_personal(word, -1)
 
         def on_ignore(widget):
-            self._spell_checker.ignore_word(word)
+            self._spell_checker.add_word_to_session(word, -1)
 
         def on_reveal_thesaurus(widget):
             self.emit('thesaurus-requested', word, word_start, word_end)
 
         menu_items = []
         if suggestions_needed:
-            suggestions = self._spell_checker.get_suggestions(word)
+            suggestions = self._spell_checker.get_suggestions(word, -1)
             suggestions = suggestions[0:3]
             for suggested in suggestions:
                 suggestion_button = Gtk.ModelButton()
@@ -871,10 +878,12 @@ class DraftSourceView(GtkSource.View):
         ctx.close_path()
 
     def _on_focus_in(self, widget, cb_data):
-        self._show_hint_window()
+        # self._show_hint_window()
+        pass
 
     def _on_focus_out(self, widget, cb_data):
-        self._hint_window.set_visible(False)
+        # self._hint_window.set_visible(False)
+        pass
 
     def _get_iter_at_event(self, event):
         _, x, y = event.get_coords()

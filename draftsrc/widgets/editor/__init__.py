@@ -19,9 +19,8 @@ from string import whitespace
 
 import gi
 gi.require_version('GtkSource', '3.0')
-gi.require_version('GtkSpell', '3.0')
 
-from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, GtkSpell
+from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib
 
 from draftsrc import file
 from draftsrc import db
@@ -54,7 +53,6 @@ class DraftEditor(Gtk.Box):
     _current_file = None
     _open_files = {}
     _load_in_progress = False
-    _spell_checker = GtkSpell.Checker()
     _synonym_word_bounds = ()
     _markup_symbols = None
 
@@ -88,11 +86,6 @@ class DraftEditor(Gtk.Box):
     def _prep_view(self, view):
         self.view = view
         self.view.get_style_context().add_class('draft-editor')
-
-        self._spell_checker.detach()
-        self._spell_checker.set_language('en_US')
-        self._spell_checker.attach(view)
-        view._spell_checker = self._spell_checker
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
         self._prep_buffer()
