@@ -25,6 +25,15 @@ from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango, Gspell
 
 from draftsrc.widgets.editor.sourcebuffer import DraftSourceBuffer
 
+DEFAULT_SCROLL_OFFSET = 3
+DEFAULT_NUM_OVERSCROLL = 3
+
+
+class TypewriterModeType(object):
+    UPPER = 0
+    CENTER = 1
+    LOWER = 2
+
 
 class DraftSourceView(GtkSource.View):
     __gtype_name__ = 'DraftSourceView'
@@ -42,7 +51,11 @@ class DraftSourceView(GtkSource.View):
     _title_change_id = None
     _hint_label = ""
     _hint_label_margin = 12
+    _typewriter_mode = False
+    _typewriter_mode_type = None
     scroll_duration = 150
+    scroll_offset = DEFAULT_SCROLL_OFFSET
+    overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
 
     def __repr__(self):
         return '<DraftSourceView>'
@@ -93,19 +106,17 @@ class DraftSourceView(GtkSource.View):
 
         self.cached_char_height = 0
         self.cached_char_width = 0
-        self.scroll_offset = 0
         self.set_has_tooltip(True)
 
         # visual margins and offsets
         self.set_visible(True)
-        self.set_pixels_above_lines(6)
-        self.set_pixels_below_lines(6)
+        self.set_pixels_above_lines(3)
+        self.set_pixels_below_lines(3)
+        self.set_pixels_inside_wrap(3)
         self.set_wrap_mode(Gtk.WrapMode.WORD)
         self.set_left_margin(24)
         self.set_right_margin(24)
         self.set_top_margin(10)
-        self.scroll_offset = 3
-        self.overscroll_num_lines = 3
 
         # formatting specific options
         self.set_auto_indent(True)
@@ -129,6 +140,10 @@ class DraftSourceView(GtkSource.View):
         # If we don't have valid line height, not much we can do now. We can
         # just adjust things later once it becomes available.
         if self.cached_char_height:
+            if self._typewriter_mode:
+                area.height = self.cached_char_height
+                return area
+
             visible_lines = int(area.height / self.cached_char_height)
             max_scroll_offset = (visible_lines - 1)/ 2
             scroll_offset = min(self.scroll_offset, max_scroll_offset)
@@ -192,7 +207,7 @@ class DraftSourceView(GtkSource.View):
         scroll_dest = current_y_scroll
         yvalue = 0
         if use_align:
-            scroll_dest = rect.y + (rect.height * yalign) - (screen.height * yalign);
+            scroll_dest = rect.y + (rect.height * yalign) - (screen.height * yalign)
 
             # if scroll_dest < screen.y, we move a negative increment (up),
             # else a positive increment (down)
@@ -207,7 +222,7 @@ class DraftSourceView(GtkSource.View):
         yvalue += current_y_scroll
 
         # Scroll offset adjustment
-        if self.cached_char_height:
+        if self.cached_char_height and not self._typewriter_mode:
             true_height = GtkSource.View.get_visible_rect(self).height
             visible_lines = int(true_height / self.cached_char_height)
             max_scroll_offset = (visible_lines - 1)/ 2
@@ -327,7 +342,18 @@ class DraftSourceView(GtkSource.View):
             new_margin = height + new_margin
         new_margin = min(max(new_margin, 0), height)
 
-        self.set_bottom_margin(new_margin)
+        if self._typewriter_mode:
+            if self._typewriter_mode_type == TypewriterModeType.UPPER:
+                self.set_top_margin(new_margin)
+                self.set_bottom_margin(height - new_margin)
+            if self._typewriter_mode_type == TypewriterModeType.CENTER:
+                self.set_top_margin(new_margin)
+                self.set_bottom_margin(new_margin)
+            if self._typewriter_mode_type == TypewriterModeType.LOWER:
+                self.set_top_margin(height - new_margin)
+                self.set_bottom_margin(new_margin)
+        else:
+            self.set_bottom_margin(new_margin)
 
     def do_move_cursor(self, step, count, extend_selection):
         GtkSource.View.do_move_cursor(self, step, count, extend_selection)
@@ -397,6 +423,16 @@ class DraftSourceView(GtkSource.View):
 
     def do_size_allocate(self, allocation):
         GtkSource.View.do_size_allocate(self, allocation)
+        if self._typewriter_mode:
+            area = GtkSource.View.get_visible_rect(self)
+            if self.cached_char_height:
+                visible_lines = int(area.height / self.cached_char_height)
+                if (self._typewriter_mode_type == TypewriterModeType.UPPER
+                        or self._typewriter_mode_type == TypewriterModeType.LOWER):
+                    self.scroll_offset = (visible_lines - 1) / 4
+                else:
+                    self.scroll_offset = (visible_lines - 1) / 2
+                self.overscroll_num_lines = self.scroll_offset
         self.refresh_overscroll()
 
     def _on_event(self, widget, event):
@@ -893,3 +929,20 @@ class DraftSourceView(GtkSource.View):
             return textiter
 
         return None
+
+    def set_typewriter_mode(self, typewriter_mode, typewriter_mode_type=None):
+        self._typewriter_mode = typewriter_mode
+        if typewriter_mode:
+            self._typewriter_mode_type = typewriter_mode_type
+            area = GtkSource.View.get_visible_rect(self)
+            if self.cached_char_height:
+                visible_lines = int(area.height / self.cached_char_height)
+                if (self._typewriter_mode_type == TypewriterModeType.UPPER
+                        or self._typewriter_mode_type == TypewriterModeType.LOWER):
+                    self.scroll_offset = (visible_lines - 1) / 4
+                else:
+                    self.scroll_offset = (visible_lines - 1) / 2
+                self.overscroll_num_lines = self.scroll_offset
+        else:
+            self.scroll_offset = DEFAULT_SCROLL_OFFSET
+            self.overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
