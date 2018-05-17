@@ -55,6 +55,7 @@ class DraftSourceView(GtkSource.View):
     _typewriter_mode = False
     _typewriter_mode_type = None
     scroll_duration = 150
+    free_width_limit = 1000
     scroll_offset = DEFAULT_SCROLL_OFFSET
     overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
 
@@ -455,6 +456,18 @@ class DraftSourceView(GtkSource.View):
 
     def do_size_allocate(self, allocation):
         GtkSource.View.do_size_allocate(self, allocation)
+        if allocation.width > self.free_width_limit:
+            extra_space = allocation.width - self.free_width_limit
+
+            # put 90% of extra space as padding divided among the two
+            # horizontal edges
+            horizontal_offset = (extra_space / 2) * 0.9
+            self.set_left_margin(DEFAULT_LEFT_MARGIN + horizontal_offset)
+            self.set_right_margin(DEFAULT_RIGHT_MARGIN + horizontal_offset)
+        else:
+            self.set_left_margin(DEFAULT_LEFT_MARGIN)
+            self.set_right_margin(DEFAULT_RIGHT_MARGIN)
+
         if self._typewriter_mode:
             area = GtkSource.View.get_visible_rect(self)
             if self.cached_char_height:
