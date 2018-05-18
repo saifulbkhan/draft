@@ -40,6 +40,7 @@ class DraftBaseList(Gtk.ListBox):
     _multi_row_selection_stack = []
     _double_click_in_progress = False
     _text_view_selection_in_progress = False
+    _shift_capture_selection_in_progress = False
     _items_changed_handler_id =None
 
     def __repr__(self):
@@ -47,6 +48,8 @@ class DraftBaseList(Gtk.ListBox):
 
     def __init__(self):
         Gtk.ListBox.__init__(self)
+        self.connect('key-press-event', self._on_key_press)
+        self.connect('key-release-event', self._on_key_release)
         self.connect('button-press-event', self._on_button_press)
         self.connect('button-release-event', self._on_button_release)
         self._row_selected_handler_id = self.connect('row-selected',
@@ -60,6 +63,22 @@ class DraftBaseList(Gtk.ListBox):
         win = device.get_window_at_position()[0]
         x, y, width, height = win.get_geometry()
         return self.get_row_at_y(y)
+
+    def _set_all_rows_selectable(self):
+        if self._model:
+            for index in range(self.get_num_items()):
+                row = self.get_row_at_index(index)
+                row.set_selectable(True)
+
+    def _on_key_press(self, widget, event):
+        """Handler for key press events"""
+        self._set_all_rows_selectable()
+
+    def _on_key_release(self, widget, event):
+        """Handler for key release events"""
+        self._set_all_rows_selectable()
+        self.set_activate_on_single_click(False)
+        self._shift_capture_selection_in_progress = False
 
     def _on_button_press(self, widget, event):
         """Handler for signal `button-press-event`"""
@@ -86,6 +105,39 @@ class DraftBaseList(Gtk.ListBox):
                         self._multi_row_selection_stack.remove(row)
                 else:
                     row.set_selectable(True)
+            if (event.button == Gdk.BUTTON_PRIMARY
+                    and modifiers == shift_mask):
+                self.set_multi_selection_mode(True)
+                row = self._row_at_event_coordinates(event)
+                if not row or len(self.get_selected_rows()) < 1:
+                    return
+
+                source = None
+                if self._multi_row_selection_stack:
+                    source = self._multi_row_selection_stack[0]
+                else:
+                    source = self.get_selected_row()
+
+                if row == source:
+                    return
+
+                self.unselect_all()
+                self._multi_row_selection_stack = []
+
+                # have to this for some wierd reason, single-click activation
+                # prevents multi-selection
+                self.set_activate_on_single_click(True)
+                self._shift_capture_selection_in_progress = True
+
+                start = source.get_index()
+                end = row.get_index()
+                indices = range(start, end + 1)
+                if start > end:
+                    indices = range(start, end - 1, -1)
+                for index in indices:
+                    row = self.get_row_at_index(index)
+                    self._multi_row_selection_stack.append(row)
+                    self.select_row(row)
         else:
             if event.triggers_context_menu():
                 row = self._row_at_event_coordinates(event)
@@ -154,7 +206,8 @@ class DraftBaseList(Gtk.ListBox):
         self.emit('text-title-changed', row_data['title'])
 
     def _on_row_activated(self, widget, row):
-        GLib.idle_add(self.editor.focus_view, True)
+        if not self._shift_capture_selection_in_progress:
+            GLib.idle_add(self.editor.focus_view, True)
 
     def _set_listview_class(self, set_class):
         listview_class = 'draft-listview'
@@ -427,6 +480,7 @@ class DraftTextList(DraftBaseList):
 
     def _on_key_press(self, widget, event):
         """Handler for signal `key-press-event`"""
+        DraftBaseList._on_key_press(self, widget, event)
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
 
