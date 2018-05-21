@@ -33,7 +33,9 @@ class DraftBaseList(Gtk.ListBox):
                                (GObject.TYPE_STRING,)),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
                            None,
-                           (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN))
+                           (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
+        'some-text-selected': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'no-text-selected': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     editor = None
@@ -106,7 +108,7 @@ class DraftBaseList(Gtk.ListBox):
 
     def _on_row_selected(self, widget, row):
         """Handler for signal `row-selected`"""
-        if (not row or not hasattr(self, '_model')
+        if (not hasattr(self, '_model')
                 or self._text_view_selection_in_progress):
             return
 
@@ -135,6 +137,11 @@ class DraftBaseList(Gtk.ListBox):
             else:
                 self.editor.set_sensitive(True)
 
+        if len(positions) > 0:
+            self.emit('some-text-selected')
+        else:
+            self.emit('no-text-selected')
+
         self._model.prepare_for_edit(positions,
                                      self.editor.switch_view,
                                      self.editor.load_file)
@@ -159,12 +166,8 @@ class DraftBaseList(Gtk.ListBox):
             return
 
         if multi_mode:
-            if hasattr(self, 'editor'):
-                self.editor.set_sensitive(False)
             self.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
         else:
-            if hasattr(self, 'editor'):
-                self.editor.set_sensitive(True)
             self.set_selection_mode(Gtk.SelectionMode.BROWSE)
 
             if escape:

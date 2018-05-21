@@ -468,6 +468,8 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('text-title-changed', self._on_text_title_changed)
         self.view.connect('menu-requested', self._on_menu_requested)
         self.view.connect('selection-requested', self._on_selection_requested)
+        self.view.connect('no-text-selected', self._on_no_text_selected)
+        self.view.connect('some-text-selected', self._on_some_text_selected)
 
         self.search_entry.connect('search-changed', self._on_search_changed)
         self._search_menu.connect('closed', self._on_search_menu_closed)
@@ -571,6 +573,12 @@ class DraftTextListView(Gtk.Bin):
 
     def _on_text_title_changed(self, widget, text_title):
         self.parent_window.set_content_title(text_title)
+
+    def _on_no_text_selected(self, widget):
+        self.parent_window.set_empty_selection_state(True)
+
+    def _on_some_text_selected(self, widget):
+        self.parent_window.set_empty_selection_state(False)
 
     def _on_menu_requested(self, widget, rect, in_trash):
 

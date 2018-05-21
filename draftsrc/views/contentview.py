@@ -73,25 +73,21 @@ class ContentView(Gtk.Bin):
 
     def set_empty_group_state(self):
         self.empty_state.update_labels()
-
-        if self.content_stack.get_visible_child_name() != 'empty':
-            current_state = self.content_stack.get_visible_child_name()
-            if current_state in ['editor', 'preview']:
-                self._last_content_state = current_state
-            self.content_stack.set_visible_child_name('empty')
+        self._set_empty_state()
 
     def set_empty_collection_state(self):
         self.empty_state.update_labels(empty_collection=True)
-
-        if self.content_stack.get_visible_child_name() != 'empty':
-            current_state = self.content_stack.get_visible_child_name()
-            if current_state in ['editor', 'preview']:
-                self._last_content_state = current_state
-            self.content_stack.set_visible_child_name('empty')
+        self._set_empty_state()
 
     def set_empty_recent_state(self):
         self.empty_state.update_labels(empty_recent=True)
+        self._set_empty_state()
 
+    def set_empty_selection_state(self):
+        self.empty_state.update_labels(empty_selection=True)
+        self._set_empty_state()
+
+    def _set_empty_state(self):
         if self.content_stack.get_visible_child_name() != 'empty':
             current_state = self.content_stack.get_visible_child_name()
             if current_state in ['editor', 'preview']:
@@ -100,25 +96,17 @@ class ContentView(Gtk.Bin):
 
     def set_empty_trashed_group_state(self):
         self.empty_trash_state.update_labels()
-
-        if self.content_stack.get_visible_child_name() != 'trash':
-            current_state = self.content_stack.get_visible_child_name()
-            if current_state in ['editor', 'preview']:
-                self._last_content_state = current_state
-            self.content_stack.set_visible_child_name('trash')
+        self._set_empty_trash_state()
 
     def set_empty_trash_state(self):
         self.empty_trash_state.update_labels(empty_trash=True)
-
-        if self.content_stack.get_visible_child_name() != 'trash':
-            current_state = self.content_stack.get_visible_child_name()
-            if current_state in ['editor', 'preview']:
-                self._last_content_state = current_state
-            self.content_stack.set_visible_child_name('trash')
+        self._set_empty_trash_state()
 
     def set_empty_trash_texts_state(self):
         self.empty_trash_state.update_labels(empty_trash_texts=True)
+        self._set_empty_trash_state()
 
+    def _set_empty_trash_state(self):
         if self.content_stack.get_visible_child_name() != 'trash':
             current_state = self.content_stack.get_visible_child_name()
             if current_state in ['editor', 'preview']:
@@ -155,7 +143,8 @@ class _DraftEmptyView(Gtk.Bin):
 
         self.add(util_box)
 
-    def update_labels(self, empty_collection=False, empty_recent=False):
+    def update_labels(self, empty_collection=False,
+                      empty_recent=False, empty_selection=False):
         self.new_group_button.set_visible(True)
         self.new_text_button.set_visible(True)
 
@@ -169,6 +158,11 @@ class _DraftEmptyView(Gtk.Bin):
             self.new_text_button.set_visible(False)
             title_text = _("Nothing here yet")
             info_text = _("No recently edited texts were found")
+        elif empty_selection:
+            self.new_group_button.set_visible(False)
+            self.new_text_button.set_visible(False)
+            title_text = _("No Text Selected")
+            info_text = ""
 
         self.title_label.set_label(title_text)
         self.info_label.set_label(info_text)

@@ -210,6 +210,14 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.show_textlist_header(True)
         self._textlist_hsize_group.add_widget(self.textlistview)
 
+    def set_empty_selection_state(self, empty_selection):
+        if empty_selection:
+            self.contentview.set_empty_selection_state()
+            self.partial_headerbar_interaction()
+        else:
+            self.contentview.set_last_content_state()
+            self.complete_headerbar_interaction()
+
     def update_content_view_and_headerbar(self):
         if self.libraryview.collection_is_empty():
             self.contentview.set_empty_collection_state()
