@@ -43,7 +43,10 @@ class DraftEditor(Gtk.Box):
         'markup-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
         'word-goal-set': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_INT,)),
         'tags-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
-        'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
+        'view-modified': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
+        'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,
+                                                               GObject.TYPE_INT,
+                                                               GObject.TYPE_INT))
     }
 
     class _ViewData(object):
@@ -53,8 +56,8 @@ class DraftEditor(Gtk.Box):
         markup_symbols = None
         synonym_word_bounds = ()
 
-    view = None
     open_views = {}
+    _current_sourceview = None
     _single_mode_name = 'single'
     _multi_mode_name = 'multi'
     _loads_in_progress = 0
@@ -96,6 +99,15 @@ class DraftEditor(Gtk.Box):
         self.thesaurus_box.connect('cancel-synonym', self._on_cancel_synonym)
         self.thesaurus_box.connect('apply-synonym', self._on_apply_synonym)
         self.connect('key-press-event', self._on_key_press)
+
+    @property
+    def view(self):
+        return self._current_sourceview
+
+    @view.setter
+    def view(self, sourceview):
+        self._current_sourceview = sourceview
+        self._update_content_header_title()
 
     @property
     def single_mode(self):
@@ -144,9 +156,6 @@ class DraftEditor(Gtk.Box):
         return view_data.markup_symbols
 
     def _prep_view(self, view):
-        # TODO: Move this to a separate method that updates current view when
-        #       cursor is placed within one or view is focused
-        # self.view = view
         view.get_style_context().add_class('draft-editor')
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
@@ -186,7 +195,7 @@ class DraftEditor(Gtk.Box):
         self.statusbar.update_word_count()
         self._set_insert_offset_for_current_buffer()
         self._set_last_modified()
-        self.emit('view-changed', self.current_text_data)
+        self.emit('view-modified', self.current_text_data)
 
     def _on_thesaurus_requested(self, widget, word, word_start, word_end):
         self._synonym_word_bounds = (word_start, word_end)
@@ -294,6 +303,9 @@ class DraftEditor(Gtk.Box):
                         vadj.set_value(vadj.get_lower())
                         self._multi_view_stack.set_visible_child(scrolled)
 
+                if i == len(texts_data) - 1:
+                    self._update_content_header_title()
+
                 if self.parent.in_preview_mode():
                     self.parent.preview_content()
 
@@ -338,6 +350,9 @@ class DraftEditor(Gtk.Box):
 
         if self.parent.in_preview_mode():
             self.parent.preview_content()
+
+        if self._loads_in_progress == 0:
+            self._update_content_header_title()
 
         self.statusbar.update_state()
 
@@ -449,6 +464,16 @@ class DraftEditor(Gtk.Box):
 
         if subtitle != self.current_text_data['subtitle']:
             self.emit('subtitle-changed', subtitle)
+
+    def _update_content_header_title(self):
+        text = self.get_text()
+        title, subtitle = self._get_title_and_subtitle_for_text(text)
+
+        id = self._id_for_view(self.view)
+        index = -1
+        if id in self._multi_mode_order:
+            index = self._multi_mode_order.index(id)
+        self.emit('view-changed', title, index+1, len(self._multi_mode_order))
 
     def _get_title_and_subtitle_for_text(self, text):
         # TODO: title identifier for specific markup, only markdown for now

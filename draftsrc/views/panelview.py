@@ -571,8 +571,8 @@ class DraftTextListView(Gtk.Bin):
     def _on_text_restored(self, widget):
         self.parent_window.update_content_view_and_headerbar()
 
-    def _on_text_title_changed(self, widget, text_title):
-        self.parent_window.set_content_title(text_title)
+    def _on_text_title_changed(self, widget, title, subtitle, update_sub):
+        self.parent_window.set_content_title(title, subtitle, update_sub)
 
     def _on_no_text_selected(self, widget):
         self.parent_window.set_empty_selection_state(True)

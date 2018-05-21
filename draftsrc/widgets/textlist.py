@@ -30,7 +30,9 @@ class DraftBaseList(Gtk.ListBox):
     __gsignals__ = {
         'text-title-changed': (GObject.SignalFlags.RUN_FIRST,
                                None,
-                               (GObject.TYPE_STRING,)),
+                               (GObject.TYPE_STRING,
+                                GObject.TYPE_STRING,
+                                GObject.TYPE_BOOLEAN)),
         'menu-requested': (GObject.SignalFlags.RUN_FIRST,
                            None,
                            (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
@@ -146,9 +148,6 @@ class DraftBaseList(Gtk.ListBox):
                                      self.editor.switch_view,
                                      self.editor.load_file)
 
-        # TODO: update this more nicely
-        # self.emit('text-title-changed', row_data['title'])
-
     def _on_row_activated(self, widget, row):
         GLib.idle_add(self.editor.focus_view, True)
 
@@ -189,7 +188,8 @@ class DraftBaseList(Gtk.ListBox):
         editor.connect('markup-changed', self.set_markup_for_selection)
         editor.connect('word-goal-set', self.set_word_goal_for_selection)
         editor.connect('tags-changed', self.set_tags_for_selection)
-        editor.connect('view-changed', self.save_last_edit_data)
+        editor.connect('view-modified', self.save_last_edit_data)
+        editor.connect('view-changed', self.set_header_title_for_view)
 
     def set_title_for_selection(self, widget, title):
         """Set the title for currently selected text, as well as write this to
@@ -282,6 +282,14 @@ class DraftBaseList(Gtk.ListBox):
 
         if metadata:
             self._model.queue_final_save(metadata)
+
+    def set_header_title_for_view(self, widget, title, position, total):
+        """Sets the headerbar title for the item being viewed. Also set the
+        subtitle, if multiple items selected. """
+        subtitle = ""
+        if position and total:
+            subtitle = _("%s of %s") % (position, total)
+        self.emit('text-title-changed', title, subtitle, True)
 
     def activate_selected_row(self):
         """Activate selected row"""
@@ -604,7 +612,7 @@ class DraftTextList(DraftBaseList):
         row = self.get_selected_row()
         box = row.get_child().get_child()
         self._set_title_label(box, title)
-        self.emit('text-title-changed', title)
+        self.emit('text-title-changed', title, "", False)
 
     def set_subtitle_for_selection(self, widget, subtitle):
         DraftBaseList.set_subtitle_for_selection(self, widget, subtitle)

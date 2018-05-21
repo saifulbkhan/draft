@@ -303,9 +303,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         headerbar = self.get_titlebar()
         headerbar.set_panel_button_active(active)
 
-    def set_content_title(self, title):
+    def set_content_title(self, title, subtitle="", update_sub=False):
         headerbar = self.get_titlebar()
         headerbar.set_content_header_title(title)
+        if update_sub:
+            headerbar.set_content_header_subtitle(subtitle)
 
     def show_library_header(self, show):
         headerbar = self.get_titlebar()
@@ -444,6 +446,7 @@ class _DraftHeaderBar(Gtk.Box):
         self._preview_button.connect('toggled', self._on_preview_toggled)
         self._new_button = self._builder.get_object('new_button')
         self._content_title_label = self._builder.get_object('content_title_label')
+        self._content_subtitle_label = self._builder.get_object('content_subtitle_label')
         self._markup_button = self._builder.get_object('markup_button')
         self._markup_button.connect('clicked', self._on_request_markup_cheatsheet)
 
@@ -524,6 +527,14 @@ class _DraftHeaderBar(Gtk.Box):
 
     def set_content_header_title(self, title):
         self._content_title_label.set_label(title)
+
+    def set_content_header_subtitle(self, subtitle):
+        if subtitle:
+            self._content_subtitle_label.set_visible(True)
+            self._content_subtitle_label.set_label(subtitle)
+        else:
+            self._content_subtitle_label.set_label('')
+            self._content_subtitle_label.set_visible(False)
 
     def set_library_header_visible(self, visible):
         if visible:

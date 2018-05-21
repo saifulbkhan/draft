@@ -38,15 +38,41 @@
       </object>
     </child>
     <child type="title">
-      <object class="GtkLabel" id="content_title_label">
+      <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="ellipsize">end</property>
-        <property name="single_line_mode">True</property>
-        <property name="max_width_chars">30</property>
-        <style>
-          <class name="title"/>
-        </style>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkLabel" id="content_title_label">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="ellipsize">end</property>
+            <property name="single_line_mode">True</property>
+            <property name="max_width_chars">30</property>
+            <style>
+              <class name="title"/>
+            </style>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="content_subtitle_label">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <style>
+              <class name="subtitle"/>
+            </style>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
       </object>
     </child>
     <child>
