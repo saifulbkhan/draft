@@ -114,6 +114,9 @@ class DraftBaseList(Gtk.ListBox):
                 or self._text_view_selection_in_progress):
             return
 
+        if not row and not self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
+            return
+
         def on_row_unfocused(widget, cb_data=None):
             if not self.get_focus_child():
                 self._set_listview_class(True)
