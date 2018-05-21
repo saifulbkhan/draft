@@ -46,24 +46,29 @@ class DraftEditor(Gtk.Box):
         'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,))
     }
 
-    # markup type of currently selected text
-    markup_type = 'markdown'
+    class _ViewData(object):
+        markup_type = ''
+        text_data = None
+        source_file = None
+        markup_symbols = None
+        synonym_word_bounds = ()
+
     view = None
-    current_text_data = None
-    _current_file = None
-    _open_files = {}
-    _load_in_progress = False
-    _synonym_word_bounds = ()
-    _markup_symbols = None
+    open_views = {}
+    _single_mode_name = 'single'
+    _multi_mode_name = 'multi'
+    _loads_in_progress = 0
+    _multi_mode_order = []
 
     def __repr__(self):
-        return '<Editor>'
+        return '<DraftEditor>'
 
     def __init__(self, main_window, parent):
         Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
         self.main_window = main_window
         self.parent = parent
         self._set_up_widgets()
+        self.single_mode = True
 
     def _set_up_widgets(self):
         self.util_revealer = Gtk.Revealer()
@@ -75,6 +80,15 @@ class DraftEditor(Gtk.Box):
         self.editor_stack = Gtk.Stack()
         self.pack_start(self.editor_stack, True, True, 0)
 
+        self.view_store = Gtk.Stack()
+        self.editor_stack.add_named(self.view_store,
+                                    self._single_mode_name)
+
+        self._multi_view_stack = Gtk.Stack()
+        self._multi_view_stack.set_transition_duration(500)
+        self.editor_stack.add_named(self._multi_view_stack,
+                                    self._multi_mode_name)
+
         self.statusbar = DraftStatusbar(self)
         self.pack_start(self.statusbar, False, False, 0)
 
@@ -83,19 +97,64 @@ class DraftEditor(Gtk.Box):
         self.thesaurus_box.connect('apply-synonym', self._on_apply_synonym)
         self.connect('key-press-event', self._on_key_press)
 
+    @property
+    def single_mode(self):
+        return self.editor_stack.get_visible_child_name() == self._single_mode_name
+
+    @single_mode.setter
+    def single_mode(self, single_mode):
+        mode_name = self._single_mode_name
+        if not single_mode:
+            mode_name = self._multi_mode_name
+        self.editor_stack.set_visible_child_name(mode_name)
+
+    @property
+    def current_text_data(self):
+        view_data = self.open_views.get(self.view)
+        return view_data.text_data
+
+    @current_text_data.setter
+    def current_text_data(self, text_data):
+        view_data = self.open_views.get(self.view)
+        view_data.text_data = text_data
+
+    @property
+    def _current_file(self):
+        view_data = self.open_views.get(self.view)
+        return view_data.source_file
+
+    @_current_file.setter
+    def _current_file(self, source_file):
+        view_data = self.open_views.get(self.view)
+        view_data.source_file = source_file
+
+    @property
+    def _synonym_word_bounds(self):
+        view_data = self.open_views.get(self.view)
+        return view_data.synonym_word_bounds
+
+    @_synonym_word_bounds.setter
+    def _synonym_word_bounds(self, bounds):
+        view_data = self.open_views.get(self.view)
+        view_data.synonym_word_bounds = bounds
+
+    @property
+    def _markup_symbols(self):
+        view_data = self.open_views.get(self.view)
+        return view_data.markup_symbols
+
     def _prep_view(self, view):
-        self.view = view
-        self.view.get_style_context().add_class('draft-editor')
+        # TODO: Move this to a separate method that updates current view when
+        #       cursor is placed within one or view is focused
+        # self.view = view
+        view.get_style_context().add_class('draft-editor')
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
-        self._prep_buffer()
-
-    def _prep_buffer(self, markup='markdown'):
-        buffer = self.view.get_buffer()
+    def _prep_buffer(self, buffer, markup='markdown'):
         buffer.connect('modified-changed', self._on_modified_changed)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
-        self.set_markup(markup)
+        self.init_markup(buffer, markup)
 
     def _on_key_press(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -116,14 +175,16 @@ class DraftEditor(Gtk.Box):
             self.emit('word-goal-set', goal)
 
     def _on_modified_changed(self, buffer):
+        assert buffer is self.view.get_buffer()
         insert = buffer.get_insert()
         self.view.scroll_mark_onscreen(insert)
 
     def _on_buffer_changed(self, buffer):
+        assert buffer is self.view.get_buffer()
         self._write_current_buffer()
         self._update_title_and_subtitle()
         self.statusbar.update_word_count()
-        self._set_insert_offset(buffer)
+        self._set_insert_offset_for_current_buffer()
         self._set_last_modified()
         self.emit('view-changed', self.current_text_data)
 
@@ -144,8 +205,11 @@ class DraftEditor(Gtk.Box):
         self.util_revealer.set_reveal_child(False)
         self.view.grab_focus()
 
-    def get_text(self):
-        buffer = self.view.get_buffer()
+    def get_text(self, view=None):
+        if not view:
+            view = self.view
+
+        buffer = view.get_buffer()
         start = buffer.get_start_iter()
         end = buffer.get_end_iter()
         text = buffer.get_text(start, end, True)
@@ -168,69 +232,109 @@ class DraftEditor(Gtk.Box):
         self.current_text_data['tags'].pop(index)
         self.emit('tags-changed', self.current_text_data['tags'])
 
-    def set_markup(self, markup):
-        self.markup_type = markup
+    def init_markup(self, buffer, markup):
+        view = self._view_for_buffer(buffer)
+        view_data = self.open_views.get(view)
+        view_data.markup = markup
         if markup == 'markdown':
-            self._markup_symbols = MarkdownSymbols()
+            view_data.markup_symbols = MarkdownSymbols()
 
         language_manager = GtkSource.LanguageManager.get_default()
         language = language_manager.get_language(markup)
-        buffer = self.view.get_buffer()
         buffer.set_language(language)
 
+    def set_markup(self, markup):
         if self.current_text_data['markup'] != markup:
             self.emit('markup-changed', markup)
 
-    def switch_view(self, text_data):
-        if self._load_in_progress:
+    def switch_view(self, texts_data):
+        if self._loads_in_progress:
             return
 
         self.util_revealer.set_reveal_child(False)
-        self.current_text_data = text_data
-        self.emit('text-viewed', self.current_text_data)
 
-        id = str(text_data['id'])
-        scrollable = self.editor_stack.get_child_by_name(id)
-        if scrollable:
-            self.editor_stack.set_visible_child(scrollable)
+        # clear multi view stack
+        for scrolled in self._multi_view_stack.get_children():
+            view = scrolled.get_child()
+            id = self._id_for_view(view)
+            self._multi_view_stack.remove(scrolled)
+            self.view_store.add_named(scrolled, id)
+        self._multi_mode_order.clear()
 
-            view = scrollable.get_child()
+        if len(texts_data) > 1:
+            self.single_mode = False
+        else:
+            self.single_mode = True
+
+        buffers = {}
+        for i, data in enumerate(texts_data):
+            self.emit('text-viewed', data)
+            id = str(data['id'])
+
+            scrolled = self.view_store.get_child_by_name(id)
+            if scrolled:
+                view = scrolled.get_child()
+                assert view in self.open_views
+                view_data = self.open_views.get(view)
+                view_data.text_data = data
+                self._prep_view(view)
+
+                if self.single_mode:
+                    self.view_store.set_visible_child(scrolled)
+                else:
+                    self.view_store.remove(scrolled)
+                    self._multi_view_stack.add_named(scrolled, id)
+                    self._multi_mode_order.append(id)
+
+                if i == 0:
+                    self.view = view
+                    self.statusbar.update_state()
+                    if not self.single_mode:
+                        vadj = scrolled.get_vadjustment()
+                        vadj.set_value(vadj.get_lower())
+                        self._multi_view_stack.set_visible_child(scrolled)
+
+                if self.parent.in_preview_mode():
+                    self.parent.preview_content()
+
+                continue
+
+            view = DraftSourceView()
+            view_data = self._ViewData()
+            self.open_views[view] = view_data
+            view_data.text_data = data
             self._prep_view(view)
-            self._current_file = self._open_files[id]
 
-            if self.parent.in_preview_mode():
-                self.parent.preview_content()
+            scrolled = Gtk.ScrolledWindow(None, None)
+            scrolled.add(view)
+            scrolled.set_visible(True)
+            scrolled.connect('edge-overshot', self._on_edge_overshot)
 
-            self.statusbar.update_state()
+            if self.single_mode:
+                self.view_store.add_named(scrolled, id)
+                self.view_store.set_visible_child(scrolled)
+            else:
+                self._multi_view_stack.add_named(scrolled, id)
+                self._multi_mode_order.append(id)
 
-            return
+            if i == 0:
+                self.view = view
+                if not self.single_mode:
+                    self._multi_view_stack.set_visible_child(scrolled)
 
-        view = DraftSourceView()
-        self._prep_view(view)
+            self._loads_in_progress += 1
+            buffers[data['id']] = view.get_buffer()
 
-        scrollable = Gtk.ScrolledWindow(None, None)
-        scrollable.set_visible(True)
-        scrollable.add(view)
-
-        self.editor_stack.add_named(scrollable, id)
-        self.editor_stack.set_visible_child(scrollable)
-
-        buffer = view.get_buffer()
-        # blocking buffer's `buffer-changed` signal handler while loading
-        buffer.handler_block(self._on_buffer_changed_id)
-
-        self._load_in_progress = True
-        return buffer
+        return buffers
 
     def load_file(self, gsf, buffer):
         if gsf:
-            self._current_file = gsf
-            # unblock buffer's `buffer-changed` signal to enable saves
-            buffer.handler_unblock(self._on_buffer_changed_id)
-
-            id = self.editor_stack.get_visible_child_name()
-            self._open_files[id] = self._current_file
-            self._load_in_progress = False
+            view = self._view_for_buffer(buffer)
+            assert view is not None
+            view_data = self.open_views.get(view)
+            view_data.source_file = gsf
+            self._prep_buffer(buffer)
+            self._loads_in_progress -= 1
 
         if self.parent.in_preview_mode():
             self.parent.preview_content()
@@ -241,9 +345,71 @@ class DraftEditor(Gtk.Box):
         self.view.grab_focus()
 
         if scroll_to_insert:
-            buffer = self.view.get_buffer()
-            insert = self._get_insert_for_buffer(buffer)
+            insert = self._get_insert_for_current_buffer()
             GLib.idle_add(self.view.scroll_mark_onscreen, insert)
+
+    def _view_for_buffer(self, buffer):
+        for view in self.open_views:
+            if view.get_buffer() is buffer:
+                return view
+        return None
+
+    def _view_for_id(self, id):
+        for view in self.open_views:
+            view_data = self.open_views.get(view)
+            if view_data.text_data['id'] == int(id):
+                return view
+        return None
+
+    def _id_for_view(self, view):
+        view_data = self.open_views.get(view)
+        return str(view_data.text_data['id'])
+
+    def _multi_mode_next(self):
+        if not self.single_mode:
+            current = self._multi_view_stack.get_visible_child_name()
+            index = -1
+            try:
+                index = self._multi_mode_order.index(current)
+            except ValueError as err:
+                # TODO: (notify) current visible child not in order list.
+                pass
+            next_index = index + 1
+            if next_index < len(self._multi_mode_order):
+                next = self._multi_mode_order[next_index]
+                next_child = self._multi_view_stack.get_child_by_name(next)
+                vadj = next_child.get_vadjustment()
+                vadj.set_value(vadj.get_lower())
+                self._multi_view_stack.set_transition_type(Gtk.StackTransitionType.SLIDE_UP)
+                self._multi_view_stack.set_visible_child(next_child)
+                self.view = next_child.get_child()
+                self.statusbar.update_state()
+
+    def _multi_mode_prev(self):
+        if not self.single_mode:
+            current = self._multi_view_stack.get_visible_child_name()
+            index = -1
+            try:
+                index = self._multi_mode_order.index(current)
+            except ValueError as err:
+                # TODO: (notify) current visible child not in order list.
+                pass
+            prev_index = index - 1
+            if not prev_index < 0:
+                prev = self._multi_mode_order[prev_index]
+                prev_child = self._multi_view_stack.get_child_by_name(prev)
+                vadj = prev_child.get_vadjustment()
+                vadj.set_value(vadj.get_upper())
+                self._multi_view_stack.set_transition_type(Gtk.StackTransitionType.SLIDE_DOWN)
+                self._multi_view_stack.set_visible_child(prev_child)
+                self.view = prev_child.get_child()
+                self.statusbar.update_state()
+
+    def _on_edge_overshot(self, scrolled, edge):
+        if edge == Gtk.PositionType.TOP:
+            self._multi_mode_prev()
+        elif edge == Gtk.PositionType.BOTTOM:
+            self._multi_mode_next()
 
     def _write_current_buffer(self):
         if not self.view or not self._current_file:
@@ -253,7 +419,8 @@ class DraftEditor(Gtk.Box):
         file.write_to_source_file_async(self._current_file,
                                         buffer)
 
-    def _get_insert_for_buffer(self, buffer):
+    def _get_insert_for_current_buffer(self):
+        buffer = self.view.get_buffer()
         last_edited_position = self.current_text_data['last_edit_position']
         if last_edited_position:
             insert_iter = buffer.get_iter_at_offset(last_edited_position)
@@ -261,7 +428,8 @@ class DraftEditor(Gtk.Box):
 
         return buffer.get_insert()
 
-    def _set_insert_offset(self, buffer):
+    def _set_insert_offset_for_current_buffer(self):
+        buffer = self.view.get_buffer()
         insert_mark = buffer.get_insert()
         insert_iter = buffer.get_iter_at_mark(insert_mark)
         offset = insert_iter.get_offset()

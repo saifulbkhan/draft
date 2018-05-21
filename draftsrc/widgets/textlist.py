@@ -125,20 +125,22 @@ class DraftBaseList(Gtk.ListBox):
             row.connect('focus-in-event', on_row_focused)
             self._set_listview_class(False)
 
-        if self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
-            return
+        positions = []
+        for row in self.get_selected_rows():
+            position = row.get_index()
+            positions.append(position)
+            row_data = self._model.get_data_for_position(position)
+            if row_data['in_trash']:
+                self.editor.set_sensitive(False)
+            else:
+                self.editor.set_sensitive(True)
 
-        position = row.get_index()
-        row_data = self._model.get_data_for_position(position)
-        if row_data['in_trash']:
-            self.editor.set_sensitive(False)
-        else:
-            self.editor.set_sensitive(True)
-
-        self._model.prepare_for_edit(position,
+        self._model.prepare_for_edit(positions,
                                      self.editor.switch_view,
                                      self.editor.load_file)
-        self.emit('text-title-changed', row_data['title'])
+
+        # TODO: update this more nicely
+        # self.emit('text-title-changed', row_data['title'])
 
     def _on_row_activated(self, widget, row):
         GLib.idle_add(self.editor.focus_view, True)
@@ -196,10 +198,8 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
+        text_id = self.editor.current_text_data['id']
+        position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'title', title)
         self.editor.current_text_data['title'] = title
 
@@ -213,10 +213,8 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
+        text_id = self.editor.current_text_data['id']
+        position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'subtitle', subtitle)
         self.editor.current_text_data['subtitle'] = subtitle
 
@@ -229,10 +227,8 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
+        text_id = self.editor.current_text_data['id']
+        position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'markup', markup)
         self.editor.current_text_data['markup'] = markup
 
@@ -245,10 +241,8 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
+        text_id = self.editor.current_text_data['id']
+        position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'word_goal', goal)
         self.editor.current_text_data['word_goal'] = goal
 
@@ -263,10 +257,8 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        row = self.get_selected_row()
-        if not row:
-            return
-        position = row.get_index()
+        text_id = self.editor.current_text_data['id']
+        position = self.get_selected_index_for_id(text_id)
         new_tags = self._model.set_tags_for_position(position, tags)
 
         # since @new_tags might have slightly different letter case tags, we
@@ -314,6 +306,15 @@ class DraftBaseList(Gtk.ListBox):
         if self._model is not None:
             return self._model.get_n_items()
         return 0
+
+    def get_selected_index_for_id(self, text_id):
+        positions = []
+        rows = self.get_selected_rows()
+        for row in rows:
+            pos = row.get_index()
+            positions.append(pos)
+
+        return self._model.get_position_for_id_in_range(text_id, positions)
 
 
 class DraftTextList(DraftBaseList):

@@ -197,29 +197,30 @@ class DraftTextListStore(Gio.ListStore):
             text_row = self._row_data_for_text(text)
             return self.append(text_row)
 
-    def prepare_for_edit(self, position, switch_view, load_file):
+    def prepare_for_edit(self, positions, switch_view, load_file):
         """Prepare text at @position in @self to be edited.
 
         @self: DraftListStore model
-        @position: integer, position at which the item to be edited is located
-                   in the model
+        @positions: list, positions at which the item to be edited is located
+                    in the model
         @switch_view: method, called to check if a new editor buffer is needed
         @load_file: method, passed on to `file.read_file_contents` function
         """
-        item = self.get_item(position)
-        id = item.db_id
-        buffer = switch_view(item.to_dict())
-        if not buffer:
+        items = [self.get_item(position) for position in positions]
+        buffers = switch_view([item.to_dict() for item in items])
+        if not buffers:
             return
 
-        hash_id = item.hash_id
-        parent_hashes = list(item.parent_list)
-        in_trash = self._trashed_texts_only
-        file.read_file_contents(hash_id,
-                                parent_hashes,
-                                buffer,
-                                load_file,
-                                in_trash)
+        for item in items:
+            if item.db_id in buffers:
+                hash_id = item.hash_id
+                parent_hashes = list(item.parent_list)
+                in_trash = self._trashed_texts_only
+                file.read_file_contents(hash_id,
+                                        parent_hashes,
+                                        buffers.get(item.db_id),
+                                        load_file,
+                                        in_trash)
 
     def set_prop_for_position(self, position, prop, value):
         """Set property @prop for item at @position to @value
@@ -378,14 +379,18 @@ class DraftTextListStore(Gio.ListStore):
                 return item.to_dict(), None
         return item.to_dict()
 
-    def get_position_for_id(self, text_id):
-        length = self.get_n_items()
-        for i in range(length):
+    def get_position_for_id_in_range(self, text_id, pos_range):
+        for i in pos_range:
             item = self.get_item(i)
             if item.db_id == text_id:
                 return i
 
         return None
+
+    def get_position_for_id(self, text_id):
+        length = self.get_n_items()
+        return self.get_position_for_id_in_range(text_id,
+                                                  range(self.get_n_items()))
 
     def get_latest_modified_position(self):
         length = self.get_n_items()
