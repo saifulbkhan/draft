@@ -155,15 +155,20 @@ class DraftEditor(Gtk.Box):
         view_data = self.open_views.get(self.view)
         return view_data.markup_symbols
 
+    @property
+    def markup_type(self):
+        view_data = self.open_views.get(self.view)
+        return view_data.markup_type
+
     def _prep_view(self, view):
         view.get_style_context().add_class('draft-editor')
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
-    def _prep_buffer(self, buffer, markup='markdown'):
+    def _prep_buffer(self, buffer, markup_type='markdown'):
         buffer.connect('modified-changed', self._on_modified_changed)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
-        self.init_markup(buffer, markup)
+        self.init_markup(buffer, markup_type)
 
     def _on_key_press(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -241,20 +246,20 @@ class DraftEditor(Gtk.Box):
         self.current_text_data['tags'].pop(index)
         self.emit('tags-changed', self.current_text_data['tags'])
 
-    def init_markup(self, buffer, markup):
+    def init_markup(self, buffer, markup_type):
         view = self._view_for_buffer(buffer)
         view_data = self.open_views.get(view)
-        view_data.markup = markup
-        if markup == 'markdown':
+        view_data.markup_type = markup_type
+        if markup_type == 'markdown':
             view_data.markup_symbols = MarkdownSymbols()
 
         language_manager = GtkSource.LanguageManager.get_default()
-        language = language_manager.get_language(markup)
+        language = language_manager.get_language(markup_type)
         buffer.set_language(language)
 
-    def set_markup(self, markup):
-        if self.current_text_data['markup'] != markup:
-            self.emit('markup-changed', markup)
+    def set_markup(self, markup_type):
+        if self.current_text_data['markup'] != markup_type:
+            self.emit('markup-changed', markup_type)
 
     def switch_view(self, texts_data):
         if self._loads_in_progress:
