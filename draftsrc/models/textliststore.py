@@ -113,7 +113,7 @@ class DraftTextListStore(Gio.ListStore):
         """
         Gio.ListStore.__init__(self, item_type=TextRowData.__gtype__)
         self._list_type = list_type
-        self._trashed_texts_only = trashed
+        self.trashed_texts_only = trashed
 
         if self._list_type == TextListType.GROUP_TEXTS:
             assert parent_group is not None
@@ -141,7 +141,7 @@ class DraftTextListStore(Gio.ListStore):
                 else:
                     load_fn = data.texts_not_in_groups
                     kwargs = {'conn': connection}
-                    if self._trashed_texts_only:
+                    if self.trashed_texts_only:
                         load_orphan_trash = True
             elif self._list_type == TextListType.RECENT_TEXTS:
                 load_fn = data.texts_recently_modified
@@ -164,9 +164,9 @@ class DraftTextListStore(Gio.ListStore):
 
             for text in load_fn(**kwargs):
                 row = self._row_data_for_text(text)
-                if self._trashed_texts_only and row.in_trash:
+                if self.trashed_texts_only and row.in_trash:
                     self.append(row)
-                elif not self._trashed_texts_only and not row.in_trash:
+                elif not self.trashed_texts_only and not row.in_trash:
                     self.append(row)
             if load_orphan_trash:
                 for text in data.texts_in_trash_but_not_parent(connection):
@@ -215,7 +215,7 @@ class DraftTextListStore(Gio.ListStore):
             if item.db_id in buffers:
                 hash_id = item.hash_id
                 parent_hashes = list(item.parent_list)
-                in_trash = self._trashed_texts_only
+                in_trash = self.trashed_texts_only
                 file.read_file_contents(hash_id,
                                         parent_hashes,
                                         buffers.get(item.db_id),
@@ -417,4 +417,4 @@ class DraftTextListStore(Gio.ListStore):
         if self._list_type == TextListType.GROUP_TEXTS:
             group = self._parent_group
 
-        return self._list_type, group, self._trashed_texts_only
+        return self._list_type, group, self.trashed_texts_only

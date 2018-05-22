@@ -136,8 +136,7 @@ class DraftBaseList(Gtk.ListBox):
         for row in self.get_selected_rows():
             position = row.get_index()
             positions.append(position)
-            row_data = self._model.get_data_for_position(position)
-            if row_data['in_trash']:
+            if self._model.trashed_texts_only:
                 self.editor.set_sensitive(False)
             else:
                 self.editor.set_sensitive(True)
@@ -360,8 +359,6 @@ class DraftTextList(DraftBaseList):
         for setting a model and populating view with items."""
         DraftBaseList.__init__(self)
         self.connect('key-press-event', self._on_key_press)
-        self._row_selected_handler_id = self.connect('row-selected',
-                                                     self._on_row_selected)
 
     def _create_row_widget(self, text_data, user_data):
         """Create a row widget for @text_data"""
@@ -571,7 +568,8 @@ class DraftTextList(DraftBaseList):
             else:
                 self._model = DraftTextListStore(list_type=TextListType.ALL_TEXTS)
 
-        self.bind_model(self._model, self._create_row_widget, None)
+        with self.handler_block(self._row_selected_handler_id):
+            self.bind_model(self._model, self._create_row_widget, None)
         self._items_changed_handler_id = self._model.connect('items-changed',
                                                              self._on_items_changed)
         if self._texts_being_moved:
