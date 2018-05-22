@@ -321,6 +321,7 @@ class DraftEditor(Gtk.Box):
             scrolled.add(view)
             scrolled.set_visible(True)
             scrolled.connect('edge-overshot', self._on_edge_overshot)
+            scrolled.connect('scroll-event', self._on_scroll_event)
 
             if self.single_mode:
                 self.view_store.add_named(scrolled, id)
@@ -425,6 +426,16 @@ class DraftEditor(Gtk.Box):
             self._multi_mode_prev()
         elif edge == Gtk.PositionType.BOTTOM:
             self._multi_mode_next()
+
+    def _on_scroll_event(self, scrolled, scroll_event):
+        vadj = scrolled.get_vadjustment()
+        cannot_scroll_child = vadj.get_upper() == vadj.get_page_size()
+        if cannot_scroll_child:
+            _, del_x, del_y = scroll_event.get_scroll_deltas()
+            if scroll_event.direction == Gdk.ScrollDirection.UP or del_y < 0:
+                self._multi_mode_prev()
+            elif scroll_event.direction == Gdk.ScrollDirection.DOWN or del_y > 0:
+                self._multi_mode_next()
 
     def _write_current_buffer(self):
         if not self.view or not self._current_file:
