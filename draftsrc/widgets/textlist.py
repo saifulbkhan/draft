@@ -54,6 +54,8 @@ class DraftBaseList(Gtk.ListBox):
         self.connect('button-release-event', self._on_button_release_base)
         self._row_selected_handler_id = self.connect('row-selected',
                                                      self._on_row_selected)
+        self._selected_rows_changed_handler_id = self.connect('selected-rows-changed',
+                                                              self._on_selected_rows_changed)
         self.connect('row-activated', self._on_row_activated)
         self.set_activate_on_single_click(False)
         self.set_selection_mode(Gtk.SelectionMode.BROWSE)
@@ -149,6 +151,9 @@ class DraftBaseList(Gtk.ListBox):
         self._model.prepare_for_edit(positions,
                                      self.editor.switch_view,
                                      self.editor.load_file)
+
+    def _on_selected_rows_changed(self, widget):
+        self._on_row_selected(widget, None)
 
     def _on_row_activated(self, widget, row):
         GLib.idle_add(self.editor.focus_view, True)
@@ -569,7 +574,9 @@ class DraftTextList(DraftBaseList):
                 self._model = DraftTextListStore(list_type=TextListType.ALL_TEXTS)
 
         with self.handler_block(self._row_selected_handler_id):
-            self.bind_model(self._model, self._create_row_widget, None)
+            with self.handler_block(self._selected_rows_changed_handler_id):
+                self.bind_model(self._model, self._create_row_widget, None)
+
         self._items_changed_handler_id = self._model.connect('items-changed',
                                                              self._on_items_changed)
         if self._texts_being_moved:
