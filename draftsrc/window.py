@@ -257,7 +257,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
             if self.textlistview.search_mode_is_on():
                 self.textlistview.search_mode_off()
-            self.set_content_title("")
+            self.set_content_title("", update_sub=True)
             self.partial_headerbar_interaction()
             self.lock_library_panel = False
             self.hide_text_panel()
