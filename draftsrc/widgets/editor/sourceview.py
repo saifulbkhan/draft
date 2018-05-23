@@ -125,7 +125,7 @@ class DraftSourceView(GtkSource.View):
         self.set_auto_indent(True)
         self.set_indent_on_tab(True)
         self.set_insert_spaces_instead_of_tabs(True)
-        self.set_indent_width(4)
+        self.set_indent_width(2)
         self.set_smart_backspace(True)
         self.set_highlight_current_line(True)
 
