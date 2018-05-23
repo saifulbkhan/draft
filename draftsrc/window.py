@@ -215,8 +215,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.contentview.set_empty_selection_state()
             self.partial_headerbar_interaction()
         else:
-            self.contentview.set_last_content_state()
-            self.complete_headerbar_interaction()
+            self.update_content_view_and_headerbar()
 
     def update_content_view_and_headerbar(self):
         if self.libraryview.collection_is_empty():
@@ -287,13 +286,13 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     def partial_headerbar_interaction(self):
         headerbar = self.get_titlebar()
-        headerbar.set_preview_button_sensitive(False)
-        headerbar.set_markup_button_sensitive(False)
+        headerbar.set_preview_button_visible(False)
+        headerbar.set_markup_button_visible(False)
 
     def complete_headerbar_interaction(self):
         headerbar = self.get_titlebar()
-        headerbar.set_preview_button_sensitive(True)
-        headerbar.set_markup_button_sensitive(True)
+        headerbar.set_preview_button_visible(True)
+        headerbar.set_markup_button_visible(True)
 
     def search_button_active(self, active):
         headerbar = self.get_titlebar()
@@ -512,11 +511,11 @@ class _DraftHeaderBar(Gtk.Box):
         self._search_button.set_visible(visible)
         self._preview_button.set_visible(visible)
 
-    def set_preview_button_sensitive(self, sensitive):
-        self._preview_button.set_sensitive(sensitive)
+    def set_preview_button_visible(self, visible):
+        self._preview_button.set_visible(visible)
 
-    def set_markup_button_sensitive(self, sensitive):
-        self._markup_button.set_sensitive(sensitive)
+    def set_markup_button_visible(self, visible):
+        self._markup_button.set_visible(visible)
 
     def set_search_button_active(self, active):
         self._search_button.set_active(active)
