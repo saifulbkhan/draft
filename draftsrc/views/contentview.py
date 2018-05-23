@@ -45,6 +45,7 @@ class ContentView(Gtk.Bin):
 
         self.content_preview = DraftPreview(self.parent_window)
         self.content_stack.add_titled(self.content_preview, 'preview', 'Preview')
+        self.content_preview.connect('view-changed', self._on_content_preview_changed)
 
         self.empty_state = _DraftEmptyView()
         self.content_stack.add_titled(self.empty_state, 'empty', 'Empty')
@@ -55,11 +56,15 @@ class ContentView(Gtk.Bin):
         self.content_stack.set_visible_child_name('editor')
 
     def preview_content(self):
-        markup = self.content_editor.get_text()
-        markup_type = self.content_editor.markup_type
-        if markup_type == 'markdown':
-            html_content = render_markdown(markup)
-            self.content_preview.load_html(html_content)
+        html_contents = {}
+        preview_data, current_text_id = self.content_editor.get_preview_data()
+        for row in preview_data:
+            text_id, markup_type, markup_content = row
+            if markup_type == 'markdown':
+                html_content = render_markdown(markup_content)
+                html_contents[text_id] = html_content
+
+        self.content_preview.load_html(html_contents, current_text_id)
 
     def in_preview_mode(self):
         return self.content_stack.get_visible_child_name() == 'preview'
@@ -68,8 +73,10 @@ class ContentView(Gtk.Bin):
         if self.content_stack.get_visible_child_name() == 'editor':
             self.content_stack.set_visible_child_name('preview')
             self.preview_content()
+            self._last_content_state = 'preview'
         else:
             self.content_stack.set_visible_child_name('editor')
+            self._last_content_state = 'editor'
 
     def set_empty_group_state(self):
         self.empty_state.update_labels()
@@ -115,6 +122,12 @@ class ContentView(Gtk.Bin):
 
     def set_last_content_state(self):
         self.content_stack.set_visible_child_name(self._last_content_state)
+
+    def _on_content_preview_changed(self, widget, offset):
+        if offset == -1:
+            self.content_editor.multi_mode_prev()
+        elif offset == 1:
+            self.content_editor.multi_mode_next()
 
 
 class _DraftEmptyView(Gtk.Bin):

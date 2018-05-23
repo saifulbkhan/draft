@@ -219,6 +219,22 @@ class DraftEditor(Gtk.Box):
         self.util_revealer.set_reveal_child(False)
         self.view.grab_focus()
 
+    def get_preview_data(self):
+        data = []
+        if len(self._multi_mode_order) <= 1:
+            row = (str(self.current_text_data['id']),
+                   self.markup_type,
+                   self.get_text())
+            data.append(row)
+        else:
+            for id in self._multi_mode_order:
+                view, view_data = self._view_for_id(id)
+                markup_type = view_data.markup_type
+                text = self.get_text(view)
+                data.append((id, markup_type, text))
+
+        return data, str(self.current_text_data['id'])
+
     def get_text(self, view=None):
         if not view:
             view = self.view
@@ -379,14 +395,14 @@ class DraftEditor(Gtk.Box):
         for view in self.open_views:
             view_data = self.open_views.get(view)
             if view_data.text_data['id'] == int(id):
-                return view
-        return None
+                return view, view_data
+        return None, None
 
     def _id_for_view(self, view):
         view_data = self.open_views.get(view)
         return str(view_data.text_data['id'])
 
-    def _multi_mode_next(self):
+    def multi_mode_next(self):
         if not self.single_mode:
             current = self._multi_view_stack.get_visible_child_name()
             index = -1
@@ -406,7 +422,7 @@ class DraftEditor(Gtk.Box):
                 self.view = next_child.get_child()
                 self.statusbar.update_state()
 
-    def _multi_mode_prev(self):
+    def multi_mode_prev(self):
         if not self.single_mode:
             current = self._multi_view_stack.get_visible_child_name()
             index = -1
@@ -428,9 +444,9 @@ class DraftEditor(Gtk.Box):
 
     def _on_edge_overshot(self, scrolled, edge):
         if edge == Gtk.PositionType.TOP:
-            self._multi_mode_prev()
+            self.multi_mode_prev()
         elif edge == Gtk.PositionType.BOTTOM:
-            self._multi_mode_next()
+            self.multi_mode_next()
 
     def _on_scroll_event(self, scrolled, scroll_event):
         vadj = scrolled.get_vadjustment()
@@ -438,9 +454,9 @@ class DraftEditor(Gtk.Box):
         if cannot_scroll_child:
             _, del_x, del_y = scroll_event.get_scroll_deltas()
             if scroll_event.direction == Gdk.ScrollDirection.UP or del_y < 0:
-                self._multi_mode_prev()
+                self.multi_mode_prev()
             elif scroll_event.direction == Gdk.ScrollDirection.DOWN or del_y > 0:
-                self._multi_mode_next()
+                self.multi_mode_next()
 
     def _write_current_buffer(self):
         if not self.view or not self._current_file:
