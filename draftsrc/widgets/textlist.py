@@ -134,15 +134,7 @@ class DraftBaseList(Gtk.ListBox):
             row.connect('focus-in-event', on_row_focused)
             self._set_listview_class(False)
 
-        positions = []
-        for row in self.get_selected_rows():
-            position = row.get_index()
-            positions.append(position)
-            if self._model.trashed_texts_only:
-                self.editor.set_sensitive(False)
-            else:
-                self.editor.set_sensitive(True)
-
+        positions = [row.get_index() for row in self.get_selected_rows()]
         if len(positions) > 0:
             self.emit('some-text-selected')
         else:

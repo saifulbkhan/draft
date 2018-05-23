@@ -625,7 +625,8 @@ class DraftSourceView(GtkSource.View):
             self.emit('thesaurus-requested', word, word_start, word_end)
 
         menu_items = []
-        if suggestions_needed:
+        if (suggestions_needed and
+                range_contains_editable_text(word_start, word_end, self.get_editable())):
             suggestions = self._spell_checker.get_suggestions(word, -1)
             suggestions = suggestions[0:3]
             for suggested in suggestions:
@@ -651,7 +652,8 @@ class DraftSourceView(GtkSource.View):
 
             separator_0 = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
             menu_items.append(separator_0)
-        elif word and only_one_selected_word():
+        elif (word and only_one_selected_word() and
+                range_contains_editable_text(word_start, word_end, self.get_editable())):
             # if spelt correctly provide option to look for synonyms
             reveal_thesaurus_button = Gtk.ModelButton()
             reveal_thesaurus_button.set_label(_("Find synonyms for “%s”") % word)

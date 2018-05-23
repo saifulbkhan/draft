@@ -369,6 +369,10 @@ class DraftEditor(Gtk.Box):
             view_data.source_file = gsf
             self._prep_buffer(buffer)
             self._loads_in_progress -= 1
+            if view_data.text_data['in_trash']:
+                view.set_editable(False)
+            else:
+                view.set_editable(True)
 
         if self.parent.in_preview_mode():
             self.parent.preview_content()
@@ -500,6 +504,8 @@ class DraftEditor(Gtk.Box):
     def _update_content_header_title(self):
         text = self.get_text()
         title, subtitle = self._get_title_and_subtitle_for_text(text)
+        if not self.view.get_editable():
+            title = title + " " + _("[Read-Only]")
 
         id = self._id_for_view(self.view)
         index = -1
