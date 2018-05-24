@@ -17,7 +17,6 @@ import re
 
 from draftsrc.parsers.mistune import escape
 from draftsrc.parsers.mistune import Markdown, InlineLexer, BlockLexer, Renderer
-from draftsrc.parsers.webstrings import html_string
 
 
 # one class for each markup, storing starting symbols. Every class should have
@@ -146,5 +145,4 @@ def render_markdown(markup):
     markdown = CustomMarkdown(renderer, inline_renderer, block_renderer)
 
     content = markdown(markup)
-    content = html_string % content
     return content

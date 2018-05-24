@@ -19,9 +19,15 @@ from draftsrc.defs import DATA_DIR
 
 DRAFT_DIR = 'file://' + os.path.join(DATA_DIR, 'draft')
 
-head_string = '''
-<head>
-    <script type="text/x-mathjax-config">
+meta_string = '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">'
+
+title_string = '<title>%s</title>'
+
+mathjax_local_src = os.path.join(DRAFT_DIR, 'mathjax', 'MathJax.js')
+mathjax_remote_src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js"
+mathjax_config = "?config=TeX-AMS-MML_HTMLorMML"
+
+script_string = '''<script type="text/x-mathjax-config">
     MathJax.Hub.Config({
     tex2jax: {
         inlineMath: [ ['$','$'] ],
@@ -31,17 +37,30 @@ head_string = '''
     showMathMenu: false,
     "HTML-CSS": { scale: 75, linebreaks: { automatic: true } }
     });
-    </script>
-    <script type="text/javascript"
-        src="%s/mathjax/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-    </script>
-</head>
-''' % (DRAFT_DIR)
+</script>
+<script type="text/javascript"
+    src="%s">
+</script>'''
 
-body_string = '''
-<body>
+mathjax_script_string = script_string % (mathjax_local_src + mathjax_config)
+export_mathjax_script_string = script_string % (mathjax_remote_src + mathjax_config)
+
+head_string = '''
+<head>
 %s
-</body>
-'''
+%s
+</head>
+''' % (meta_string, mathjax_script_string)
+
+export_head_string = '''
+<head>
+%s
+%s
+%s
+</head>
+''' % (meta_string, title_string, export_mathjax_script_string)
+
+body_string = '<body>\n%s</body>'
 
 html_string = head_string + body_string
+export_html_string = export_head_string + body_string

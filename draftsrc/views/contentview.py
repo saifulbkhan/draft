@@ -16,14 +16,17 @@
 from gettext import gettext as _
 from gi.repository import Gtk, GLib
 
+from draftsrc import export
 from draftsrc.widgets.editor import DraftEditor
 from draftsrc.widgets.preview import DraftPreview
 from draftsrc.parsers.markup import render_markdown
+from draftsrc.parsers.webstrings import html_string, export_html_string
 
 
 # TODO: Make this a horizontal box to support side-by-side editing
 class ContentView(Gtk.Bin):
     _last_content_state = 'editor'
+    _current_html_content = []
 
     def __repr__(self):
         return '<ContentView>'
@@ -57,11 +60,14 @@ class ContentView(Gtk.Bin):
 
     def preview_content(self):
         html_contents = {}
+        self._current_html_content = []
         preview_data, current_text_id = self.content_editor.get_preview_data()
         for row in preview_data:
             text_id, markup_type, markup_content = row
             if markup_type == 'markdown':
                 html_content = render_markdown(markup_content)
+                self._current_html_content.append(html_content)
+                html_content = html_string % html_content
                 html_contents[text_id] = html_content
 
         self.content_preview.load_html(html_contents, current_text_id)
@@ -77,6 +83,50 @@ class ContentView(Gtk.Bin):
         else:
             self.content_stack.set_visible_child_name('editor')
             self._last_content_state = 'editor'
+
+    def process_html_export_request(self):
+        builder = Gtk.Builder()
+        builder.add_from_resource('/org/gnome/Draft/contentview.ui')
+
+        html_export_dialog = builder.get_object('html_export_dialog')
+        html_export_dialog.set_transient_for(self.parent_window)
+
+        html_dialog_header = builder.get_object('html_dialog_header')
+        html_title_entry = builder.get_object('html_title_entry')
+        html_export_chooser = builder.get_object('html_export_chooser')
+        html_cancel_button = builder.get_object('html_cancel_button')
+        html_save_button = builder.get_object('html_save_button')
+
+        default_path = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS)
+        html_export_chooser.set_current_folder(default_path)
+
+        if len(self._current_html_content) > 1:
+            html_dialog_header.set_subtitle(_("%s Texts") % len(self._current_html_content))
+
+        title = self.content_editor.get_export_title()
+        html_title_entry.set_text(title)
+
+        def _on_cancel_clicked(widget):
+            html_export_dialog.emit('response', Gtk.ResponseType.CANCEL)
+
+        def _on_save_clicked(widget):
+            html_export_dialog.emit('response', Gtk.ResponseType.ACCEPT)
+
+        html_cancel_button.connect('clicked', _on_cancel_clicked)
+        html_save_button.connect('clicked', _on_save_clicked)
+
+        response = html_export_dialog.run()
+        if response == Gtk.ResponseType.ACCEPT:
+            title = html_title_entry.get_text()
+            body = ''.join(self._current_html_content)
+            html = export_html_string % (title, body)
+            destination_folder = html_export_chooser.get_current_folder()
+            export.save_html(destination_folder, title, html)
+
+        html_export_dialog.destroy()
+
+    def export_requested(self):
+        self.content_preview.process_html_export_request()
 
     def set_empty_group_state(self):
         self.empty_state.update_labels()

@@ -74,6 +74,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         titlebar.connect('panels-toggled', self._on_panels_toggled)
         titlebar.connect('search-toggled', self._on_search_toggled)
         titlebar.connect('preview-toggled', self._on_preview_toggled)
+        titlebar.connect('export-requested', self._on_export_requested)
 
         self._topbox = Gtk.Box()
         self.add(self._topbox)
@@ -136,6 +137,9 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     def _on_preview_toggled(self, widget):
         self.contentview.preview_toggled()
+
+    def _on_export_requested(self, widget):
+        self.contentview.process_html_export_request()
 
     def _on_key_press(self, widget, event):
         modifier = Gtk.accelerator_get_default_mod_mask()
@@ -287,12 +291,12 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def partial_headerbar_interaction(self):
         headerbar = self.get_titlebar()
         headerbar.set_preview_button_visible(False)
-        headerbar.set_markup_button_visible(False)
+        headerbar.set_utility_buttons_visible(False)
 
     def complete_headerbar_interaction(self):
         headerbar = self.get_titlebar()
         headerbar.set_preview_button_visible(True)
-        headerbar.set_markup_button_visible(True)
+        headerbar.set_utility_buttons_visible(True)
 
     def search_button_active(self, active):
         headerbar = self.get_titlebar()
@@ -392,10 +396,13 @@ class _DraftHeaderBar(Gtk.Box):
     __gsignals__ = {
         'panels-toggled': (GObject.SignalFlags.RUN_FIRST, None, ()),
         'search-toggled': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'preview-toggled': (GObject.SignalFlags.RUN_FIRST, None, ())
+        'preview-toggled': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'export-requested': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     _editor = None
+    _current_utility_buttons = []
+    _passive_utility_buttons = []
 
     def __repr__(self):
         return '<DraftHeaderBar>'
@@ -404,6 +411,8 @@ class _DraftHeaderBar(Gtk.Box):
         Gtk.Box.__init__(self)
         self.parent = parent
         self._set_up_widgets(library_hsize_group, list_hsize_group, content_hsize_group)
+        self._current_utility_buttons = [self._markup_button]
+        self._passive_utility_buttons = [self._export_button]
 
     def _set_up_widgets(self, library_hsize_group, list_hsize_group, content_hsize_group):
         self._builder = Gtk.Builder()
@@ -448,6 +457,8 @@ class _DraftHeaderBar(Gtk.Box):
         self._content_subtitle_label = self._builder.get_object('content_subtitle_label')
         self._markup_button = self._builder.get_object('markup_button')
         self._markup_button.connect('clicked', self._on_request_markup_cheatsheet)
+        self._export_button = self._builder.get_object('export_button')
+        self._export_button.connect('clicked', self._on_export_clicked)
 
         self._library_buttons = self._builder.get_object('library_buttons')
         self._content_button_box = self._builder.get_object('content_button_box')
@@ -496,7 +507,17 @@ class _DraftHeaderBar(Gtk.Box):
         self.emit('search-toggled')
 
     def _on_preview_toggled(self, widget):
+        if widget.get_active():
+            self._current_utility_buttons = [self._export_button]
+            self._passive_utility_buttons = [self._markup_button]
+        else:
+            self._current_utility_buttons = [self._markup_button]
+            self._passive_utility_buttons = [self._export_button]
         self.emit('preview-toggled')
+        self.set_utility_buttons_visible(True)
+
+    def _on_export_clicked(self, widget):
+        self.emit('export-requested')
 
     def _on_request_markup_cheatsheet(self, widget):
         self._cheatsheet_popover.popup()
@@ -514,8 +535,11 @@ class _DraftHeaderBar(Gtk.Box):
     def set_preview_button_visible(self, visible):
         self._preview_button.set_visible(visible)
 
-    def set_markup_button_visible(self, visible):
-        self._markup_button.set_visible(visible)
+    def set_utility_buttons_visible(self, visible):
+        for button in self._current_utility_buttons:
+            button.set_visible(visible)
+        for button in self._passive_utility_buttons:
+            button.set_visible(False)
 
     def set_search_button_active(self, active):
         self._search_button.set_active(active)

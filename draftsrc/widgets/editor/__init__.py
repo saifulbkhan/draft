@@ -235,6 +235,14 @@ class DraftEditor(Gtk.Box):
 
         return data, str(self.current_text_data['id'])
 
+    def get_export_title(self):
+        if len(self._multi_mode_order) <= 1:
+            return self.current_text_data['title']
+        else:
+            id = self._multi_mode_order[0]
+            view, view_data = self._view_for_id(id)
+            return view_data.text_data['title']
+
     def get_text(self, view=None):
         if not view:
             view = self.view

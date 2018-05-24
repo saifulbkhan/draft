@@ -9,6 +9,7 @@ configure_file(
 app_sources = [
   '__init__.py',
   'app.py',
+  'export.py',
   'file.py',
   'search.py',
   'thesaurus.py',
