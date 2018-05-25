@@ -406,3 +406,8 @@ class DraftGroupTree(Gtk.TreeView):
             return True
 
         return False
+
+    def get_group_for_selected(self):
+        """Return metadata as a dict for the selected group."""
+        model, treeiter = self.selection.get_selected()
+        return model.get_group_for_iter(treeiter)

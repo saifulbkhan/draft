@@ -17,6 +17,7 @@ from gettext import gettext as _
 from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
 from draftsrc import search
+from draftsrc import export
 from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.widgets.collectionlist import DraftCollectionList
 from draftsrc.widgets.grouptree import DraftGroupTree
@@ -89,6 +90,7 @@ class DraftLibraryView(Gtk.Bin):
         self._remove_button = self.builder.get_object('remove_button')
         self._expand_button = self.builder.get_object('expand_button')
         self._collapse_button = self.builder.get_object('collapse_button')
+        self._export_html_button = self.builder.get_object('export_html_button')
 
         self._trash_menu = self.builder.get_object('trash_popover_menu')
         self._restore_button = self.builder.get_object('trash_restore_button')
@@ -124,6 +126,7 @@ class DraftLibraryView(Gtk.Bin):
         self._empty_trash_button.connect('clicked', self._on_empty_trash_button_clicked)
         self._trash_expand_button.connect('clicked', self._on_trash_expand_clicked)
         self._trash_collapse_button.connect('clicked', self._on_trash_expand_clicked)
+        self._export_html_button.connect('clicked', self._on_export_html_clicked)
 
     def _on_collection_class_selected(self, widget, collection_class_type):
         """Handler for `class-selected` signal from DraftsCollectionView. Calls
@@ -250,6 +253,10 @@ class DraftLibraryView(Gtk.Bin):
     def _on_remove_clicked(self, widget):
         self.local_groups_view.delete_selected_row()
         self._popover_menu.popdown()
+
+    def _on_export_html_clicked(self, widget):
+        group = self.local_groups_view.get_group_for_selected()
+        export.request_save_html_for_group(group)
 
     def _on_trash_menu_requested(self, widget):
         """Cater to context menu request for a trashed group. Ignore if the

@@ -84,53 +84,10 @@ class ContentView(Gtk.Bin):
             self.content_stack.set_visible_child_name('editor')
             self._last_content_state = 'editor'
 
-    def process_html_export_request(self):
-        builder = Gtk.Builder()
-        builder.add_from_resource('/org/gnome/Draft/contentview.ui')
-
-        html_export_dialog = builder.get_object('html_export_dialog')
-        html_export_dialog.set_transient_for(self.parent_window)
-
-        html_dialog_header = builder.get_object('html_dialog_header')
-        html_title_entry = builder.get_object('html_title_entry')
-        html_export_chooser = builder.get_object('html_export_chooser')
-        html_export_check = builder.get_object('html_export_check')
-        html_cancel_button = builder.get_object('html_cancel_button')
-        html_save_button = builder.get_object('html_save_button')
-
-        default_path = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS)
-        html_export_chooser.set_current_folder(default_path)
-
-        if len(self._current_html_content) > 1:
-            html_dialog_header.set_subtitle(_("%s Texts") % len(self._current_html_content))
-
-        title = self.content_editor.get_export_title()
-        html_title_entry.set_text(title)
-
-        def _on_cancel_clicked(widget):
-            html_export_dialog.emit('response', Gtk.ResponseType.CANCEL)
-
-        def _on_save_clicked(widget):
-            html_export_dialog.emit('response', Gtk.ResponseType.ACCEPT)
-
-        html_cancel_button.connect('clicked', _on_cancel_clicked)
-        html_save_button.connect('clicked', _on_save_clicked)
-
-        response = html_export_dialog.run()
-        if response == Gtk.ResponseType.ACCEPT:
-            title = html_title_entry.get_text()
-            body = ''.join(self._current_html_content)
-            destination_folder = html_export_chooser.get_current_folder()
-            with_style = html_export_check.get_active()
-            export.save_html(destination_folder,
-                             title,
-                             body,
-                             with_style=with_style)
-
-        html_export_dialog.destroy()
-
-    def export_requested(self):
-        self.content_preview.process_html_export_request()
+    def html_export_requested(self):
+        suggested_title = self.content_editor.get_export_title()
+        export.handle_html_export_request(self._current_html_content,
+                                          suggested_title)
 
     def set_empty_group_state(self):
         self.empty_state.update_labels()

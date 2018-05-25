@@ -20,6 +20,7 @@ from draftsrc.views.panelview import DraftTextListView, DraftLibraryView
 from draftsrc.views.contentview import ContentView
 from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.parsers.markup import MarkdownSymbols
+from draftsrc import export
 
 
 class ApplicationWindow(Gtk.ApplicationWindow):
@@ -47,6 +48,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self._set_up_actions()
         self._set_up_widgets()
         self.show_all()
+        export.main_window = self
 
     def _set_up_actions(self):
         action_entries = [
@@ -139,7 +141,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.contentview.preview_toggled()
 
     def _on_export_requested(self, widget):
-        self.contentview.process_html_export_request()
+        self.contentview.html_export_requested()
 
     def _on_key_press(self, widget, event):
         modifier = Gtk.accelerator_get_default_mod_mask()
