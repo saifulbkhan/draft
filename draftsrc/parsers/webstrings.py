@@ -19,7 +19,7 @@ from draftsrc.defs import DATA_DIR
 
 DRAFT_DIR = 'file://' + os.path.join(DATA_DIR, 'draft')
 
-meta_string = '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">'
+meta_string = '<meta charset="UTF-8">'
 
 title_string = '<title>%s</title>'
 
@@ -73,6 +73,8 @@ export_styled_head_string = '''
 
 body_string = '<body>\n%s</body>'
 
-html_string = head_string + body_string
-export_html_string = export_head_string + body_string
-export_styled_html_string = export_styled_head_string + body_string
+html_wrapper = '<!DOCTYPE html>\n<html>%s\n</html>'
+
+html_string = html_wrapper % (head_string + body_string)
+export_html_string = html_wrapper % (export_head_string + body_string)
+export_styled_html_string = html_wrapper % (export_styled_head_string + body_string)
