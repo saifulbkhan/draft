@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from os import environ, path
+from os import path
 from subprocess import call
 
 import gi
@@ -23,7 +23,8 @@ from gi.repository import Gtk, GLib, GObject, Gdk, WebKit2 as WebKit, WkJsCore
 
 from draftsrc.defs import DATA_DIR
 
-DRAFT_DIR = 'file://' + path.join(DATA_DIR, 'draft')
+DRAFT_DIR = path.join(DATA_DIR, 'draft')
+DRAFT_DIR_URL = 'file://' + DRAFT_DIR
 
 
 class DraftPreview(Gtk.Box):
@@ -60,9 +61,8 @@ class DraftPreview(Gtk.Box):
 
     def _set_up_content_manager(self):
         user_content_manager = WebKit.UserContentManager()
-        home = environ.get('HOME')
         # This would only work on UNIX filesystems. Maybe fix this?
-        css_path = path.join(home, '.local/share/draft/styles/webview.css')
+        css_path = path.join(DRAFT_DIR, 'styles', 'webview.css')
         with open(css_path) as f:
             css_str = f.read()
             user_stylesheet = WebKit.UserStyleSheet(
@@ -107,7 +107,7 @@ class DraftPreview(Gtk.Box):
 
             webview = scrolled.get_child().get_child()
             webview.set_editable(True)
-            GLib.idle_add(webview.load_html, html_contents[id], DRAFT_DIR)
+            GLib.idle_add(webview.load_html, html_contents[id], DRAFT_DIR_URL)
             self._view_order.append(id)
 
     @staticmethod
