@@ -61,7 +61,6 @@ class DraftPreview(Gtk.Box):
 
     def _set_up_content_manager(self):
         user_content_manager = WebKit.UserContentManager()
-        # This would only work on UNIX filesystems. Maybe fix this?
         css_path = path.join(DRAFT_DIR, 'styles', 'webview.css')
         with open(css_path) as f:
             css_str = f.read()

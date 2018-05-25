@@ -20,7 +20,7 @@ from draftsrc import export
 from draftsrc.widgets.editor import DraftEditor
 from draftsrc.widgets.preview import DraftPreview
 from draftsrc.parsers.markup import render_markdown
-from draftsrc.parsers.webstrings import html_string, export_html_string
+from draftsrc.parsers.webstrings import html_string
 
 
 # TODO: Make this a horizontal box to support side-by-side editing
@@ -94,6 +94,7 @@ class ContentView(Gtk.Bin):
         html_dialog_header = builder.get_object('html_dialog_header')
         html_title_entry = builder.get_object('html_title_entry')
         html_export_chooser = builder.get_object('html_export_chooser')
+        html_export_check = builder.get_object('html_export_check')
         html_cancel_button = builder.get_object('html_cancel_button')
         html_save_button = builder.get_object('html_save_button')
 
@@ -119,9 +120,12 @@ class ContentView(Gtk.Bin):
         if response == Gtk.ResponseType.ACCEPT:
             title = html_title_entry.get_text()
             body = ''.join(self._current_html_content)
-            html = export_html_string % (title, body)
             destination_folder = html_export_chooser.get_current_folder()
-            export.save_html(destination_folder, title, html)
+            with_style = html_export_check.get_active()
+            export.save_html(destination_folder,
+                             title,
+                             body,
+                             with_style=with_style)
 
         html_export_dialog.destroy()
 

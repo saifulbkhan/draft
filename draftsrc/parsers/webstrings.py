@@ -45,6 +45,8 @@ script_string = '''<script type="text/x-mathjax-config">
 mathjax_script_string = script_string % (mathjax_local_src + mathjax_config)
 export_mathjax_script_string = script_string % (mathjax_remote_src + mathjax_config)
 
+style_string = '''<style type="text/css">%s</style>'''
+
 head_string = '''
 <head>
 %s
@@ -60,7 +62,17 @@ export_head_string = '''
 </head>
 ''' % (meta_string, title_string, export_mathjax_script_string)
 
+export_styled_head_string = '''
+<head>
+%s
+%s
+%s
+%s
+</head>
+''' % (meta_string, title_string, export_mathjax_script_string, style_string)
+
 body_string = '<body>\n%s</body>'
 
 html_string = head_string + body_string
 export_html_string = export_head_string + body_string
+export_styled_html_string = export_styled_head_string + body_string

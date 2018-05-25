@@ -15,7 +15,23 @@
 
 from os import path
 
-def save_html(parent, title, html):
+from draftsrc.parsers.webstrings import export_html_string
+from draftsrc.parsers.webstrings import export_styled_html_string
+from draftsrc.defs import DATA_DIR
+
+DRAFT_DIR = path.join(DATA_DIR, 'draft')
+
+
+def save_html(parent, title, body, with_style=False):
+    html = ""
+    if with_style:
+        css_path = path.join(DRAFT_DIR, 'styles', 'webview.css')
+        with open(css_path, 'r') as f:
+            css = f.read()
+            html = export_styled_html_string % (title, css, body)
+    else:
+        html = export_html_string % (title, body)
+
     filename = '-'.join(title.lower().split())
     fpath = path.join(parent, filename)
     with open(fpath, 'w') as f:
