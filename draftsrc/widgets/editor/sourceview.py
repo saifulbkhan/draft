@@ -538,7 +538,7 @@ class DraftSourceView(GtkSource.View):
         can_paste = selection_data.targets_include_text()
 
         def range_contains_editable_text(start, end, default_editability):
-            iter = start
+            iter = start.copy()
             while iter.compare(end) < 0:
                 if iter.editable(default_editability):
                     return True
@@ -568,9 +568,9 @@ class DraftSourceView(GtkSource.View):
                 if word:
                     correctly_spelled = self._spell_checker.check_word(word, -1)
                     if not correctly_spelled:
-                        return True, word, word_end, word_start
+                        return True, word, word_start, word_end
                     else:
-                        return False, word, word_end, word_start
+                        return False, word, word_start, word_end
 
                 return False, None, None, None
 
@@ -582,7 +582,7 @@ class DraftSourceView(GtkSource.View):
                     if not correctly_spelled:
                         return True, word, word_start, word_end
                     else:
-                        return False, word, word_end, word_start
+                        return False, word, word_start, word_end
 
             return False, None, None, None
 
