@@ -207,6 +207,9 @@ class DraftTextListStore(Gio.ListStore):
         @load_file: method, passed on to `file.read_file_contents` function
         """
         items = [self.get_item(position) for position in positions]
+        if None in items:
+            return
+
         buffers = switch_view([item.to_dict() for item in items])
         if not buffers:
             return
