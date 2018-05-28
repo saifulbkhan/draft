@@ -27,6 +27,7 @@ class DraftSourceBuffer(GtkSource.Buffer):
     _link_marks = {}
     _search_mark = None
     _search_context = None
+    _current_match = ()
 
     _link_regex = r'''\[((?:\[[^^\]]*\]|[^\[\]]|(?=[^\[]*\]))*)\]\([^\)"']*?(\s("[^"]*?"|'[^']*?'))?\)'''
     _link_text_regex = r'''\[((?:\[[^^\]]*\]|[^\[\]]|(?=[^\[]*\]))*)\]'''
@@ -51,9 +52,9 @@ class DraftSourceBuffer(GtkSource.Buffer):
         self._search_context = GtkSource.SearchContext(buffer=self)
         self._search_context.set_highlight(False)
 
-        search_settings = self._search_context.get_settings()
-        search_settings.set_regex_enabled(True)
-        search_settings.set_wrap_around(False)
+        self._search_settings = self._search_context.get_settings()
+        self._search_settings.set_regex_enabled(True)
+        self._search_settings.set_wrap_around(False)
 
         if not self.get_tag_table().lookup(self._invis_tag_name):
             self.create_tag(self._invis_tag_name, size=0, editable=False)
@@ -224,3 +225,82 @@ class DraftSourceBuffer(GtkSource.Buffer):
                 return True, (bullet_match.end() - bullet_match.start())
 
         return False, -1
+
+    def get_selected_text(self):
+        selection = self.get_selection_bounds()
+        if selection:
+            start, end = selection
+            return self.get_slice(start, end, True)
+        return None
+
+    def unselect_any(self):
+        selection = self.get_selection_bounds()
+        if selection:
+            start, end = selection
+            self.select_range(start, start)
+
+    def find_matches(self, search_text):
+        self._current_match = ()
+        self._search_settings.set_search_text(search_text)
+        self._search_settings.set_wrap_around(False)
+        self._search_context.set_highlight(True)
+
+        search_iter = self.get_start_iter()
+        while True:
+            found, match_start, match_end, wrapped = \
+                self._search_context.forward2(search_iter)
+            if not found:
+                break
+
+            search_iter = match_end.copy()
+
+    def get_occurrences_count(self):
+        return self._search_context.get_occurrences_count()
+
+    def select_next_match(self):
+        if not self._current_match:
+            search_iter = self.get_iter_at_mark(self.get_insert())
+        else:
+            search_iter = self._current_match[1]
+
+        self._search_settings.set_wrap_around(True)
+        found, match_start, match_end, wrapped = \
+            self._search_context.forward2(search_iter)
+        if found:
+            self.select_range(match_start, match_end)
+            self._current_match = (match_start, match_end)
+
+    def select_prev_match(self):
+        if not self._current_match:
+            search_iter = self.get_iter_at_mark(self.get_insert())
+        else:
+            search_iter = self._current_match[0]
+
+        self._search_settings.set_wrap_around(True)
+        found, match_start, match_end, wrapped = \
+            self._search_context.backward2(search_iter)
+        if found:
+            self.select_range(match_start, match_end)
+            self._current_match = (match_start, match_end)
+
+    def replace_current_match(self, replacement):
+        match_start, match_end = self._current_match
+        try:
+            self._search_context.replace2(match_start, match_end, replacement, -1)
+        except Exception as e:
+            # TODO: notify, replacement error
+            pass
+
+    def replace_all_matches(self, replacement):
+        self._search_context.replace_all(replacement, -1)
+
+    def set_search_case_sensitivity(self, case_sensitive):
+        self._search_settings.set_case_sensitive(case_sensitive)
+
+    def set_search_whole_words_only(self, whole_words_only):
+        self._search_settings.set_at_word_boundaries(whole_words_only)
+
+    def finish_current_search(self):
+        self._current_match = ()
+        self._search_settings.set_search_text("")
+        self._search_context.set_highlight(False)

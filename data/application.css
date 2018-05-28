@@ -225,3 +225,8 @@ radiobutton > radio {
 .draft-thesaurus-box {
     border-bottom: 1px solid @borders;
 }
+
+.draft-search-box {
+    padding: 6px;
+    border-bottom: 1px solid @borders;
+}

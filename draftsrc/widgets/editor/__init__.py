@@ -27,6 +27,7 @@ from draftsrc import db
 from draftsrc.parsers.markup import MarkdownSymbols
 from draftsrc.widgets.statusbar import DraftStatusbar
 from draftsrc.widgets.thesaurusbox import DraftThesaurusBox
+from draftsrc.widgets.searchbox import DraftSearchBox
 from draftsrc.widgets.editor.sourceview import DraftSourceView
 
 # Ensure that GtkBuilder actually recognises SourceView in UI file
@@ -78,7 +79,7 @@ class DraftEditor(Gtk.Box):
         self.pack_start(self.util_revealer, False, False, 0)
 
         self.thesaurus_box = DraftThesaurusBox()
-        self.util_revealer.add(self.thesaurus_box)
+        self.search_box = DraftSearchBox()
 
         self.editor_stack = Gtk.Stack()
         self.pack_start(self.editor_stack, True, True, 0)
@@ -98,6 +99,7 @@ class DraftEditor(Gtk.Box):
         self.statusbar.connect('word-goal-set', self._on_word_goal_set)
         self.thesaurus_box.connect('cancel-synonym', self._on_cancel_synonym)
         self.thesaurus_box.connect('apply-synonym', self._on_apply_synonym)
+        self.search_box.connect('close-search', self._on_close_search)
         self.connect('key-press-event', self._on_key_press)
 
     @property
@@ -162,6 +164,11 @@ class DraftEditor(Gtk.Box):
 
     def _prep_view(self, view):
         view.get_style_context().add_class('draft-editor')
+
+        def on_grab_focus(widget):
+            self.util_revealer.set_reveal_child(False)
+
+        view.connect('grab-focus', on_grab_focus)
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
     def _prep_buffer(self, buffer, markup_type='markdown'):
@@ -174,7 +181,6 @@ class DraftEditor(Gtk.Box):
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
 
-        # TODO: Add shortcuts to textview
         if (event_and_modifiers and
                 event_and_modifiers == Gdk.ModifierType.CONTROL_MASK):
             if event.keyval == Gdk.KEY_b:
@@ -183,6 +189,10 @@ class DraftEditor(Gtk.Box):
                 self.insert_emphasis()
             elif event.keyval ==Gdk.KEY_k:
                 self.insert_link()
+            elif event.keyval == Gdk.KEY_f:
+                self.set_utility_child(self.search_box)
+                self.util_revealer.set_reveal_child(True)
+                self.search_box.set_active_view(self.view)
 
     def _on_word_goal_set(self, widget, goal):
         if self.current_text_data['word_goal'] != goal:
@@ -204,6 +214,7 @@ class DraftEditor(Gtk.Box):
 
     def _on_thesaurus_requested(self, widget, word, word_start, word_end):
         self._synonym_word_bounds = (word_start, word_end)
+        self.set_utility_child(self.thesaurus_box)
         self.util_revealer.set_reveal_child(True)
         self.thesaurus_box.update_for_word(word)
 
@@ -217,6 +228,9 @@ class DraftEditor(Gtk.Box):
         buffer.delete(start, end)
         buffer.insert(start, word)
         self.util_revealer.set_reveal_child(False)
+        self.view.grab_focus()
+
+    def _on_close_search(self, widget):
         self.view.grab_focus()
 
     def get_preview_data(self):
@@ -284,6 +298,13 @@ class DraftEditor(Gtk.Box):
     def set_markup(self, markup_type):
         if self.current_text_data['markup'] != markup_type:
             self.emit('markup-changed', markup_type)
+
+    def set_utility_child(self, child):
+        current_child = self.util_revealer.get_child()
+        if current_child:
+            self.util_revealer.remove(current_child)
+        child.set_visible(True)
+        self.util_revealer.add(child)
 
     def switch_view(self, texts_data):
         if self._loads_in_progress:

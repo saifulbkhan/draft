@@ -50,6 +50,7 @@ widgets_sources = [
   'widgets/grouptree.py',
   'widgets/__init__.py',
   'widgets/collectionlist.py',
+  'widgets/searchbox.py',
   'widgets/preview.py',
   'widgets/statusbar.py',
   'widgets/textlist.py',
