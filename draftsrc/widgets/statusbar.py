@@ -14,10 +14,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import cairo
+import math
 from string import whitespace
 from gettext import gettext as _
 
-from gi.repository import Gtk, GLib, GObject
+from gi.repository import Gtk, GLib, GObject, Gdk, Pango
 
 UPDATE_REGISTRY = []    # registry of functions called when updating state
 
@@ -41,6 +43,7 @@ class DraftStatusbar(Gtk.Bin):
     }
 
     _word_goal_set = False
+    _word_goal_ratio_accomplished = 0
     _builder = Gtk.Builder()
 
     def __repr__(self):
@@ -65,17 +68,24 @@ class DraftStatusbar(Gtk.Bin):
 
         self._word_count_label = self._builder.get_object('word_count_label')
         self._word_goal_label = self._builder.get_object('word_goal_label')
-        self._word_goal_complete_label = self._builder.get_object('word_goal_complete_label')
+        self._word_goal_overlay = self._builder.get_object('word_goal_overlay')
+        self._word_goal_drawing_area = self._builder.get_object('word_goal_drawing_area')
         self._word_goal_popover = self._builder.get_object('word_goal_popover')
         self._word_goal_title = self._builder.get_object('word_goal_title')
         self._goal_set_entry = self._builder.get_object('word_goal_entry')
         self._word_goal_stack = self._builder.get_object('word_goal_stack')
+        self._word_goal_overlay = self._builder.get_object('word_goal_overlay')
         word_goal_button = self._builder.get_object('word_goal_button')
         goal_edit_button = self._builder.get_object('word_goal_edit_button')
         goal_remove_button = self._builder.get_object('word_goal_remove_button')
         goal_set_button = self._builder.get_object('word_goal_set_button')
 
+        self._word_count_overlay_label = Gtk.Label()
+        self._word_count_overlay_label.set_justify(Gtk.Justification.CENTER)
+        self._word_goal_overlay.add_overlay(self._word_count_overlay_label)
+
         self._word_goal_popover.connect('closed', self._on_goal_popover_closed)
+        self._word_goal_drawing_area.connect('draw', self._on_goal_draw)
         self._goal_set_entry.connect('changed', self._on_goal_entry_changed)
         self._goal_set_entry.connect('activate', self._on_set_goal)
         word_goal_button.connect('clicked', self._on_word_count_clicked)
@@ -224,7 +234,7 @@ class DraftStatusbar(Gtk.Bin):
     def _unset_word_goal(self):
         self._goal_set_entry.set_text('')
         self._word_goal_label.set_visible(False)
-        self._word_goal_complete_label.set_visible(False)
+        self._word_goal_overlay.set_visible(False)
 
     def _set_goal_entry_mode(self, val):
         self._switch_stack_child(int(val))
@@ -269,11 +279,59 @@ class DraftStatusbar(Gtk.Bin):
 
         goal = int(goal)
         done = (current / goal)
-        word_goal_string = '<span size="x-large">{:,} Words</span>'.format(goal)
-        percent_string = '<span>({:.0%} Complete)</span>'.format(done)
-        self._word_goal_label.set_markup(word_goal_string)
-        self._word_goal_complete_label.set_markup(percent_string)
+        self._word_goal_ratio_accomplished = done
+        overlay_string = '<span font_size="xx-large"><b>{:,}</b></span>\nwords'.format(current)
+        self._word_count_overlay_label.set_markup(overlay_string)
+        goal_string = 'of at least\n<b>{:,}</b> words'.format(goal)
+        self._word_goal_label.set_markup(goal_string)
         self._word_goal_label.set_visible(True)
-        self._word_goal_complete_label.set_visible(True)
+        self._word_goal_overlay.show_all()
         self._update_word_goal_state(True)
         self.emit('word-goal-set', goal)
+
+    def _on_goal_draw(self, widget, cr):
+        context = widget.get_style_context()
+
+        width = widget.get_allocated_width()
+        height = widget.get_allocated_height()
+
+        Gtk.render_background(context, cr, 0, 0, width, height)
+
+        xc, yc = width/2.0, height/2.0
+        radius = min(height, width) / 2.0
+        angle1 = angle2 = - (math.pi / 2.0)
+        ratio = self._word_goal_ratio_accomplished
+        fg_color = context.get_color(context.get_state())
+        bg_color = Gdk.RGBA()
+        has_color, bg_color = context.lookup_color('theme_bg_color')
+        has_color, completion_color = context.lookup_color('theme_selected_bg_color')
+
+        # Add a faded circle first
+        cr.move_to(xc, yc)
+        fg_color.alpha = 0.1
+        Gdk.cairo_set_source_rgba(cr, fg_color)
+        cr.arc(xc, yc, radius, 0, 2 * math.pi)
+        cr.fill()
+
+        # Add the goal completion circle
+        if ratio > 0:
+            if ratio >= 1:
+                ratio = 1
+                has_color, completion_color = context.lookup_color('success_color')
+                completion_color.alpha = 0.7
+            angle2 = (ratio * math.pi * 2.0) - (math.pi / 2.0)
+            cr.move_to(xc, yc)
+            Gdk.cairo_set_source_rgba(cr, completion_color)
+            cr.arc(xc, yc, radius, angle1, angle2)
+            cr.fill()
+
+        # Add an inner circle of bg color
+        cr.move_to(xc, yc)
+        bg_color.alpha = 1.0
+        if ratio >= 1:
+            bg_color.alpha = 0.8
+        Gdk.cairo_set_source_rgba(cr, bg_color)
+        cr.arc(xc, yc, radius - 16, 0, 2 * math.pi)
+        cr.fill()
+
+        return False

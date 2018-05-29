@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.20.2 -->
+<!-- Generated with glade 3.20.4 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkBox" id="main_button_box">
@@ -159,15 +159,16 @@
       <object class="GtkBox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="margin_left">12</property>
+        <property name="margin_right">12</property>
+        <property name="margin_top">12</property>
+        <property name="margin_bottom">12</property>
         <property name="orientation">vertical</property>
+        <property name="spacing">12</property>
         <child>
           <object class="GtkLabel" id="word_goal_title">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="margin_left">12</property>
-            <property name="margin_right">12</property>
-            <property name="margin_top">12</property>
-            <property name="margin_bottom">6</property>
             <style>
               <class name="draft-menu-title"/>
             </style>
@@ -179,12 +180,23 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="word_goal_label">
+          <object class="GtkOverlay" id="word_goal_overlay">
+            <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="margin_left">12</property>
             <property name="margin_right">12</property>
             <property name="margin_top">12</property>
-            <property name="margin_bottom">3</property>
+            <child>
+              <object class="GtkDrawingArea" id="word_goal_drawing_area">
+                <property name="width_request">176</property>
+                <property name="height_request">176</property>
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="index">-1</property>
+              </packing>
+            </child>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -193,12 +205,10 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="word_goal_complete_label">
+          <object class="GtkLabel" id="word_goal_label">
             <property name="can_focus">False</property>
-            <property name="margin_left">12</property>
-            <property name="margin_right">12</property>
-            <property name="margin_top">3</property>
-            <property name="margin_bottom">18</property>
+            <property name="margin_bottom">12</property>
+            <property name="justify">center</property>
           </object>
           <packing>
             <property name="expand">False</property>
@@ -210,10 +220,6 @@
           <object class="GtkStack" id="word_goal_stack">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="margin_left">12</property>
-            <property name="margin_right">12</property>
-            <property name="margin_top">6</property>
-            <property name="margin_bottom">12</property>
             <property name="transition_type">crossfade</property>
             <child>
               <object class="GtkBox">
