@@ -26,7 +26,6 @@ from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango, Gspell
 from draftsrc.widgets.editor.sourcebuffer import DraftSourceBuffer
 
 DEFAULT_SCROLL_OFFSET, DEFAULT_NUM_OVERSCROLL = 3, 3
-DEFAULT_TOP_MARGIN, DEFAULT_BOTTOM_MARGIN = 24, 24
 DEFAULT_LEFT_MARGIN, DEFAULT_RIGHT_MARGIN = 24, 24
 
 
@@ -58,6 +57,8 @@ class DraftSourceView(GtkSource.View):
     free_width_limit = 1000
     scroll_offset = DEFAULT_SCROLL_OFFSET
     overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
+    _calculated_top_margin = 24
+    _calculated_bottom_margin = 24
 
     def __repr__(self):
         return '<DraftSourceView>'
@@ -118,8 +119,8 @@ class DraftSourceView(GtkSource.View):
         self.set_wrap_mode(Gtk.WrapMode.WORD)
         self.set_left_margin(DEFAULT_LEFT_MARGIN)
         self.set_right_margin(DEFAULT_RIGHT_MARGIN)
-        self.set_top_margin(DEFAULT_TOP_MARGIN)
-        self.set_bottom_margin(DEFAULT_BOTTOM_MARGIN)
+        self.set_top_margin(self._calculated_top_margin)
+        self.set_bottom_margin(self._calculated_bottom_margin)
 
         # formatting specific options
         self.set_auto_indent(True)
@@ -139,7 +140,6 @@ class DraftSourceView(GtkSource.View):
     def get_visible_rect(self):
         area = GtkSource.View.get_visible_rect(self)
         self.refresh_overscroll()
-        area.y += self.get_top_margin()
 
         # If we don't have valid line height, not much we can do now. We can
         # just adjust things later once it becomes available.
@@ -228,18 +228,24 @@ class DraftSourceView(GtkSource.View):
         # Scroll offset adjustment
         if self.cached_char_height:
             true_height = GtkSource.View.get_visible_rect(self).height
-            visible_lines = int(true_height / self.cached_char_height)
-            max_scroll_offset = (visible_lines - 1)/ 2
-            scroll_offset = min(self.scroll_offset, max_scroll_offset)
             if self._typewriter_mode:
                 scroll_offset = self.scroll_offset
-
-            scroll_offset_height = self.cached_char_height * scroll_offset
-            if scroll_offset_height > 0:
-                if rect.y - scroll_offset_height < yvalue:
-                    yvalue -= (scroll_offset_height - (rect.y - yvalue))
-                elif self._gdk_rectangle_y2(rect) + scroll_offset_height > yvalue + screen.height:
-                    yvalue += (self._gdk_rectangle_y2(rect) + scroll_offset_height) - (yvalue + true_height)
+                scroll_offset_height = self.cached_char_height * scroll_offset
+                if scroll_offset_height > 0:
+                    if rect.y - scroll_offset_height < yvalue:
+                        yvalue -= (scroll_offset_height - (rect.y - yvalue))
+                    elif self._gdk_rectangle_y2(rect) + scroll_offset_height > yvalue + screen.height:
+                        yvalue += (self._gdk_rectangle_y2(rect) + scroll_offset_height) - (yvalue + true_height)
+            else:
+                visible_lines = int(true_height / self.cached_char_height)
+                max_scroll_offset = (visible_lines - 1)/ 2
+                scroll_offset = min(self.scroll_offset, max_scroll_offset)
+                scroll_offset_height = self.cached_char_height * scroll_offset
+                if scroll_offset_height > 0:
+                    if rect.y - scroll_offset_height < yvalue:
+                        yvalue -= (scroll_offset_height - (rect.y - yvalue)) - self.cached_char_height
+                    elif self._gdk_rectangle_y2(rect) + scroll_offset_height > yvalue + screen.height:
+                        yvalue += (self._gdk_rectangle_y2(rect) + scroll_offset_height + self.cached_char_height) - (yvalue + true_height)
 
         # Horizontal alignment
         scroll_dest = current_x_scroll
@@ -361,15 +367,15 @@ class DraftSourceView(GtkSource.View):
             end = buffer.get_end_iter()
             end_loc = self.get_iter_location(end)
             if loc.y <= top_margin:
-                self.set_top_margin(top_margin - loc.y + DEFAULT_TOP_MARGIN)
+                self.set_top_margin(top_margin - loc.y + self._calculated_top_margin)
             else:
-                self.set_top_margin(DEFAULT_TOP_MARGIN)
+                self.set_top_margin(self._calculated_top_margin)
             if self._gdk_rectangle_y2(end_loc) - self._gdk_rectangle_y2(loc) <= bottom_margin:
                 self.set_bottom_margin(bottom_margin -\
                                        (self._gdk_rectangle_y2(end_loc) -\
                                         self._gdk_rectangle_y2(loc)))
             else:
-                self.set_bottom_margin(DEFAULT_BOTTOM_MARGIN)
+                self.set_bottom_margin(self._calculated_bottom_margin)
 
             # need to do this for margins to properly update with blank space
             GtkSource.View.do_style_updated(self)
@@ -444,6 +450,11 @@ class DraftSourceView(GtkSource.View):
         self.cached_char_width, self.cached_char_height = layout.get_pixel_size()
         self.cached_char_height += self.get_pixels_above_lines() +\
                                    self.get_pixels_below_lines()
+        self._calculated_top_margin = self._calculated_bottom_margin = self.cached_char_height
+        self.set_top_margin(self._calculated_top_margin)
+        self.set_bottom_margin(self._calculated_bottom_margin)
+        if not self._typewriter_mode:
+            self.set_top_margin(self._calculated_top_margin)
 
     def do_size_allocate(self, allocation):
         GtkSource.View.do_size_allocate(self, allocation)
@@ -462,7 +473,7 @@ class DraftSourceView(GtkSource.View):
         if self._typewriter_mode:
             area = GtkSource.View.get_visible_rect(self)
             if self.cached_char_height:
-                visible_lines = int(area.height / self.cached_char_height)
+                visible_lines = int(area.height / self.cached_char_height) - 1
                 if self._typewriter_mode_type == TypewriterModeType.UPPER:
                     self.scroll_offset = (visible_lines - 1) / 4
                     self.overscroll_num_lines = (visible_lines - 1) / 4
