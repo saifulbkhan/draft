@@ -131,9 +131,9 @@ class DraftLibraryView(Gtk.Bin):
     def _on_collection_class_selected(self, widget, collection_class_type):
         """Handler for `class-selected` signal from DraftsCollectionView. Calls
         TextListView to update its collection class and consequently its model"""
+        self.parent_window.textlistview.set_collection_class_type(collection_class_type)
         self.local_groups_view.selection.unselect_all()
         self.trash_view.selection.unselect_all()
-        self.parent_window.textlistview.set_collection_class_type(collection_class_type)
         self.collection_class_selected = collection_class_type
         self.parent_window.update_content_view_and_headerbar()
 
