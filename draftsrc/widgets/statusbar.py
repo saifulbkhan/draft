@@ -132,6 +132,12 @@ class DraftStatusbar(Gtk.Bin):
             self._goal_set_entry.activate()
         self._update_word_goal_state(bool(goal))
 
+        if self._word_goal_set:
+            done = word_count / goal
+            self._word_goal_ratio_accomplished = done
+            overlay_string = '<span font_size="xx-large"><b>{:,}</b></span>\nwords'.format(word_count)
+            self._word_count_overlay_label.set_markup(overlay_string)
+
     @registered_for_update
     def update_text_data(self):
         """Updates the text specific information presented by @self, such
