@@ -37,9 +37,36 @@
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
         <child>
-          <object class="GtkLabel" id="word_count_label">
+          <object class="GtkStack" id="word_count_stack">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="transition_duration">250</property>
+            <property name="transition_type">slide-up</property>
+            <child>
+              <object class="GtkLabel" id="word_count_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+              </object>
+              <packing>
+                <property name="name">page0</property>
+                <property name="title" translatable="yes">page0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="goal_label">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">GOAL!</property>
+                <style>
+                  <class name="draft-success-label"/>
+                </style>
+              </object>
+              <packing>
+                <property name="name">page1</property>
+                <property name="title" translatable="yes">page1</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
           </object>
         </child>
         <style>

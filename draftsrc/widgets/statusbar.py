@@ -67,6 +67,8 @@ class DraftStatusbar(Gtk.Bin):
         self.add(self._main_button_box)
 
         self._word_count_label = self._builder.get_object('word_count_label')
+        self._goal_label = self._builder.get_object('goal_label')
+        self._word_count_stack = self._builder.get_object('word_count_stack')
         self._word_goal_label = self._builder.get_object('word_goal_label')
         self._word_goal_overlay = self._builder.get_object('word_goal_overlay')
         self._word_goal_drawing_area = self._builder.get_object('word_goal_drawing_area')
@@ -134,6 +136,13 @@ class DraftStatusbar(Gtk.Bin):
 
         if self._word_goal_set:
             done = word_count / goal
+
+            if self._word_goal_ratio_accomplished < 1 and done >= 1:
+                self._word_count_stack.set_visible_child(self._goal_label)
+                GLib.timeout_add(1000,
+                                 self._word_count_stack.set_visible_child,
+                                 self._word_count_label)
+
             self._word_goal_ratio_accomplished = done
             overlay_string = '<span font_size="xx-large"><b>{:,}</b></span>\nwords'.format(word_count)
             self._word_count_overlay_label.set_markup(overlay_string)

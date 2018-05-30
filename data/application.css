@@ -55,8 +55,14 @@
     color: @theme_fg_color;
 }
 
-.draft-statusbar label {
+.draft-statusbar box label,
+.draft-statusbar stack:first-child {
     color: alpha(@theme_fg_color, 0.8);
+}
+
+.draft-success-label {
+    color: mix(@theme_fg_color, @success_color, 0.7);
+    font-weight: bold;
 }
 
 .draft-tag-label {
