@@ -121,6 +121,7 @@ class DraftEditor(Gtk.Box):
         if not single_mode:
             mode_name = self._multi_mode_name
         self.editor_stack.set_visible_child_name(mode_name)
+        self.editor_stack.get_child_by_name(mode_name).set_visible(True)
 
     @property
     def current_text_data(self):
