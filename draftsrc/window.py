@@ -30,6 +30,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     text_panel_hidden = False
     lock_library_panel = False
     lock_text_panel = False
+    in_fullscreen_mode = False
 
     def __repr__(self):
         return '<ApplicationWindow>'
@@ -78,13 +79,21 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         titlebar.connect('preview-toggled', self._on_preview_toggled)
         titlebar.connect('export-requested', self._on_export_requested)
 
+        self._header_revealer = Gtk.Revealer()
+        self._header_revealer.set_valign(Gtk.Align.START)
+        self._header_revealer.set_vexpand(False)
+
         self._topbox = Gtk.Box()
-        self.add(self._topbox)
+        self._overlay = Gtk.Overlay()
+        self._overlay.add(self._topbox)
+        self._overlay.add_overlay(self._header_revealer)
+        self.add(self._overlay)
 
         self._set_up_panel_views()
         self._set_up_content_view()
         GLib.idle_add(self.libraryview.select_appropriate_row)
         self.connect('key-press-event', self._on_key_press)
+        self.connect('motion-notify-event', self._on_motion_event)
 
     def _set_up_panel_views(self):
         self.libraryview = DraftLibraryView(self)
@@ -168,6 +177,41 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             elif event.keyval == Gdk.KEY_Escape:
                 self.textlistview.search_mode_off()
                 self._escape_selection_modes()
+            elif event.keyval == Gdk.KEY_F11:
+                if self.in_fullscreen_mode:
+                    self.go_unfullscreen()
+                else:
+                    self.go_fullscreen()
+
+    def _on_motion_event(self, widget, event):
+        if event.y_root <= 1 and self.in_fullscreen_mode:
+            self._header_revealer.set_reveal_child(True)
+        elif (event.y_root >= self.get_titlebar().get_allocated_height()
+                and self.in_fullscreen_mode):
+            self._header_revealer.set_reveal_child(False)
+
+    def get_titlebar(self):
+        if self.in_fullscreen_mode:
+            return self._header_revealer.get_child()
+        return Gtk.Window.get_titlebar(self)
+
+    def go_fullscreen(self):
+        self.fullscreen()
+        headerbar = self.get_titlebar()
+        temp_header = Gtk.HeaderBar()
+        self.set_titlebar(temp_header)
+        headerbar.set_fullscreen_mode(True)
+        self._header_revealer.add(headerbar)
+        self.in_fullscreen_mode = True
+
+    def go_unfullscreen(self):
+        headerbar = self._header_revealer.get_child()
+        self._header_revealer.set_reveal_child(False)
+        self._header_revealer.remove(headerbar)
+        headerbar.set_fullscreen_mode(False)
+        self.set_titlebar(headerbar)
+        self.unfullscreen()
+        self.in_fullscreen_mode = False
 
     def toggle_panels(self):
         if (not self.library_panel_hidden
@@ -560,6 +604,16 @@ class _DraftHeaderBar(Gtk.Box):
         else:
             self._content_subtitle_label.set_label('')
             self._content_subtitle_label.set_visible(False)
+
+    def set_fullscreen_mode(self, fullscreen_mode):
+        if fullscreen_mode:
+            self._library_header.get_style_context().add_class('draft-fullscreen-library-header')
+            self._list_header.get_style_context().add_class('draft-fullscreen-textlist-header')
+            self._content_header.get_style_context().add_class('draft-fullscreen-content-header')
+        else:
+            self._library_header.get_style_context().remove_class('draft-fullscreen-library-header')
+            self._list_header.get_style_context().remove_class('draft-fullscreen-textlist-header')
+            self._content_header.get_style_context().remove_class('draft-fullscreen-content-header')
 
     def set_library_header_visible(self, visible):
         if visible:

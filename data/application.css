@@ -192,6 +192,23 @@
     padding: 0px;
 }
 
+.draft-fullscreen-library-header:dir(ltr),
+.draft-fullscreen-textlist-header:dir(ltr) {
+    margin-left: -6px;
+    margin-right: 6px;
+}
+
+.draft-fullscreen-library-header:dir(rtl),
+.draft-fullscreen-textlist-header:dir(rtl) {
+    margin-left: 6px;
+    margin-right: -6px;
+}
+
+.draft-fullscreen-content-header {
+    margin-left: -6px;
+    margin-right: -6px
+}
+
 .draft-library-header:dir(ltr) {
     border-right: 1px solid @borders;
 }
@@ -206,6 +223,10 @@
 
 .draft-textlist-header:dir(rtl) {
     border-left: 1px solid @borders;
+}
+
+.titlebar {
+    border-bottom: 0px;
 }
 
 radiobutton > radio {
