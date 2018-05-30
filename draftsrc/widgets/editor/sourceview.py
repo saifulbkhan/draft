@@ -54,7 +54,7 @@ class DraftSourceView(GtkSource.View):
     _typewriter_mode = False
     _typewriter_mode_type = None
     scroll_duration = 150
-    free_width_limit = 1000
+    free_width_limit = 800
     scroll_offset = DEFAULT_SCROLL_OFFSET
     overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
     _calculated_top_margin = 24
