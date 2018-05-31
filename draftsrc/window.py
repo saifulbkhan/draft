@@ -187,7 +187,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         if event.y_root <= 1 and self.in_fullscreen_mode:
             self._header_revealer.set_reveal_child(True)
         elif (event.y_root >= self.get_titlebar().get_allocated_height()
-                and self.in_fullscreen_mode):
+                and self.in_fullscreen_mode
+                and not self.get_titlebar().popup_active):
             self._header_revealer.set_reveal_child(False)
 
     def get_titlebar(self):
@@ -450,6 +451,7 @@ class _DraftHeaderBar(Gtk.Box):
     }
 
     _editor = None
+    popup_active = False
     _current_utility_buttons = []
     _passive_utility_buttons = []
 
@@ -548,9 +550,11 @@ class _DraftHeaderBar(Gtk.Box):
             self._show_both_button.set_visible(visibility)
 
         self._toggle_popup_menu.popup()
+        self.popup_active = True
 
     def _on_toggle_popup_closed(self, widget):
         self._toggle_popup_button.set_active(False)
+        self.popup_active = False
 
     def _on_search_toggled(self, widget):
         self.emit('search-toggled')
@@ -570,9 +574,11 @@ class _DraftHeaderBar(Gtk.Box):
 
     def _on_request_markup_cheatsheet(self, widget):
         self._cheatsheet_popover.popup()
+        self.popup_active = True
 
     def _on_cheatsheet_popover_closed(self, widget):
         self._markup_button.set_active(False)
+        self.popup_active = False
 
     def set_elements_visible(self, visible, new_button_visible=True):
         self._toggle_panel_button.set_visible(visible)
