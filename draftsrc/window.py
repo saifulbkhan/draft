@@ -197,6 +197,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
 
     def go_fullscreen(self):
         self.fullscreen()
+        self._hide_both_panels(None, None)
         headerbar = self.get_titlebar()
         temp_header = Gtk.HeaderBar()
         self.set_titlebar(temp_header)
