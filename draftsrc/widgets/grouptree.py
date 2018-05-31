@@ -411,3 +411,43 @@ class DraftGroupTree(Gtk.TreeView):
         """Return metadata as a dict for the selected group."""
         model, treeiter = self.selection.get_selected()
         return model.get_group_for_iter(treeiter)
+
+    def _bottom_most_iter(self):
+        """Get the last visible iterator in the treeview."""
+        model = self.get_model()
+        last = model[-1]
+        last_iter = last.iter
+        last_path = last.path
+        while (model.iter_has_child(last_iter)
+                and self.row_expanded(last_path)):
+            last_index = model.iter_n_children(last.iter) - 1
+            last_iter = model.iter_nth_child(last_iter,
+                                                   last_index)
+            last_path = model.get_path(last_iter)
+
+        return last_iter
+
+    def should_move_down(self):
+        """Whether the widget has reached the last visible node and should move
+        down to the next widget."""
+        model, treeiter = self.selection.get_selected()
+        last_iter = self._bottom_most_iter()
+        return model.get_path(treeiter) == model.get_path(last_iter)
+
+    def should_move_up(self):
+        """Whether the widget has reach the top most node and should move up to
+        the previous widget."""
+        model, treeiter = self.selection.get_selected()
+        top = self._root_path()
+        return model.get_path(treeiter) == top
+
+    def focus_top_level(self):
+        """Selects and focuses on the top node."""
+        self.set_cursor(self._root_path(), None, False)
+
+    def focus_bottom_level(self):
+        """Selects and focuses on the bottom-most visible node."""
+        model = self.get_model()
+        last_iter = self._bottom_most_iter()
+        last_path = model.get_path(last_iter)
+        self.set_cursor(last_path, None, False)

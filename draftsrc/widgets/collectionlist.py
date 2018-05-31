@@ -64,3 +64,14 @@ class DraftCollectionList(Gtk.TreeView):
 
         collection_class_type = model[treeiter][Column.TYPE]
         self.emit('class-selected', collection_class_type)
+
+    def should_move_down(self):
+        """Whether selection is the end and should move to next widget."""
+        model, treeiter = self.selection.get_selected()
+        return model.get_path(treeiter) == model[-1].path
+
+    def focus_bottom_level(self):
+        """Selects and focuses on the bottom-most visible node."""
+        model = self.get_model()
+        last_path = model[-1].path
+        self.set_cursor(last_path, None, False)

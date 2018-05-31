@@ -101,6 +101,7 @@ class DraftLibraryView(Gtk.Bin):
 
         self.collection_list.connect('class-selected',
                                   self._on_collection_class_selected)
+        self.collection_list.connect('key-press-event', self._on_collection_list_key_press)
 
         self.local_groups_view.connect('group-selected', self._on_group_selected)
         self.local_groups_view.connect('texts-dropped', self._on_texts_dropped)
@@ -108,10 +109,12 @@ class DraftLibraryView(Gtk.Bin):
         self.local_groups_view.connect('menu-requested', self._on_group_menu_requested)
         self.local_groups_view.connect('group-created', self._on_group_created)
         self.local_groups_view.connect('group-deleted', self._on_group_deleted)
+        self.local_groups_view.connect('key-press-event', self._on_local_view_key_press)
 
         self.trash_view.connect('group-selected', self._on_group_selected)
         self.trash_view.connect('group-restored', self._on_group_restored)
         self.trash_view.connect('menu-requested', self._on_trash_menu_requested)
+        self.trash_view.connect('key-press-event', self._on_trash_view_key_press)
 
         self._action_button.connect('clicked', self._on_name_set)
         self._name_entry.connect('activate', self._on_name_set)
@@ -150,6 +153,36 @@ class DraftLibraryView(Gtk.Bin):
 
         self.parent_window.update_content_view_and_headerbar()
         self.parent_window.textlistview.set_model_for_group(group)
+
+    def _on_collection_list_key_press(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            if event.keyval == Gdk.KEY_Down and widget.should_move_down():
+                self.trash_view.focus_top_level()
+                self.trash_view.grab_focus()
+
+    def _on_local_view_key_press(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            if event.keyval == Gdk.KEY_Up and widget.should_move_up():
+                self.trash_view.focus_bottom_level()
+                self.trash_view.grab_focus()
+
+    def _on_trash_view_key_press(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            if event.keyval == Gdk.KEY_Down and widget.should_move_down():
+                self.local_groups_view.focus_top_level()
+                self.local_groups_view.grab_focus()
+            elif event.keyval == Gdk.KEY_Up and widget.should_move_up():
+                self.collection_list.focus_bottom_level()
+                self.collection_list.grab_focus()
 
     def _on_texts_dropped(self, widget, text_ids, new_parent_id):
         """Handle view's `texts-dropped` signal"""
