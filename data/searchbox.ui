@@ -59,6 +59,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Go to previous occurrence</property>
                 <property name="image">image2</property>
                 <style>
                   <class name="image-button"/>
@@ -75,6 +76,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Go to next occurrence</property>
                 <property name="image">image1</property>
                 <style>
                   <class name="image-button"/>
@@ -107,6 +109,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Toggle replace mode</property>
                 <property name="image">image3</property>
                 <style>
                   <class name="image-button"/>
@@ -123,6 +126,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Set search preferences</property>
                 <property name="image">image4</property>
                 <style>
                   <class name="image-button"/>
@@ -178,6 +182,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Replace current match</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -191,6 +196,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Replace all matches</property>
               </object>
               <packing>
                 <property name="expand">False</property>

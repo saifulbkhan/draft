@@ -10,6 +10,7 @@
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
+        <property name="tooltip_text" translatable="yes">Edit tags for this Text</property>
         <property name="hexpand">True</property>
         <child>
           <object class="GtkBox" id="tag_labels">
@@ -36,6 +37,7 @@
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
+        <property name="tooltip_text" translatable="yes">Edit writing goal for this Text</property>
         <child>
           <object class="GtkStack" id="word_count_stack">
             <property name="visible">True</property>
@@ -152,6 +154,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="tooltip_text" translatable="yes">Add tag</property>
                 <child>
                   <object class="GtkImage">
                     <property name="visible">True</property>
@@ -271,6 +274,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
+                    <property name="tooltip_text" translatable="yes">Set goal</property>
                     <child>
                       <object class="GtkImage">
                         <property name="visible">True</property>

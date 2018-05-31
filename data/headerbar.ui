@@ -86,6 +86,7 @@
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
+        <property name="tooltip_text" translatable="yes">Preview content in HTML</property>
         <property name="valign">center</property>
         <signal name="toggled" handler="_on_preview_toggled" swapped="no"/>
       </object>
@@ -99,6 +100,7 @@
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
+        <property name="tooltip_text" translatable="yes">Markup Reference</property>
         <property name="image">image1</property>
       </object>
       <packing>
@@ -110,6 +112,7 @@
       <object class="GtkButton" id="export_button">
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
+        <property name="tooltip_text" translatable="yes">Export HTML</property>
         <property name="image">image2</property>
       </object>
       <packing>
@@ -153,6 +156,7 @@
             <property name="can_focus">True</property>
             <property name="focus_on_click">False</property>
             <property name="receives_default">True</property>
+            <property name="tooltip_text" translatable="yes">Create new Text</property>
             <property name="action_name">win.new_text</property>
             <property name="image">add_icon</property>
             <style>
@@ -170,6 +174,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
+            <property name="tooltip_text" translatable="yes">Search for Text contents</property>
             <property name="valign">center</property>
             <property name="image">search_icon</property>
             <signal name="toggled" handler="_on_search_toggled" swapped="no"/>
@@ -212,6 +217,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">True</property>
+            <property name="tooltip_text" translatable="yes">Toggle side panels</property>
             <property name="image">toggle_panel_icon</property>
             <style>
               <class name="image-button"/>

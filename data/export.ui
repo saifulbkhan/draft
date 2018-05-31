@@ -61,6 +61,7 @@
                   <object class="GtkEntry" id="html_title_entry">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
+                    <property name="tooltip_text" translatable="yes">This will be "title" of HTML document</property>
                     <property name="width_chars">32</property>
                   </object>
                   <packing>
@@ -84,6 +85,7 @@
                   <object class="GtkFileChooserButton" id="html_export_chooser">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="tooltip_text" translatable="yes">Folder where file will be exported</property>
                     <property name="action">select-folder</property>
                     <property name="title" translatable="yes">Choose Export Destination</property>
                   </object>

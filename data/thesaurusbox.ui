@@ -59,6 +59,7 @@
         <property name="sensitive">False</property>
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
+        <property name="tooltip_text" translatable="yes">Replace with selected synonym</property>
       </object>
       <packing>
         <property name="expand">False</property>
@@ -72,6 +73,7 @@
         <property name="visible">True</property>
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
+        <property name="tooltip_text" translatable="yes">Show available languages</property>
         <property name="image">image2</property>
         <property name="image_position">right</property>
         <property name="always_show_image">True</property>
