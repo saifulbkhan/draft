@@ -28,7 +28,7 @@ class DraftLibraryView(Gtk.Bin):
     """A container bounding a GtkTreeView that allows for slider based hiding
     and resizing"""
     collection_class_selected = None
-    _panel_visible = True
+    panel_visible = True
     _creation_state = False
 
     def __repr__(self):
@@ -162,6 +162,9 @@ class DraftLibraryView(Gtk.Bin):
             if event.keyval == Gdk.KEY_Down and widget.should_move_down():
                 self.trash_view.focus_top_level()
                 self.trash_view.grab_focus()
+            elif (event.keyval == Gdk.KEY_Right
+                    and self.parent_window.textlistview.panel_visible):
+                self.parent_window.textlistview.view.grab_focus()
 
     def _on_local_view_key_press(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -171,6 +174,9 @@ class DraftLibraryView(Gtk.Bin):
             if event.keyval == Gdk.KEY_Up and widget.should_move_up():
                 self.trash_view.focus_bottom_level()
                 self.trash_view.grab_focus()
+            elif (event.keyval == Gdk.KEY_Right
+                    and self.parent_window.textlistview.panel_visible):
+                self.parent_window.textlistview.view.grab_focus()
 
     def _on_trash_view_key_press(self, widget, event):
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -183,6 +189,9 @@ class DraftLibraryView(Gtk.Bin):
             elif event.keyval == Gdk.KEY_Up and widget.should_move_up():
                 self.collection_list.focus_bottom_level()
                 self.collection_list.grab_focus()
+            elif (event.keyval == Gdk.KEY_Right
+                    and self.parent_window.textlistview.panel_visible):
+                self.parent_window.textlistview.view.grab_focus()
 
     def _on_texts_dropped(self, widget, text_ids, new_parent_id):
         """Handle view's `texts-dropped` signal"""
@@ -358,7 +367,7 @@ class DraftLibraryView(Gtk.Bin):
 
     def toggle_panel(self):
         """Toggle the reveal status of slider's child"""
-        if self._panel_visible:
+        if self.panel_visible:
             self.hide_panel()
         else:
             self.reveal_panel()
@@ -366,12 +375,12 @@ class DraftLibraryView(Gtk.Bin):
     def hide_panel(self):
         """Hide the slider's child"""
         self.slider.set_reveal_child(False)
-        self._panel_visible = False
+        self.panel_visible = False
 
     def reveal_panel(self):
         """Reveal the slider's child"""
         self.slider.set_reveal_child(True)
-        self._panel_visible = True
+        self.panel_visible = True
 
     def new_group_request(self):
         """Cater to the request for new group creation. Pops up an entry to set
@@ -453,9 +462,17 @@ class DraftLibraryView(Gtk.Bin):
         group = self.local_groups_view.select_if_not_selected()
         self.parent_window.textlistview.set_model_for_group(group)
 
+    def focus_current_view(self):
+        if self.local_groups_view.has_row_selected():
+            self.local_groups_view.grab_focus()
+        elif self.trash_view.has_row_selected():
+            self.trash_view.grab_focus()
+        elif self.collection_class_selected:
+            self.collection_list.grab_focus()
+
 
 class DraftTextListView(Gtk.Bin):
-    _panel_visible = True
+    panel_visible = True
     _group_shown = None
     _last_search_terms = ""
     sidebar_width = 250
@@ -510,6 +527,7 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('selection-requested', self._on_selection_requested)
         self.view.connect('no-text-selected', self._on_no_text_selected)
         self.view.connect('some-text-selected', self._on_some_text_selected)
+        self.view.connect('key-press-event', self._on_view_key_press)
 
         self.search_entry.connect('search-changed', self._on_search_changed)
         self._search_menu.connect('closed', self._on_search_menu_closed)
@@ -522,7 +540,7 @@ class DraftTextListView(Gtk.Bin):
         self._delete_button.connect('clicked', self._on_delete_clicked)
 
     def toggle_panel(self):
-        if self._panel_visible:
+        if self.panel_visible:
             self.hide_panel()
         else:
             self.reveal_panel()
@@ -530,12 +548,12 @@ class DraftTextListView(Gtk.Bin):
     def hide_panel(self):
         """Hide the slider's child"""
         self.slider.set_reveal_child(False)
-        self._panel_visible = False
+        self.panel_visible = False
 
     def reveal_panel(self):
         """Reveal the slider's child"""
         self.slider.set_reveal_child(True)
-        self._panel_visible = True
+        self.panel_visible = True
 
     def search_toggled(self):
         if self.search_mode_is_on():
@@ -717,3 +735,12 @@ class DraftTextListView(Gtk.Bin):
                                                     search_tags,
                                                     in_trash,
                                                     post_search_callback)
+
+    def _on_view_key_press(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        event_and_modifiers = (event.state & modifiers)
+
+        if not event_and_modifiers:
+            if (event.keyval == Gdk.KEY_Left
+                    and self.parent_window.libraryview.panel_visible):
+                self.parent_window.libraryview.focus_current_view()

@@ -59,6 +59,7 @@ class DraftBaseList(Gtk.ListBox):
         self.connect('row-activated', self._on_row_activated)
         self.set_activate_on_single_click(False)
         self.set_selection_mode(Gtk.SelectionMode.BROWSE)
+        self.set_can_focus(True)
 
     def _row_at_event_coordinates(self, event):
         device = event.device
