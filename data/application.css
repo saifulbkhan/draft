@@ -34,9 +34,8 @@
 }
 
 .draft-statusbar {
-    border-top-style: solid;
-    border-top-width: 1px;
-    border-color: @borders;
+    border-top: 1px solid @borders;
+    background: @theme_bg_color;
 }
 
 .draft-statusbar-button {

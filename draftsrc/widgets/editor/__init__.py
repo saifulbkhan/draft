@@ -34,7 +34,7 @@ from draftsrc.widgets.editor.sourceview import DraftSourceView
 GObject.type_ensure(GObject.GType(GtkSource.View))
 
 
-class DraftEditor(Gtk.Box):
+class DraftEditor(Gtk.Overlay):
     __gtype_name__ = 'DraftEditor'
 
     __gsignals__ = {
@@ -63,26 +63,30 @@ class DraftEditor(Gtk.Box):
     _multi_mode_name = 'multi'
     _loads_in_progress = 0
     _multi_mode_order = []
+    _in_fullscreen_mode = False
 
     def __repr__(self):
         return '<DraftEditor>'
 
     def __init__(self, main_window, parent):
-        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
+        Gtk.Overlay.__init__(self)
         self.main_window = main_window
-        self.parent = parent
+        self.parent_container = parent
         self._set_up_widgets()
         self.single_mode = True
 
     def _set_up_widgets(self):
+        self._main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.add(self._main_box)
+
         self.util_revealer = Gtk.Revealer()
-        self.pack_start(self.util_revealer, False, False, 0)
+        self._main_box.pack_start(self.util_revealer, False, False, 0)
 
         self.thesaurus_box = DraftThesaurusBox()
         self.search_box = DraftSearchBox()
 
         self.editor_stack = Gtk.Stack()
-        self.pack_start(self.editor_stack, True, True, 0)
+        self._main_box.pack_start(self.editor_stack, True, True, 0)
 
         self.view_store = Gtk.Stack()
         self.editor_stack.add_named(self.view_store,
@@ -94,13 +98,20 @@ class DraftEditor(Gtk.Box):
                                     self._multi_mode_name)
 
         self.statusbar = DraftStatusbar(self)
-        self.pack_start(self.statusbar, False, False, 0)
+        self._main_box.pack_start(self.statusbar, False, False, 0)
+
+        self._status_revealer = Gtk.Revealer()
+        self._status_revealer.set_valign(Gtk.Align.END)
+        self._status_revealer.set_vexpand(False)
+        self._status_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_UP)
+        self.add_overlay(self._status_revealer)
 
         self.statusbar.connect('word-goal-set', self._on_word_goal_set)
         self.thesaurus_box.connect('cancel-synonym', self._on_cancel_synonym)
         self.thesaurus_box.connect('apply-synonym', self._on_apply_synonym)
         self.search_box.connect('close-search', self._on_close_search)
         self.connect('key-press-event', self._on_key_press)
+        self.connect('motion-notify-event', self._on_motion_notify)
 
     @property
     def view(self):
@@ -195,6 +206,14 @@ class DraftEditor(Gtk.Box):
                 self.util_revealer.set_reveal_child(True)
                 self.search_box.set_active_view(self.view)
 
+    def _on_motion_notify(self, widget, event):
+        if self._in_fullscreen_mode:
+            x, y, width, height = event.window.get_geometry()
+            if event.y_root >= height - 1:
+                self._status_revealer.set_reveal_child(True)
+            elif height - event.y_root > self.statusbar.get_allocated_height():
+                self._status_revealer.set_reveal_child(False)
+
     def _on_word_goal_set(self, widget, goal):
         if self.current_text_data['word_goal'] != goal:
             self.emit('word-goal-set', goal)
@@ -233,6 +252,16 @@ class DraftEditor(Gtk.Box):
 
     def _on_close_search(self, widget):
         self.view.grab_focus()
+
+    def fullscreen_mode(self):
+        self._main_box.remove(self.statusbar)
+        self._status_revealer.add(self.statusbar)
+        self._in_fullscreen_mode = True
+
+    def regular_mode(self):
+        self._status_revealer.remove(self.statusbar)
+        self._main_box.pack_start(self.statusbar, False, False, 0)
+        self._in_fullscreen_mode = False
 
     def get_preview_data(self):
         data = []
@@ -357,8 +386,8 @@ class DraftEditor(Gtk.Box):
                 if i == len(texts_data) - 1:
                     self._update_content_header_title()
 
-                if self.parent.in_preview_mode():
-                    self.parent.preview_content()
+                if self.parent_container.in_preview_mode():
+                    self.parent_container.preview_content()
 
                 continue
 
@@ -404,8 +433,8 @@ class DraftEditor(Gtk.Box):
             else:
                 view.set_editable(True)
 
-        if self.parent.in_preview_mode():
-            self.parent.preview_content()
+        if self.parent_container.in_preview_mode():
+            self.parent_container.preview_content()
 
         if self._loads_in_progress == 0:
             self._update_content_header_title()
