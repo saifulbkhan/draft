@@ -528,6 +528,8 @@ class DraftTextListView(Gtk.Bin):
         self.view.connect('no-text-selected', self._on_no_text_selected)
         self.view.connect('some-text-selected', self._on_some_text_selected)
         self.view.connect('key-press-event', self._on_view_key_press)
+        self.view.connect('reveal-requested', self._on_reveal_requested)
+        self.resultlistview.connect('reveal-requested', self._on_reveal_requested)
 
         self.search_entry.connect('search-changed', self._on_search_changed)
         self._search_menu.connect('closed', self._on_search_menu_closed)
@@ -744,3 +746,6 @@ class DraftTextListView(Gtk.Bin):
             if (event.keyval == Gdk.KEY_Left
                     and self.parent_window.libraryview.panel_visible):
                 self.parent_window.libraryview.focus_current_view()
+
+    def _on_reveal_requested(self, widget):
+        self.reveal_panel()

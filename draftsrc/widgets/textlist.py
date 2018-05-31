@@ -37,7 +37,8 @@ class DraftBaseList(Gtk.ListBox):
                            None,
                            (GObject.TYPE_PYOBJECT, GObject.TYPE_BOOLEAN)),
         'some-text-selected': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'no-text-selected': (GObject.SignalFlags.RUN_FIRST, None, ())
+        'no-text-selected': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'reveal-requested': (GObject.SignalFlags.RUN_FIRST, None, ()),
     }
 
     editor = None
@@ -190,6 +191,7 @@ class DraftBaseList(Gtk.ListBox):
         editor.connect('tags-changed', self.set_tags_for_selection)
         editor.connect('view-modified', self.save_last_edit_data)
         editor.connect('view-changed', self.set_header_title_for_view)
+        editor.connect('escape-edit', self.set_escape_focus)
 
     def set_title_for_selection(self, widget, title):
         """Set the title for currently selected text, as well as write this to
@@ -290,6 +292,11 @@ class DraftBaseList(Gtk.ListBox):
         if position and total:
             subtitle = _("%s of %s") % (position, total)
         self.emit('text-title-changed', title, subtitle, True)
+
+    def set_escape_focus(self, widget):
+        self.emit('reveal-requested')
+        row = self.get_selected_row()
+        row.grab_focus()
 
     def activate_selected_row(self):
         """Activate selected row"""

@@ -47,7 +47,8 @@ class DraftEditor(Gtk.Overlay):
         'view-modified': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
         'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,
                                                                GObject.TYPE_INT,
-                                                               GObject.TYPE_INT))
+                                                               GObject.TYPE_INT)),
+        'escape-edit': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     class _ViewData(object):
@@ -180,7 +181,12 @@ class DraftEditor(Gtk.Overlay):
         def on_grab_focus(widget):
             self.util_revealer.set_reveal_child(False)
 
+        def on_key_press(widget, event):
+            if event.keyval == Gdk.KEY_Escape:
+                self.emit('escape-edit')
+
         view.connect('grab-focus', on_grab_focus)
+        view.connect('key-press-event', on_key_press)
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
     def _prep_buffer(self, buffer, markup_type='markdown'):
