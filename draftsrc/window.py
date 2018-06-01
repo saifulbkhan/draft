@@ -167,6 +167,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
                     self.reveal_text_panel()
                 else:
                     self.hide_library_panel()
+            elif (event.keyval == Gdk.KEY_p
+                    and modifier == control_mask):
+                headerbar = self.get_titlebar()
+                if headerbar.has_preview_available():
+                    headerbar.activate_preview()
         else:
             if event.keyval == Gdk.KEY_F9:
                 if self.text_panel_hidden:
@@ -589,6 +594,12 @@ class _DraftHeaderBar(Gtk.Box):
 
     def set_preview_button_visible(self, visible):
         self._preview_button.set_visible(visible)
+
+    def has_preview_available(self):
+        return self._preview_button.get_visible()
+
+    def activate_preview(self):
+        self._preview_button.set_active(True)
 
     def set_utility_buttons_visible(self, visible):
         for button in self._current_utility_buttons:
