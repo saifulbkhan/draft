@@ -602,6 +602,9 @@ class DraftTextListView(Gtk.Bin):
         self.resultlistview.set_editor(editor)
 
     def new_text_request(self):
+        if not self._group_shown or self._group_shown['in_trash']:
+            return
+
         self.view.new_text_request()
         if self.search_mode_is_on():
             self.search_mode_off()
@@ -748,6 +751,9 @@ class DraftTextListView(Gtk.Bin):
             if (event.keyval == Gdk.KEY_f
                     and event_and_modifiers == control_mask):
                 self.search_mode_on()
+            if (event.keyval == Gdk.KEY_n
+                    and event_and_modifiers == control_mask):
+                self.new_text_request()
         else:
             if (event.keyval == Gdk.KEY_Left
                     and self.parent_window.libraryview.panel_visible):
