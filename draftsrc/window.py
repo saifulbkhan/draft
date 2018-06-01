@@ -458,8 +458,9 @@ class _DraftHeaderBar(Gtk.Box):
         'export-requested': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
-    _editor = None
     popup_active = False
+    _editor = None
+    _last_focused_widget = None
     _current_utility_buttons = []
     _passive_utility_buttons = []
 
@@ -511,6 +512,8 @@ class _DraftHeaderBar(Gtk.Box):
         self._search_button.connect('toggled', self._on_search_toggled)
         self._preview_button = self._builder.get_object('preview_button')
         self._preview_button.connect('toggled', self._on_preview_toggled)
+        self._preview_button.set_can_focus(False)
+
         self._new_button = self._builder.get_object('new_button')
         self._content_title_label = self._builder.get_object('content_title_label')
         self._content_subtitle_label = self._builder.get_object('content_subtitle_label')
@@ -569,6 +572,7 @@ class _DraftHeaderBar(Gtk.Box):
 
     def _on_preview_toggled(self, widget):
         if widget.get_active():
+            self._last_focused_widget = self._editor.get_focus_child()
             self._current_utility_buttons = [self._export_button]
             self._passive_utility_buttons = [self._markup_button]
         else:
@@ -576,6 +580,8 @@ class _DraftHeaderBar(Gtk.Box):
             self._passive_utility_buttons = [self._export_button]
         self.emit('preview-toggled')
         self.set_utility_buttons_visible(True)
+        if self._last_focused_widget is not None:
+            self._editor.view.grab_focus()
 
     def _on_export_clicked(self, widget):
         self.emit('export-requested')
@@ -602,7 +608,8 @@ class _DraftHeaderBar(Gtk.Box):
         return self._preview_button.get_visible()
 
     def activate_preview(self):
-        self._preview_button.set_active(True)
+        in_preview = self._preview_button.get_active()
+        self._preview_button.set_active(not in_preview)
 
     def activate_markup_reference(self):
         if self._editor.get_focus_child() is not None:
