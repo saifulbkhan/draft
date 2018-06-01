@@ -103,6 +103,7 @@ class DraftStatusbar(Gtk.Bin):
         clickable = self._builder.get_object('tag_button')
 
         self._new_tag_entry.connect('activate', self._on_tag_added)
+        self._tag_popover.connect('closed', self._on_tag_popover_closed)
         new_tag_button.connect('clicked', self._on_tag_added)
         clickable.connect('clicked', self._on_labels_clicked)
 
@@ -112,6 +113,12 @@ class DraftStatusbar(Gtk.Bin):
         """
         for update_method in UPDATE_REGISTRY:
             update_method(self)
+
+    def show_tag_editor(self):
+        self._on_labels_clicked(None, None)
+
+    def show_goal_editor(self):
+        self._on_word_count_clicked(None, None)
 
     def _count_words(self):
         text = self._editor.get_text()
@@ -232,6 +239,9 @@ class DraftStatusbar(Gtk.Bin):
         tag = label.get_label()
         self._editor.delete_tag(tag)
 
+    def _on_tag_popover_closed(self, widget):
+        self._editor.fullscreen_statusbar_reveal(False)
+
     def _on_word_count_clicked(self, widget, user_data=None):
         """Handle click on word count label"""
         self._word_goal_popover.popup()
@@ -273,6 +283,7 @@ class DraftStatusbar(Gtk.Bin):
         if self._word_goal_set and \
            self._word_goal_stack.get_visible_child() is parent:
             self._word_goal_stack.set_visible_child_name('button_mode')
+        self._editor.fullscreen_statusbar_reveal(False)
 
     def _on_request_goal_change(self, widget, user_data=None):
         self._word_goal_stack.set_visible_child_name('entry_mode')

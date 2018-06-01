@@ -211,6 +211,12 @@ class DraftEditor(Gtk.Overlay):
                 self.set_utility_child(self.search_box)
                 self.util_revealer.set_reveal_child(True)
                 self.search_box.set_active_view(self.view)
+            elif event.keyval == Gdk.KEY_t:
+                self.fullscreen_statusbar_reveal(True)
+                self.statusbar.show_tag_editor()
+            elif event.keyval == Gdk.KEY_g:
+                self.fullscreen_statusbar_reveal(True)
+                self.statusbar.show_goal_editor()
 
     def _on_motion_notify(self, widget, event):
         if self._in_fullscreen_mode:
@@ -268,6 +274,10 @@ class DraftEditor(Gtk.Overlay):
         self._status_revealer.remove(self.statusbar)
         self._main_box.pack_start(self.statusbar, False, False, 0)
         self._in_fullscreen_mode = False
+
+    def fullscreen_statusbar_reveal(self, reveal):
+        if self._in_fullscreen_mode:
+            self._status_revealer.set_reveal_child(reveal)
 
     def get_preview_data(self):
         data = []
