@@ -580,7 +580,6 @@ class DraftTextListView(Gtk.Bin):
         self.textstack.set_visible_child(self.listview)
         self.parent_window.search_button_active(False)
         self.search_bar.set_search_mode(False)
-        self.view.selected_row_grab_focus()
 
     def set_model_for_group(self, group):
         self._group_shown = group
