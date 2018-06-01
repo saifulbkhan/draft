@@ -580,6 +580,7 @@ class DraftTextListView(Gtk.Bin):
         self.textstack.set_visible_child(self.listview)
         self.parent_window.search_button_active(False)
         self.search_bar.set_search_mode(False)
+        self.view.selected_row_grab_focus()
 
     def set_model_for_group(self, group):
         self._group_shown = group
@@ -742,7 +743,12 @@ class DraftTextListView(Gtk.Bin):
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
 
-        if not event_and_modifiers:
+        if event_and_modifiers:
+            control_mask = Gdk.ModifierType.CONTROL_MASK
+            if (event.keyval == Gdk.KEY_f
+                    and event_and_modifiers == control_mask):
+                self.search_mode_on()
+        else:
             if (event.keyval == Gdk.KEY_Left
                     and self.parent_window.libraryview.panel_visible):
                 self.parent_window.libraryview.focus_current_view()

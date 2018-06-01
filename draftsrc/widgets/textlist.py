@@ -295,8 +295,12 @@ class DraftBaseList(Gtk.ListBox):
 
     def set_escape_focus(self, widget):
         self.emit('reveal-requested')
+        self.selected_row_grab_focus()
+
+    def selected_row_grab_focus(self):
         row = self.get_selected_row()
-        row.grab_focus()
+        if row is not None:
+            row.grab_focus()
 
     def activate_selected_row(self):
         """Activate selected row"""
