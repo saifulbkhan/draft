@@ -159,6 +159,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         if modifier:
             control_mask = Gdk.ModifierType.CONTROL_MASK
             shift_mask = Gdk.ModifierType.SHIFT_MASK
+            headerbar = self.get_titlebar()
 
             if (event.keyval == Gdk.KEY_F9
                     and modifier == control_mask):
@@ -169,9 +170,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
                     self.hide_library_panel()
             elif (event.keyval == Gdk.KEY_p
                     and modifier == control_mask):
-                headerbar = self.get_titlebar()
                 if headerbar.has_preview_available():
                     headerbar.activate_preview()
+            elif (event.keyval == Gdk.KEY_m
+                    and modifier == control_mask):
+                headerbar.activate_markup_reference()
         else:
             if event.keyval == Gdk.KEY_F9:
                 if self.text_panel_hidden:
@@ -600,6 +603,10 @@ class _DraftHeaderBar(Gtk.Box):
 
     def activate_preview(self):
         self._preview_button.set_active(True)
+
+    def activate_markup_reference(self):
+        if self._editor.get_focus_child() is not None:
+            self._on_request_markup_cheatsheet(None)
 
     def set_utility_buttons_visible(self, visible):
         for button in self._current_utility_buttons:
