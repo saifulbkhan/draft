@@ -37,6 +37,7 @@ class Application(Gtk.Application):
         init_db(app_version)
         self._init_style()
         self._window = None
+        self._settings = Gio.Settings.new('org.gnome.Draft')
 
     def _init_style(self):
         css_provider_file = Gio.File.new_for_uri(
@@ -84,5 +85,5 @@ class Application(Gtk.Application):
 
     def do_activate(self):
         if not self._window:
-            self._window = ApplicationWindow(self)
+            self._window = ApplicationWindow(self, self._settings)
         self._window.present()

@@ -21,7 +21,7 @@ import gi
 gi.require_version('GtkSource', '3.0')
 gi.require_version('Gspell', '1')
 
-from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango, Gspell
+from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango, Gspell, Gio
 
 from draftsrc.widgets.editor.sourcebuffer import DraftSourceBuffer
 
@@ -30,9 +30,9 @@ DEFAULT_LEFT_MARGIN, DEFAULT_RIGHT_MARGIN = 24, 24
 
 
 class TypewriterModeType(object):
-    UPPER = 0
-    CENTER = 1
-    LOWER = 2
+    UPPER = 1
+    CENTER = 2
+    LOWER = 3
 
 
 class DraftSourceView(GtkSource.View):
@@ -1001,3 +1001,11 @@ class DraftSourceView(GtkSource.View):
         else:
             self.scroll_offset = DEFAULT_SCROLL_OFFSET
             self.overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
+
+    def set_font(self, font_name, default_font=False):
+        if default_font:
+            settings = Gio.Settings('org.gnome.desktop.interface')
+            font_name = settings.get_string('monospace-font-name')
+
+        pango_font_desc = Pango.FontDescription.from_string(font_name)
+        self.override_font(pango_font_desc)

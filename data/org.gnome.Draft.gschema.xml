@@ -1,5 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
+  <enum id="org.gnome.Draft.TypewriterMode">
+   <value nick="none" value="0"/>
+   <value nick="upper" value="1"/>
+   <value nick="center" value="2"/>
+   <value nick="lower" value="3"/>
+  </enum>
   <schema path="/org/gnome/Draft/" id="org.gnome.Draft" gettext-domain="draft">
+    <key name="editor-font" type="s">
+      <!-- Translators: This is a GSettings default value. Do NOT change or localize the quotation marks! -->
+      <default>'Monospace 12'</default>
+      <summary>Editor Font</summary>
+      <description>The font to be used for editor content.</description>
+    </key>
+    <key type="s" name="color-scheme">
+      <default>""</default>
+      <summary>Editor color scheme</summary>
+      <description>The GtkSource recognized colorscheme used by the editor.</description>
+    </key>
+    <key type="b" name="dark-ui">
+      <default>false</default>
+      <summary>Use dark GTK theme</summary>
+      <description></description>
+    </key>
+    <key type="b" name="library-panel-visible">
+      <default>true</default>
+      <summary>Show library panel on start</summary>
+      <description></description>
+    </key>
+    <key enum="org.gnome.Draft.TypewriterMode" name="typewriter-mode">
+      <default>'none'</default>
+      <summary>Possibilities for Typewriter Mode options</summary>
+      <description>This option allows current line to be vertically fixed at a position relative to editor height.</description>
+      </key>
   </schema>
 </schemalist>

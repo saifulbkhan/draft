@@ -35,10 +35,11 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def __repr__(self):
         return '<ApplicationWindow>'
 
-    def __init__(self, app):
+    def __init__(self, app, settings):
         Gtk.ApplicationWindow.__init__(self,
                                        application=app,
                                        title="Draft")
+        self.app_settings = settings
 
         self.set_default_size(800, 600)
 
@@ -49,6 +50,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self._set_up_actions()
         self._set_up_widgets()
         self.show_all()
+        self._set_up_for_app_settings()
         export.main_window = self
 
     def _set_up_actions(self):
@@ -111,6 +113,19 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.textlistview.set_editor(self.contentview.content_editor)
         headerbar = self.get_titlebar()
         headerbar.set_editor(self.contentview.content_editor)
+
+    def _set_up_for_app_settings(self):
+        library_panel_visible = self.app_settings.get_value('library-panel-visible')
+        if library_panel_visible:
+            self.reveal_library_panel()
+        else:
+            self.hide_library_panel()
+
+        settings = Gtk.Settings.get_default()
+        gtk_dark = settings.get_property('gtk-application-prefer-dark-theme')
+        if not gtk_dark:
+            dark = self.app_settings.get_value('dark-ui')
+            settings.set_property('gtk-application-prefer-dark-theme', dark)
 
     def _new_text_request(self, action, param):
         self.textlistview.new_text_request()
@@ -242,6 +257,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self.panel_button_active(False)
         else:
             self.panel_button_active(True)
+        self.app_settings.set_value('library-panel-visible',
+                                    GLib.Variant('b', False))
 
     def reveal_library_panel(self):
         if self.lock_library_panel:
@@ -251,6 +268,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.panel_button_active(True)
         self.show_library_header(True)
         self._library_hsize_group.add_widget(self.libraryview)
+        self.app_settings.set_value('library-panel-visible',
+                                    GLib.Variant('b', True))
 
     def hide_text_panel(self):
         if self.textlistview in self._textlist_hsize_group.get_widgets():

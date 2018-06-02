@@ -65,6 +65,7 @@ class DraftEditor(Gtk.Overlay):
     _loads_in_progress = 0
     _multi_mode_order = []
     _in_fullscreen_mode = False
+    _style_manager = None
 
     def __repr__(self):
         return '<DraftEditor>'
@@ -74,6 +75,7 @@ class DraftEditor(Gtk.Overlay):
         self.main_window = main_window
         self.parent_container = parent
         self._set_up_widgets()
+        self._style_manager = GtkSource.StyleSchemeManager.get_default()
         self.single_mode = True
 
     def _set_up_widgets(self):
@@ -176,7 +178,12 @@ class DraftEditor(Gtk.Overlay):
         return view_data.markup_type
 
     def _prep_view(self, view):
-        view.get_style_context().add_class('draft-editor')
+        font_name = self.main_window.app_settings.get_string('editor-font')
+        view.set_font(font_name)
+
+        typewriter_mode = self.main_window.app_settings.get_enum('typewriter-mode')
+        if typewriter_mode:
+            view.set_typewriter_mode(True, typewriter_mode)
 
         def on_grab_focus(widget):
             self.util_revealer.set_reveal_child(False)
@@ -190,6 +197,11 @@ class DraftEditor(Gtk.Overlay):
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
     def _prep_buffer(self, buffer, markup_type='markdown'):
+        scheme_id = self.main_window.app_settings.get_string('color-scheme')
+        if scheme_id:
+            color_scheme = self._style_manager.get_scheme(scheme_id)
+            buffer.set_style_scheme(color_scheme)
+
         buffer.connect('modified-changed', self._on_modified_changed)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
