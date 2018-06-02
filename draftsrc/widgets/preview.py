@@ -211,3 +211,8 @@ class DraftPreview(Gtk.Box):
         if not event_and_modifiers:
             if event.keyval == Gdk.KEY_F9:
                 self.main_window.toggle_panels()
+            elif event.keyval == Gdk.KEY_F11:
+                if self.main_window.in_fullscreen_mode:
+                    self.main_window.go_unfullscreen()
+                else:
+                    self.main_window.go_fullscreen()
