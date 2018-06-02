@@ -17,7 +17,8 @@ import sys
 import gi
 
 gi.require_version('Notify', '0.7')
-from gi.repository import Gtk, GLib, Gio, Gdk, Notify
+gi.require_version('GtkSource', '3.0')
+from gi.repository import Gtk, GLib, Gio, Gdk, Notify, GtkSource
 
 from draftsrc.window import ApplicationWindow
 from draftsrc.defs import VERSION as app_version
@@ -55,6 +56,7 @@ class Application(Gtk.Application):
         self.set_app_menu(appmenu)
 
         action_entries = [
+            ('preferences', self._preferences),
             ('about', self._about),
             ('quit', self.quit),
         ]
@@ -63,6 +65,79 @@ class Application(Gtk.Application):
             simple_action = Gio.SimpleAction.new(action, None)
             simple_action.connect('activate', callback)
             self.add_action(simple_action)
+
+    def _preferences(self, action, param):
+        builder = Gtk.Builder()
+        builder.add_from_resource('/org/gnome/Draft/preferences.ui')
+        preferences_dialog = builder.get_object('preferences_dialog')
+        dark_ui_switch = builder.get_object('dark_ui_switch')
+        color_scheme_label = builder.get_object('color_scheme_label')
+        color_scheme_scrolled = builder.get_object('color_scheme_scrolled')
+        font_chooser_button = builder.get_object('font_chooser_button')
+        typewriter_mode_label = builder.get_object('typewriter_mode_label')
+        typewriter_mode_options = builder.get_object('typewriter_mode_options')
+
+        def preferences_response(dialog, response):
+            preferences_dialog.destroy()
+
+        def dark_ui_state_switched(switch, state):
+            self._settings.set_boolean('dark-ui', state)
+
+        def scheme_button_clicked(button):
+            color_scheme_label.set_label(button.get_label())
+            color_scheme_id = button_scheme_pairs.get(button)
+            self._settings.set_string('color-scheme', color_scheme_id)
+
+        def editor_font_set(font_button, user_data=None):
+            font_name = font_button.get_font()
+            self._settings.set_string('editor-font', font_name)
+
+        def typewriter_mode_selected(button, user_data=None):
+            typewriter_mode_label.set_label(button.props.text)
+            index = typewriter_mode_options.child_get_property(button,
+                                                               'position')
+            self._settings.set_enum('typewriter-mode', index)
+
+        dark_ui_state = self._settings.get_boolean('dark-ui')
+        dark_ui_switch.set_state(dark_ui_state)
+        dark_ui_switch.connect('state-set', dark_ui_state_switched)
+
+        current_scheme_id = self._settings.get_string('color-scheme')
+        button_scheme_pairs = {}
+        style_manager = GtkSource.StyleSchemeManager.get_default()
+        scheme_ids = style_manager.get_scheme_ids()
+        if scheme_ids:
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            for scheme_id in scheme_ids:
+                scheme = style_manager.get_scheme(scheme_id)
+                button = Gtk.ModelButton()
+                button.set_label(scheme.get_name())
+                button.get_child().set_halign(Gtk.Align.START)
+                button.connect('clicked', scheme_button_clicked)
+                box.add(button)
+                button_scheme_pairs[button] = scheme_id
+
+                if scheme_id == current_scheme_id:
+                    color_scheme_label.set_label(scheme.get_name())
+
+            box.show_all()
+            color_scheme_scrolled.add(box)
+
+        current_font = self._settings.get_string('editor-font').strip("'")
+        font_chooser_button.set_font(current_font)
+        font_chooser_button.connect('font-set', editor_font_set)
+
+        current_typewriter_mode = self._settings.get_enum('typewriter-mode')
+        for button in typewriter_mode_options.get_children():
+            button.connect('clicked', typewriter_mode_selected)
+            index = typewriter_mode_options.child_get_property(button,
+                                                               'position')
+            if index == current_typewriter_mode:
+                typewriter_mode_label.set_label(button.props.text)
+
+        preferences_dialog.set_transient_for(self._window)
+        preferences_dialog.connect('response', preferences_response)
+        preferences_dialog.show()
 
     def _about(self, action, param):
 

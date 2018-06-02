@@ -14,7 +14,7 @@
       <description>The font to be used for editor content.</description>
     </key>
     <key type="s" name="color-scheme">
-      <default>""</default>
+      <default>'classic'</default>
       <summary>Editor color scheme</summary>
       <description>The GtkSource recognized colorscheme used by the editor.</description>
     </key>

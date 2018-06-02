@@ -178,12 +178,8 @@ class DraftEditor(Gtk.Overlay):
         return view_data.markup_type
 
     def _prep_view(self, view):
-        font_name = self.main_window.app_settings.get_string('editor-font')
-        view.set_font(font_name)
-
-        typewriter_mode = self.main_window.app_settings.get_enum('typewriter-mode')
-        if typewriter_mode:
-            view.set_typewriter_mode(True, typewriter_mode)
+        self.set_view_font_from_app_settings(view)
+        self.set_view_typewriter_mode_from_app_settings(view)
 
         def on_grab_focus(widget):
             self.util_revealer.set_reveal_child(False)
@@ -197,14 +193,10 @@ class DraftEditor(Gtk.Overlay):
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
 
     def _prep_buffer(self, buffer, markup_type='markdown'):
-        scheme_id = self.main_window.app_settings.get_string('color-scheme')
-        if scheme_id:
-            color_scheme = self._style_manager.get_scheme(scheme_id)
-            buffer.set_style_scheme(color_scheme)
-
         buffer.connect('modified-changed', self._on_modified_changed)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
+        self.set_buffer_style_scheme_from_settings(buffer)
         self.init_markup(buffer, markup_type)
 
     def _on_key_press(self, widget, event):
@@ -290,6 +282,35 @@ class DraftEditor(Gtk.Overlay):
     def fullscreen_statusbar_reveal(self, reveal):
         if self._in_fullscreen_mode:
             self._status_revealer.set_reveal_child(reveal)
+
+    def update_font_for_settings(self):
+        for view in self.open_views:
+            self.set_view_font_from_app_settings(view)
+
+    def update_typewriter_mode_for_settings(self):
+        for view in self.open_views:
+            self.set_view_typewriter_mode_from_app_settings(view)
+
+    def update_style_scheme_for_settings(self):
+        for view in self.open_views:
+            self.set_buffer_style_scheme_from_settings(view.get_buffer())
+
+    def set_view_font_from_app_settings(self, view):
+        font_name = self.main_window.app_settings.get_string('editor-font')
+        view.set_font(font_name)
+
+    def set_view_typewriter_mode_from_app_settings(self, view):
+        typewriter_mode = self.main_window.app_settings.get_enum('typewriter-mode')
+        if typewriter_mode:
+            view.set_typewriter_mode(True, typewriter_mode)
+        else:
+            view.set_typewriter_mode(False)
+
+    def set_buffer_style_scheme_from_settings(self, buffer):
+        scheme_id = self.main_window.app_settings.get_string('color-scheme')
+        if scheme_id:
+            color_scheme = self._style_manager.get_scheme(scheme_id)
+            buffer.set_style_scheme(color_scheme)
 
     def get_preview_data(self):
         data = []

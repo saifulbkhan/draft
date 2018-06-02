@@ -121,11 +121,15 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         else:
             self.hide_library_panel()
 
+        self._update_dark_theme()
+        self.app_settings.connect('changed', self._on_settings_changed)
+
+    def _update_dark_theme(self):
         settings = Gtk.Settings.get_default()
         gtk_dark = settings.get_property('gtk-application-prefer-dark-theme')
-        if not gtk_dark:
-            dark = self.app_settings.get_value('dark-ui')
-            settings.set_property('gtk-application-prefer-dark-theme', dark)
+        app_dark = self.app_settings.get_value('dark-ui')
+        if not gtk_dark == app_dark:
+            settings.set_property('gtk-application-prefer-dark-theme', app_dark)
 
     def _new_text_request(self, action, param):
         self.textlistview.new_text_request()
@@ -154,6 +158,16 @@ class ApplicationWindow(Gtk.ApplicationWindow):
     def _escape_selection_modes(self):
         self.textlistview.escape_selection_mode()
         self.libraryview.escape_selection_mode()
+
+    def _on_settings_changed(self, settings, key):
+        if key == 'dark-ui':
+            self._update_dark_theme()
+        elif key == 'color-scheme':
+            self.contentview.content_editor.update_style_scheme_for_settings()
+        elif key == 'editor-font':
+            self.contentview.content_editor.update_font_for_settings()
+        elif key == 'typewriter-mode':
+            self.contentview.content_editor.update_typewriter_mode_for_settings()
 
     def _on_panels_toggled(self, widget):
         self.toggle_panels()
