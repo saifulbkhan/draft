@@ -418,31 +418,32 @@ class DraftEditor(Gtk.Overlay):
                 view = scrolled.get_child()
                 assert view in self.open_views
                 view_data = self.open_views.get(view)
-                view_data.text_data = data
-                self._prep_view(view)
+                if view_data.text_data['in_trash'] == data['in_trash']:
+                    view_data.text_data = data
+                    self._prep_view(view)
 
-                if self.single_mode:
-                    self.view_store.set_visible_child(scrolled)
-                else:
-                    self.view_store.remove(scrolled)
-                    self._multi_view_stack.add_named(scrolled, id)
-                    self._multi_mode_order.append(id)
+                    if self.single_mode:
+                        self.view_store.set_visible_child(scrolled)
+                    else:
+                        self.view_store.remove(scrolled)
+                        self._multi_view_stack.add_named(scrolled, id)
+                        self._multi_mode_order.append(id)
 
-                if i == 0:
-                    self.view = view
-                    self.statusbar.update_state()
-                    if not self.single_mode:
-                        vadj = scrolled.get_vadjustment()
-                        vadj.set_value(vadj.get_lower())
-                        self._multi_view_stack.set_visible_child(scrolled)
+                    if i == 0:
+                        self.view = view
+                        self.statusbar.update_state()
+                        if not self.single_mode:
+                            vadj = scrolled.get_vadjustment()
+                            vadj.set_value(vadj.get_lower())
+                            self._multi_view_stack.set_visible_child(scrolled)
 
-                if i == len(texts_data) - 1:
-                    self._update_content_header_title()
+                    if i == len(texts_data) - 1:
+                        self._update_content_header_title()
 
-                if self.parent_container.in_preview_mode():
-                    self.parent_container.preview_content()
+                    if self.parent_container.in_preview_mode():
+                        self.parent_container.preview_content()
 
-                continue
+                    continue
 
             view = DraftSourceView()
             view_data = self._ViewData()
@@ -457,6 +458,9 @@ class DraftEditor(Gtk.Overlay):
             scrolled.connect('scroll-event', self._on_scroll_event)
 
             if self.single_mode:
+                child = self.view_store.get_child_by_name(id)
+                if child:
+                    self.view_store.remove(child)
                 self.view_store.add_named(scrolled, id)
                 self.view_store.set_visible_child(scrolled)
             else:
