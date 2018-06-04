@@ -123,6 +123,10 @@ class DraftEditor(Gtk.Overlay):
     @view.setter
     def view(self, sourceview):
         self._current_sourceview = sourceview
+        if self.open_views[sourceview].text_data['in_trash']:
+            self.statusbar.set_sensitive(False)
+        else:
+            self.statusbar.set_sensitive(True)
         self._update_content_header_title()
 
     @property
