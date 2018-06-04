@@ -122,7 +122,7 @@ class DraftGroupTree(Gtk.TreeView):
         if res:
             path, col, _x, _y = res
             selected_path = self.get_selected_path()
-            if path.to_string() == selected_path.to_string():
+            if not selected_path or path.to_string() == selected_path.to_string():
                 self.set_drag_dest_row(None,
                                        Gtk.TreeViewDropPosition.INTO_OR_AFTER)
                 return False
@@ -214,7 +214,9 @@ class DraftGroupTree(Gtk.TreeView):
 
     def get_selected_path(self):
         model, treeiter = self.selection.get_selected()
-        return model.get_path(treeiter)
+        if model and treeiter:
+            return model.get_path(treeiter)
+        return None
 
     def get_selected_rect(self):
         path = self.get_selected_path()
