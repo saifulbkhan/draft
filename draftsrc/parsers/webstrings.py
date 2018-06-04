@@ -35,7 +35,7 @@ script_string = '''<script type="text/x-mathjax-config">
         imageFont: null
     },
     showMathMenu: false,
-    "HTML-CSS": { scale: 75, linebreaks: { automatic: true } }
+    "HTML-CSS": { scale: 90, linebreaks: { automatic: true } }
     });
 </script>
 <script type="text/javascript"
