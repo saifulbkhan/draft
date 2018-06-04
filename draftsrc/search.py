@@ -14,6 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import threading
+from xml.sax.saxutils import escape as xml_escape
 
 from whoosh import index, writing, highlight
 from whoosh.fields import Schema, TEXT, KEYWORD, ID
@@ -91,12 +92,15 @@ class CustomFormatter(highlight.Formatter):
     """Custom formatter for the matched terms."""
     between = '...\n'
 
+    def _text(self, text):
+        return xml_escape(text)
+
     def format_token(self, text, token, replace=False):
         # Use the get_text function to get the text corresponding to the token
         tokentext = highlight.get_text(text, token, replace)
 
         # Return the text as wrapped around with custom tags
-        return "<u>%s</u>" % tokentext
+        return "<u>%s</u>" % xml_escape(tokentext)
 
 
 def search_in_group(group_id, search_string, search_tags=False, in_trash=False):

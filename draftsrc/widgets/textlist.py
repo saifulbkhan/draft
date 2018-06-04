@@ -15,6 +15,7 @@
 
 import cairo
 from gettext import gettext as _
+from xml.sax.saxutils import escape as xml_escape
 
 from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
@@ -399,7 +400,7 @@ class DraftTextList(DraftBaseList):
         """Set label for @label to @title"""
         labels = box.get_children()
         label = labels[0]
-        label.set_markup('<b>%s</b>' % title)
+        label.set_markup('<b>%s</b>' % xml_escape(title))
         self._shape_row_label(label)
 
     def _append_subtitle_label(self, box, subtitle):
@@ -721,7 +722,7 @@ class DraftResultList(DraftBaseList):
         """Set label for @label to @title"""
         labels = box.get_children()
         label = labels[0]
-        label.set_markup('<b>%s</b>' % title)
+        label.set_markup('<b>%s</b>' % xml_escape(title))
         self._shape_row_label(label)
 
     def _append_highlights(self, box, highlights):
