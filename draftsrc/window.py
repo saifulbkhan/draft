@@ -638,6 +638,8 @@ class _DraftHeaderBar(Gtk.Box):
 
     def set_preview_button_visible(self, visible):
         self._preview_button.set_visible(visible)
+        if self._preview_button.get_active():
+            self._preview_button.set_active(visible)
 
     def has_preview_available(self):
         return self._preview_button.get_visible()
