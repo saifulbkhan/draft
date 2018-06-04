@@ -122,19 +122,10 @@ class DraftBaseList(Gtk.ListBox):
         if not row and not self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
             return
 
-        def on_row_unfocused(widget, cb_data=None):
-            if not self.get_focus_child():
-                self._set_listview_class(True)
-
-        def on_row_focused(widget, cb_data=None):
-            self._set_listview_class(False)
-
         # if row loses focus then grayed selection, but if selection is within
         # the list itself then remove gray selection class
         if row:
             row.grab_focus()
-            row.connect('focus-out-event', on_row_unfocused)
-            row.connect('focus-in-event', on_row_focused)
             self._set_listview_class(False)
 
         positions = [row.get_index() for row in self.get_selected_rows()]
@@ -557,6 +548,18 @@ class DraftTextList(DraftBaseList):
             else:
                 self.finish_selection_for_id(text_id)
 
+    def _connect_focus_based_styling(self, row):
+
+        def on_row_unfocused(widget, cb_data=None):
+            if not self.get_focus_child():
+                self._set_listview_class(True)
+
+        def on_row_focused(widget, cb_data=None):
+            self._set_listview_class(False)
+
+        row.connect('focus-out-event', on_row_unfocused)
+        row.connect('focus-in-event', on_row_focused)
+
     def set_editor(self, editor):
         """Set editor and connect any other signal(s)."""
         DraftBaseList.set_editor(self, editor)
@@ -599,13 +602,19 @@ class DraftTextList(DraftBaseList):
             if position is not None:
                 row = self.get_row_at_index(position)
                 self.select_row(row)
+
+        for row in self.get_children():
+            self._connect_focus_based_styling(row)
+
         self._set_listview_class(True)
 
     def new_text_request(self):
         """Request for creation of a new text and append it to the list"""
         self._model.new_text_request()
         position = self._model.get_latest_modified_position()
-        self.select_row(self.get_row_at_index(position))
+        new_row = self.get_row_at_index(position)
+        self._connect_focus_based_styling(new_row)
+        self.select_row(new_row)
         self.emit('text-created')
 
     def set_group_for_ids(self, text_ids, group):
