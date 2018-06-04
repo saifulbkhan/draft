@@ -164,6 +164,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
             self._update_dark_theme()
         elif key == 'color-scheme':
             self.contentview.content_editor.update_style_scheme_for_settings()
+        elif key == 'stylesheet':
+            self.contentview.content_preview.update_stylesheet_for_settings()
         elif key == 'editor-font':
             self.contentview.content_editor.update_font_for_settings()
         elif key == 'typewriter-mode':

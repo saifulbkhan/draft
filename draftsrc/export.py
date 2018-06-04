@@ -16,7 +16,7 @@
 from os import path
 from gettext import gettext as _
 
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gio
 
 from draftsrc import file
 from draftsrc import db
@@ -83,7 +83,9 @@ def save_html(parent, title, body, with_style=False):
     given parent folder."""
     html = ""
     if with_style:
-        css_path = path.join(DRAFT_DIR, 'styles', 'webview.css')
+        settings = Gio.Settings.new('org.gnome.Draft')
+        stylesheet = settings.get_string('stylesheet')
+        css_path = path.join(DRAFT_DIR, 'styles', stylesheet)
         with open(css_path, 'r') as f:
             css = f.read()
             html = export_styled_html_string % (title, css, body)

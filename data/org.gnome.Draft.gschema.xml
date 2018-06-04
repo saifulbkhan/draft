@@ -13,6 +13,11 @@
       <summary>Editor Font</summary>
       <description>The font to be used for editor content.</description>
     </key>
+    <key type="s" name="stylesheet">
+      <default>'default.css'</default>
+      <summary>Preview stylesheet</summary>
+      <description>The CSS stylesheet used by in preview mode.</description>
+    </key>
     <key type="s" name="color-scheme">
       <default>'classic'</default>
       <summary>Editor color scheme</summary>

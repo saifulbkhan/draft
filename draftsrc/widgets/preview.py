@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from os import path
+from os import path, fsencode, fsdecode, listdir
 from subprocess import call
 
 import gi
@@ -52,27 +52,28 @@ class DraftPreview(Gtk.Box):
         self._set_up_widgets()
 
     def _set_up_widgets(self):
-        self._manager = self._set_up_content_manager()
+        self._manager = WebKit.UserContentManager()
         self.connect('key-press-event', self._on_key_pressed)
 
         self._view_stack = Gtk.Stack()
         self._view_stack.set_transition_duration(500)
         self.pack_start(self._view_stack, True, True, 0)
 
-    def _set_up_content_manager(self):
-        user_content_manager = WebKit.UserContentManager()
-        css_path = path.join(DRAFT_DIR, 'styles', 'webview.css')
+    def update_stylesheet_for_settings(self):
+        user_content_manager = self._manager
+        current_stylesheet = self.main_window.app_settings.get_string('stylesheet')
+        css_path = path.join(DRAFT_DIR, 'styles', current_stylesheet)
         with open(css_path) as f:
             css_str = f.read()
             user_stylesheet = WebKit.UserStyleSheet(
                 css_str,
                 WebKit.UserContentInjectedFrames.ALL_FRAMES,
-                WebKit.UserStyleLevel.USER,
+                WebKit.UserStyleLevel.AUTHOR,
                 None,
                 None
             )
+            user_content_manager.remove_all_style_sheets()
             user_content_manager.add_style_sheet(user_stylesheet)
-        return user_content_manager
 
     def add_view(self, id):
         webview = WebKit.WebView.new_with_user_content_manager(self._manager)
@@ -106,6 +107,7 @@ class DraftPreview(Gtk.Box):
 
             webview = scrolled.get_child().get_child()
             webview.set_editable(True)
+            webview.set_visible(False)
             GLib.idle_add(webview.load_html, html_contents[id], DRAFT_DIR_URL)
             self._view_order.append(id)
 
@@ -174,6 +176,9 @@ class DraftPreview(Gtk.Box):
             return
 
         if load_event == WebKit.LoadEvent.FINISHED:
+            self.update_stylesheet_for_settings()
+            # only show after stylesheet has been updated
+            webview.set_visible(True)
             self._scroll_webview_to(webview, view_data.scroll_offset)
 
     def _on_unmapped(self, *args):
@@ -216,3 +221,15 @@ class DraftPreview(Gtk.Box):
                     self.main_window.go_unfullscreen()
                 else:
                     self.main_window.go_fullscreen()
+
+
+def get_available_styles():
+    style_path = path.join(DRAFT_DIR, 'styles')
+    directory = fsencode(style_path)
+    style_files = {}
+    for file in listdir(directory):
+        filename = fsdecode(file)
+        if filename.endswith('.css'):
+            style_name = filename.rstrip('.css').title()
+            style_files[filename] = style_name
+    return style_files

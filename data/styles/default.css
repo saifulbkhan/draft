@@ -1,7 +1,7 @@
 /*
- * This file was entirely derived from Pascal Hertleif's 'pandoc.css'. Its
- * working surprisingly well for Draft with a necessary modifications. The
- * original work can be found here: https://gist.github.com/killercup/5917178
+ * This file was entirely derived from Pascal Hertleif's 'pandoc.css'. It has
+ * been modified to suit the needs of this application. The original work can
+ * be found here: https://gist.github.com/killercup/5917178
  */
 
 html {
@@ -108,9 +108,9 @@ h6 {
 
 blockquote {
   color: #666666;
-  margin: 0;
-  padding-left: 3em;
-  border-left: 0.5em #EEE solid;
+  margin: 1em 0;
+  padding-left: 1em;
+  border-left: 0.25em #EEE solid;
 }
 
 hr {
@@ -125,9 +125,9 @@ hr {
 
 pre, code, kbd, samp {
   color: #000;
-  font-family: monospace, monospace;
-  _font-family: 'courier new', monospace;
-  font-size: 0.98em;
+  _font-family: monospace, monospace;
+  font-family: 'courier new', monospace;
+  font-size: 0.95em;
 }
 
 pre {
@@ -204,8 +204,11 @@ dd:last-child {
 
 img {
   border: 0;
+  display: block;
   -ms-interpolation-mode: bicubic;
   vertical-align: middle;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 figure {
@@ -226,11 +229,14 @@ figcaption {
 }
 
 table {
+  margin-left: auto;
+  margin-right: auto;
   margin-bottom: 2em;
   border-bottom: 1px solid #ddd;
   border-right: 1px solid #ddd;
   border-spacing: 0;
   border-collapse: collapse;
+  text-align: left;
 }
 
 table th {

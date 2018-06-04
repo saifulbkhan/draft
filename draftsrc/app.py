@@ -21,6 +21,7 @@ gi.require_version('GtkSource', '3.0')
 from gi.repository import Gtk, GLib, Gio, Gdk, Notify, GtkSource
 
 from draftsrc.window import ApplicationWindow
+from draftsrc.widgets import preview
 from draftsrc.defs import VERSION as app_version
 from draftsrc.file import init_storage
 from draftsrc.db import init_db
@@ -73,6 +74,8 @@ class Application(Gtk.Application):
         dark_ui_switch = builder.get_object('dark_ui_switch')
         color_scheme_label = builder.get_object('color_scheme_label')
         color_scheme_scrolled = builder.get_object('color_scheme_scrolled')
+        preview_stylesheet_label = builder.get_object('preview_stylesheet_label')
+        preview_stylesheet_scrolled = builder.get_object('preview_stylesheet_scrolled')
         font_chooser_button = builder.get_object('font_chooser_button')
         typewriter_mode_label = builder.get_object('typewriter_mode_label')
         typewriter_mode_options = builder.get_object('typewriter_mode_options')
@@ -87,6 +90,11 @@ class Application(Gtk.Application):
             color_scheme_label.set_label(button.get_label())
             color_scheme_id = button_scheme_pairs.get(button)
             self._settings.set_string('color-scheme', color_scheme_id)
+
+        def style_button_clicked(button):
+            preview_stylesheet_label.set_label(button.get_label())
+            stylesheet = button_style_pairs.get(button)
+            self._settings.set_string('stylesheet', stylesheet)
 
         def editor_font_set(font_button, user_data=None):
             font_name = font_button.get_font()
@@ -122,6 +130,24 @@ class Application(Gtk.Application):
 
             box.show_all()
             color_scheme_scrolled.add(box)
+
+        current_stylesheet = self._settings.get_string('stylesheet')
+        available_styles = preview.get_available_styles()
+        button_style_pairs = {}
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        for stylesheet in available_styles:
+            button = Gtk.ModelButton()
+            button.set_label(available_styles.get(stylesheet))
+            button.get_child().set_halign(Gtk.Align.START)
+            button.connect('clicked', style_button_clicked)
+            box.add(button)
+            button_style_pairs[button] = stylesheet
+
+            if stylesheet == current_stylesheet:
+                preview_stylesheet_label.set_label(available_styles.get(stylesheet))
+
+        box.show_all()
+        preview_stylesheet_scrolled.add(box)
 
         current_font = self._settings.get_string('editor-font').strip("'")
         font_chooser_button.set_font(current_font)
