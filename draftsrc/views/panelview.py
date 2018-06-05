@@ -388,15 +388,19 @@ class DraftLibraryView(Gtk.Bin):
         # use parent's reveal method to ensure size group allotment
         self.parent_window.reveal_library_panel()
 
-        rect = self.local_groups_view.new_group_request()
+        self.local_groups_view.new_group_request()
         self.local_groups_view.set_faded_selection(True)
 
+        def prepare_for_popup():
+            rect = self.local_groups_view.get_selected_rect()
+            self._action_button.set_label('Create')
+            self._popover_title.set_label('Group Name')
+            self._popover.set_relative_to(self.local_groups_view)
+            self._popover.set_pointing_to(rect)
+            self._popover.popup()
+
         self._creation_state = True
-        self._action_button.set_label('Create')
-        self._popover_title.set_label('Group Name')
-        self._popover.set_relative_to(self.local_groups_view)
-        self._popover.set_pointing_to(rect)
-        self._popover.popup()
+        GLib.idle_add(prepare_for_popup)
 
     def selection_request(self, group_id, in_trash=False):
         if in_trash:

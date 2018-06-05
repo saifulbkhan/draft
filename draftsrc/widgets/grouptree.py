@@ -244,8 +244,6 @@ class DraftGroupTree(Gtk.TreeView):
         self.expand_row(model.get_path(treeiter), False)
         self.selection.select_iter(new_iter)
 
-        return self.get_selected_rect()
-
     def finalize_name_for_new_group(self, name):
         """Give the selected group a name and then finalize its creation and
         if name is not a non-whitespace string, discard the row altogether"""
