@@ -145,6 +145,7 @@ class DraftSourceView(GtkSource.View):
         # just adjust things later once it becomes available.
         if self.cached_char_height:
             if self._typewriter_mode:
+                area.y = self.get_top_margin()
                 area.height = self.cached_char_height
                 return area
 
@@ -264,6 +265,10 @@ class DraftSourceView(GtkSource.View):
                 scroll_dest = rect.x + rect.width
                 xvalue = scroll_dest - screen_right + screen_x_offset
         xvalue += current_x_scroll
+
+        # do not animate if we are scrolling less than 2 full lines.
+        if abs(yvalue - vadj.get_value()) < 2 * self.cached_char_height:
+            animate = False
 
         hadj.set_value(xvalue)
         self.set_value_alt(vadj, yvalue, animate)
@@ -386,10 +391,7 @@ class DraftSourceView(GtkSource.View):
         GtkSource.View.do_move_cursor(self, step, count, extend_selection)
         buffer = self.get_buffer()
         insert_mark = buffer.get_insert()
-        if self._typewriter_mode:
-            self.scroll_mark_onscreen(insert_mark, animate=False)
-        else:
-            self.scroll_mark_onscreen(insert_mark)
+        self.scroll_mark_onscreen(insert_mark)
 
         # TODO: Disabling this until link editor is stable.
         # editable = self.get_editable()
@@ -483,7 +485,8 @@ class DraftSourceView(GtkSource.View):
                 else:
                     self.scroll_offset = (visible_lines - 1) / 2
                     self.overscroll_num_lines = self.scroll_offset
-        self.refresh_overscroll()
+        else:
+            self.refresh_overscroll()
 
     def _on_event(self, widget, event):
         key_pressed, key = event.get_keyval()
