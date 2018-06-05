@@ -184,6 +184,7 @@ class DraftBaseList(Gtk.ListBox):
         editor.connect('view-modified', self.save_last_edit_data)
         editor.connect('view-changed', self.set_header_title_for_view)
         editor.connect('escape-edit', self.set_escape_focus)
+        editor.connect('update-requested', self.save_text_data)
 
     def set_title_for_selection(self, widget, title):
         """Set the title for currently selected text, as well as write this to
@@ -276,6 +277,14 @@ class DraftBaseList(Gtk.ListBox):
 
         if metadata:
             self._model.queue_final_save(metadata)
+
+    def save_text_data(self, widget, metadata):
+        """Queue this metadata for save immeadiately"""
+        if not hasattr(self, '_model'):
+            return
+
+        if metadata:
+            self._model.queue_save(metadata)
 
     def set_header_title_for_view(self, widget, title, position, total):
         """Sets the headerbar title for the item being viewed. Also set the

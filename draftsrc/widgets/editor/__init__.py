@@ -48,7 +48,10 @@ class DraftEditor(Gtk.Overlay):
         'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,
                                                                GObject.TYPE_INT,
                                                                GObject.TYPE_INT)),
-        'escape-edit': (GObject.SignalFlags.RUN_FIRST, None, ())
+        'escape-edit': (GObject.SignalFlags.RUN_FIRST, None, ()),
+        'update-requested': (GObject.SignalFlags.RUN_FIRST,
+                             None,
+                             (GObject.TYPE_PYOBJECT,))
     }
 
     class _ViewData(object):
@@ -122,6 +125,11 @@ class DraftEditor(Gtk.Overlay):
 
     @view.setter
     def view(self, sourceview):
+        # every time view is changed, update the metadata for last view in db
+        view_data = self.open_views.get(self._current_sourceview)
+        if view_data:
+            self.emit('update-requested', view_data.text_data)
+
         self._current_sourceview = sourceview
         if self.open_views[sourceview].text_data['in_trash']:
             self.statusbar.set_sensitive(False)
@@ -195,6 +203,7 @@ class DraftEditor(Gtk.Overlay):
         view.connect('grab-focus', on_grab_focus)
         view.connect('key-press-event', on_key_press)
         view.connect('thesaurus-requested', self._on_thesaurus_requested)
+        view.connect('insert-changed', self._on_insert_changed)
 
     def _prep_buffer(self, buffer, markup_type='markdown'):
         buffer.connect('modified-changed', self._on_modified_changed)
@@ -248,9 +257,8 @@ class DraftEditor(Gtk.Overlay):
         self._write_current_buffer()
         self._update_title_and_subtitle()
         self.statusbar.update_word_count()
-        self._set_insert_offset_for_current_buffer()
         self._set_last_modified()
-        self.emit('view-modified', self.current_text_data)
+        GLib.idle_add(self.view.emit, 'insert-changed')
 
     def _on_thesaurus_requested(self, widget, word, word_start, word_end):
         self._synonym_word_bounds = (word_start, word_end)
@@ -272,6 +280,16 @@ class DraftEditor(Gtk.Overlay):
 
     def _on_close_search(self, widget):
         self.view.grab_focus()
+
+    def _on_insert_changed(self, sourceview):
+        buffer = sourceview.get_buffer()
+        insert_mark = buffer.get_insert()
+        insert_iter = buffer.get_iter_at_mark(insert_mark)
+        offset = insert_iter.get_offset()
+
+        view_data = self.open_views.get(sourceview)
+        view_data.text_data['last_edit_position'] = offset
+        self.emit('view-modified', self.current_text_data)
 
     def fullscreen_mode(self):
         self._main_box.remove(self.statusbar)
@@ -594,14 +612,6 @@ class DraftEditor(Gtk.Overlay):
             buffer.place_cursor(insert_iter)
 
         return buffer.get_insert()
-
-    def _set_insert_offset_for_current_buffer(self):
-        buffer = self.view.get_buffer()
-        insert_mark = buffer.get_insert()
-        insert_iter = buffer.get_iter_at_mark(insert_mark)
-        offset = insert_iter.get_offset()
-
-        self.current_text_data['last_edit_position'] = offset
 
     def _set_last_modified(self):
         datetime = db.get_datetime()

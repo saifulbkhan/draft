@@ -300,6 +300,11 @@ class DraftTextListStore(Gio.ListStore):
 
         return item.tags
 
+    def queue_save(self, metadata):
+        text_id = metadata['id']
+        db.final_text_updater.remove_if_exists(text_id)
+        db.async_text_updater.enqueue(text_id, metadata)
+
     def queue_final_save(self, metadata):
         db.final_text_updater.enqueue(metadata['id'], metadata)
 
@@ -323,7 +328,7 @@ class DraftTextListStore(Gio.ListStore):
         file.trash_file(hash_id, parent_hashes)
 
         with db.connect() as connection:
-            data.update_text(connection, id, item.to_dict())
+            self.queue_save(item.to_dict())
 
         self.dequeue_final_save(id)
 

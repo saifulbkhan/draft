@@ -262,6 +262,7 @@ class DeleteRequestQueue(RequestQueue):
 # a queue for regular updates that need to be performed immediately
 async_text_updater = UpdateRequestQueue()
 async_text_updater.execution_fn = data.update_text
+async_text_updater.fetch_fn = data.text_for_id
 
 # a queue for asynchrnously deleting texts immediately
 async_text_deleter = DeleteRequestQueue()

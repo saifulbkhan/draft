@@ -43,7 +43,8 @@ class DraftSourceView(GtkSource.View):
                                 None,
                                 (GObject.TYPE_STRING,
                                  GObject.TYPE_PYOBJECT,
-                                 GObject.TYPE_PYOBJECT))
+                                 GObject.TYPE_PYOBJECT)),
+        'insert-changed': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     _context_menu = None
@@ -99,7 +100,6 @@ class DraftSourceView(GtkSource.View):
         # self._hint_window.set_app_paintable(True)
 
         self.connect('event', self._on_event)
-        self.connect('focus-in-event', self._on_focus_in)
         self.connect('key-press-event', self._on_key_press)
         self.connect('button-press-event', self._on_button_press)
         self.connect('focus-in-event', self._on_focus_in)
@@ -397,6 +397,7 @@ class DraftSourceView(GtkSource.View):
 
     def do_move_cursor(self, step, count, extend_selection):
         GtkSource.View.do_move_cursor(self, step, count, extend_selection)
+        self.emit('insert-changed')
         buffer = self.get_buffer()
         insert_mark = buffer.get_insert()
         self.scroll_mark_onscreen(insert_mark)
@@ -506,12 +507,10 @@ class DraftSourceView(GtkSource.View):
             self._popup_context_menu(event, menu_requested)
             return True
 
-    def _on_focus_in(self, widget, event):
-        self._delayed_vertical_scroll = True
-
     def _on_button_press(self, widget, event):
         if event.button == Gdk.BUTTON_PRIMARY:
             self._delayed_vertical_scroll = True
+            GLib.idle_add(self.emit, 'insert-changed')
 
     def _on_key_press(self, widget, event):
         key = event.keyval
@@ -984,8 +983,9 @@ class DraftSourceView(GtkSource.View):
         ctx.close_path()
 
     def _on_focus_in(self, widget, cb_data):
+        self._delayed_vertical_scroll = True
+        GLib.idle_add(self.emit, 'insert-changed')
         # self._show_hint_window()
-        pass
 
     def _on_focus_out(self, widget, cb_data):
         # self._hint_window.set_visible(False)
