@@ -21,7 +21,7 @@ import gi
 gi.require_version('GtkSource', '3.0')
 gi.require_version('Gspell', '1')
 
-from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango, Gspell, Gio
+from gi.repository import Gtk, GObject, GtkSource, Gdk, Pango, Gspell, Gio, GLib
 
 from draftsrc.widgets.editor.sourcebuffer import DraftSourceBuffer
 
@@ -59,6 +59,7 @@ class DraftSourceView(GtkSource.View):
     overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
     _calculated_top_margin = 24
     _calculated_bottom_margin = 24
+    _delayed_vertical_scroll = False
 
     def __repr__(self):
         return '<DraftSourceView>'
@@ -98,7 +99,9 @@ class DraftSourceView(GtkSource.View):
         # self._hint_window.set_app_paintable(True)
 
         self.connect('event', self._on_event)
+        self.connect('focus-in-event', self._on_focus_in)
         self.connect('key-press-event', self._on_key_press)
+        self.connect('button-press-event', self._on_button_press)
         self.connect('focus-in-event', self._on_focus_in)
         self.connect('focus-out-event', self._on_focus_out)
 
@@ -271,7 +274,10 @@ class DraftSourceView(GtkSource.View):
             animate = False
 
         hadj.set_value(xvalue)
-        self.set_value_alt(vadj, yvalue, animate)
+        if self._delayed_vertical_scroll:
+            GLib.idle_add(self.set_value_alt, vadj, yvalue, animate)
+        else:
+            self.set_value_alt(vadj, yvalue, animate)
 
     # TODO: Separate from this class
     def _gdk_rectangle_y2(self, rect):
@@ -334,6 +340,8 @@ class DraftSourceView(GtkSource.View):
         else:
             self._end_updating(adjustment, clock)
             adjustment.set_value(value)
+
+        self._delayed_vertical_scroll = False
 
     def scroll_mark_onscreen(self, mark, animate=True):
         visible_rect = self.get_visible_rect()
@@ -497,6 +505,13 @@ class DraftSourceView(GtkSource.View):
         if event.triggers_context_menu() or menu_requested:
             self._popup_context_menu(event, menu_requested)
             return True
+
+    def _on_focus_in(self, widget, event):
+        self._delayed_vertical_scroll = True
+
+    def _on_button_press(self, widget, event):
+        if event.button == Gdk.BUTTON_PRIMARY:
+            self._delayed_vertical_scroll = True
 
     def _on_key_press(self, widget, event):
         key = event.keyval
