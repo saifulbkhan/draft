@@ -482,6 +482,9 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         dialog_box.set_default_response(Gtk.ResponseType.ACCEPT)
         return dialog_box
 
+    def handle_key_press(self, eventkey):
+        self._on_key_press(self, eventkey)
+
 
 class _DraftHeaderBar(Gtk.Box):
     __gtype_name__ = 'DraftHeaderBar'

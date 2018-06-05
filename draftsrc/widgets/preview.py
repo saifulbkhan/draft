@@ -208,19 +208,8 @@ class DraftPreview(Gtk.Box):
         elif scroll_event.direction == Gdk.ScrollDirection.DOWN or del_y > 0:
             self._view_next()
 
-    def _on_key_pressed(self, widget, event):
-        modifiers = Gtk.accelerator_get_default_mod_mask()
-        event_and_modifiers = (event.state & modifiers)
-
-        # TODO: Add shortcuts to textview
-        if not event_and_modifiers:
-            if event.keyval == Gdk.KEY_F9:
-                self.main_window.toggle_panels()
-            elif event.keyval == Gdk.KEY_F11:
-                if self.main_window.in_fullscreen_mode:
-                    self.main_window.go_unfullscreen()
-                else:
-                    self.main_window.go_fullscreen()
+    def _on_key_pressed(self, widget, eventkey):
+        self.main_window.handle_key_press(eventkey)
 
 
 def get_available_styles():
