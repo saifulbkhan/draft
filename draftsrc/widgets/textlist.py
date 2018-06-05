@@ -617,6 +617,12 @@ class DraftTextList(DraftBaseList):
         self.select_row(new_row)
         self.emit('text-created')
 
+        def scroll_to_new_row():
+            adj = self.get_adjustment()
+            adj.set_value(adj.get_upper())
+
+        GLib.idle_add(scroll_to_new_row)
+
     def set_group_for_ids(self, text_ids, group):
         """Send texts with @text_ids to the group with id @group. Assuming this
         is not the same group as the texts is currently in, it will be removed
