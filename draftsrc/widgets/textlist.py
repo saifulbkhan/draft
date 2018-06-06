@@ -276,6 +276,9 @@ class DraftBaseList(Gtk.ListBox):
             return
 
         if metadata:
+            text_id = self.editor.current_text_data['id']
+            position = self.get_selected_index_for_id(text_id)
+            self._model.update_model_item_for_position(position, metadata)
             self._model.queue_final_save(metadata)
 
     def save_text_data(self, widget, metadata):

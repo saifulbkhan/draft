@@ -96,6 +96,28 @@ class TextRowData(GObject.Object):
             'misc': self.misc
         }
 
+    def update_from_dict(self, data_dict):
+        self.title = data_dict['title']
+        self.tags = data_dict['tags']
+        self.last_modified = data_dict['last_modified']
+        self.db_id = data_dict['id']
+        self.hash_id = data_dict['hash_id']
+        self.in_trash = bool(data_dict['in_trash'])
+        self.parent_id = data_dict['parent_id']
+        self.parent_list = data_dict['parent_list']
+        self.markup = data_dict['markup']
+        self.subtitle = data_dict['subtitle']
+
+        self.word_goal = 0
+        if data_dict['word_goal']:
+            self.word_goal = int(data_dict['word_goal'])
+
+        self.last_edit_position = 0
+        if data_dict['last_edit_position']:
+            self.last_edit_position = int(data_dict['last_edit_position'])
+
+        self.misc = data_dict.get('misc')
+
 
 class DraftTextListStore(Gio.ListStore):
     """Model for a list of texts (only) from one particular text group"""
@@ -224,6 +246,12 @@ class DraftTextListStore(Gio.ListStore):
                                         buffers.get(item.db_id),
                                         load_file,
                                         in_trash)
+
+    def update_model_item_for_position(self, position, metadata):
+        """Only updates the model entry (at @position) with given metadata. No
+        updates are made to the db."""
+        item = self.get_item(position)
+        item.update_from_dict(metadata)
 
     def set_prop_for_position(self, position, prop, value):
         """Set property @prop for item at @position to @value
