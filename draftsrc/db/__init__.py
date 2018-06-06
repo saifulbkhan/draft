@@ -226,11 +226,17 @@ class UpdateRequestQueue(RequestQueue):
 
             with connect() as connection:
                 if self.fetch_fn:
-                    current_values = self.fetch_fn(connection, id)
-                    last_modified = get_datetime_from_string(current_values['last_modified'])
-                    new_last_modified = get_datetime_from_string(values['last_modified'])
-                    if last_modified > new_last_modified:
-                        continue
+                    try:
+                        current_values = self.fetch_fn(connection, id)
+                        last_modified = get_datetime_from_string(current_values['last_modified'])
+                        new_last_modified = get_datetime_from_string(values['last_modified'])
+                        if last_modified > new_last_modified:
+                            continue
+                    except Exception as e:
+                         # (notify): maybe text with given id does not exist,
+                         # or some other sqlite exception; regardless it is
+                         # unsafe to proceed with update execution -- skip this.
+                         continue
 
                 self.execution_fn(connection, id, values)
 
