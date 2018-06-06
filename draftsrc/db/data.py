@@ -467,6 +467,19 @@ def group_for_id(conn, group_id):
     return next(gen)
 
 
+def group_for_last_modified_text(conn):
+    """Returns the group id which houses last modified (non-trashed) text."""
+    query = '''
+        SELECT parent_id
+          FROM text
+         WHERE in_trash = 0
+      ORDER BY last_modified DESC
+         LIMIT 1
+    '''
+    res = conn.execute(query)
+    return res.fetchone()
+
+
 def fetch_tags(conn, where_condition='', order_condition='', args={}):
     """Return an iterator of all tags satisfying @where_condition and ordered
     by @order_condition"""

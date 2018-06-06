@@ -360,3 +360,8 @@ class DraftGroupTreeStore(Gtk.TreeStore):
                 count += data.count_texts_in_trash_but_not_parent(connection)
 
         return count
+
+    def get_last_modified_parent_id(self):
+        with db.connect() as connection:
+            parent_id = data.group_for_last_modified_text(connection)
+            return parent_id[0]

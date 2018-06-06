@@ -463,7 +463,7 @@ class DraftLibraryView(Gtk.Bin):
 
     def select_appropriate_row(self):
         """Select an appropriate row in the library"""
-        group = self.local_groups_view.select_if_not_selected()
+        group = self.local_groups_view.select_group_with_last_modified_text()
         self.parent_window.textlistview.set_model_for_group(group)
 
     def focus_current_view(self):

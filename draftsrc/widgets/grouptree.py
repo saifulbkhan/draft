@@ -338,8 +338,7 @@ class DraftGroupTree(Gtk.TreeView):
         """Select a group for the given group id"""
         model = self.get_model()
         if group_id is None:
-            path = self._root_path()
-            self.selection.select_path(path)
+            self.select_top_level()
             return
 
         def select_if_group_id_matches(model, path, treeiter, data):
@@ -356,18 +355,15 @@ class DraftGroupTree(Gtk.TreeView):
         """Selects the top level root node. This can be helpful for selecting
         one node that we know will be present always (hopefully)"""
         model = self.get_model()
-        treeiter = model.get_iter(self._root_path())
-        self.selection.select_iter(treeiter)
+        self.selection.select_path(self._root_path())
 
-    def select_if_not_selected(self):
-        """Select a row if not selected"""
-        # FIXME: Make this select the row containing the
-        # last edited or viewed text item.
-        model, treeiter = self.selection.get_selected()
-        if not treeiter:
-            treeiter = model.get_iter(self._root_path())
-        self.selection.select_iter(treeiter)
+    def select_group_with_last_modified_text(self):
+        """Select a group for last modified text, otherwise select top node."""
+        model = self.get_model()
+        group_id = model.get_last_modified_parent_id()
+        self.select_for_id(group_id)
         self.grab_focus()
+        model, treeiter = self.selection.get_selected()
         return model.get_group_for_iter(treeiter)
 
     def count_top_level_groups_and_texts(self):
