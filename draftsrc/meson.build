@@ -24,8 +24,12 @@ db_sources = [
 
 editor_sources = [
   'widgets/editor/__init__.py',
+  'widgets/editor/editor.py',
+  'widgets/editor/searchbox.py',
   'widgets/editor/sourcebuffer.py',
-  'widgets/editor/sourceview.py'
+  'widgets/editor/sourceview.py',
+  'widgets/editor/statusbar.py',
+  'widgets/editor/thesaurusbox.py'
 ]
 
 models_sources = [
@@ -50,11 +54,8 @@ widgets_sources = [
   'widgets/grouptree.py',
   'widgets/__init__.py',
   'widgets/collectionlist.py',
-  'widgets/searchbox.py',
   'widgets/preview.py',
-  'widgets/statusbar.py',
   'widgets/textlist.py',
-  'widgets/thesaurusbox.py'
 ]
 
 install_data(app_sources, install_dir: draftsrcdir)
