@@ -21,9 +21,9 @@ from gi.repository import Gtk, GLib, Gio
 from draftsrc import file
 from draftsrc import db
 from draftsrc.db import data
-from draftsrc.parsers import markup
-from draftsrc.parsers.webstrings import export_html_string
-from draftsrc.parsers.webstrings import export_styled_html_string
+from draftsrc import markup
+from draftsrc.htmlstrings import export_html_string
+from draftsrc.htmlstrings import export_styled_html_string
 from draftsrc.defs import DATA_DIR
 
 DRAFT_DIR = path.join(DATA_DIR, 'draft')

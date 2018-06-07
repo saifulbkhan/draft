@@ -11,6 +11,8 @@ app_sources = [
   'app.py',
   'export.py',
   'file.py',
+  'htmlstrings.py',
+  'markup.py',
   'search.py',
   'thesaurus.py',
   'window.py'
@@ -38,13 +40,6 @@ models_sources = [
   'models/textliststore.py'
 ]
 
-parsers_sources = [
-  'parsers/__init__.py',
-  'parsers/markup.py',
-  'parsers/mistune.py',
-  'parsers/webstrings.py'
-]
-
 views_sources = [
   'views/contentview.py',
   'views/__init__.py',
@@ -64,6 +59,5 @@ install_data(app_sources, install_dir: draftsrcdir)
 install_data(db_sources, install_dir: draftsrcdir + '/db')
 install_data(editor_sources, install_dir: draftsrcdir + '/widgets/editor')
 install_data(models_sources, install_dir: draftsrcdir + '/models')
-install_data(parsers_sources, install_dir: draftsrcdir + '/parsers')
 install_data(views_sources, install_dir: draftsrcdir + '/views')
 install_data(widgets_sources, install_dir: draftsrcdir + '/widgets')

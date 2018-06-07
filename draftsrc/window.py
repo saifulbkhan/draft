@@ -20,7 +20,7 @@ from draftsrc.views.librarypanelview import DraftLibraryView
 from draftsrc.views.textpanelview import DraftTextListView
 from draftsrc.views.contentview import ContentView
 from draftsrc.models.collectionliststore import CollectionClassType
-from draftsrc.parsers.markup import MarkdownSymbols
+from draftsrc.markup import MarkdownSymbols
 from draftsrc import export
 
 

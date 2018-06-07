@@ -24,7 +24,7 @@ from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib
 
 from draftsrc import file
 from draftsrc import db
-from draftsrc.parsers.markup import MarkdownSymbols
+from draftsrc.markup import MarkdownSymbols
 from draftsrc.widgets.editor.statusbar import DraftStatusbar
 from draftsrc.widgets.editor.thesaurusbox import DraftThesaurusBox
 from draftsrc.widgets.editor.searchbox import DraftSearchBox

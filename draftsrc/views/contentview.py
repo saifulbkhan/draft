@@ -19,8 +19,8 @@ from gi.repository import Gtk, GLib
 from draftsrc import export
 from draftsrc.widgets.editor.editor import DraftEditor
 from draftsrc.widgets.preview import DraftPreview
-from draftsrc.parsers.markup import render_markdown
-from draftsrc.parsers.webstrings import html_string
+from draftsrc.markup import render_markdown
+from draftsrc.htmlstrings import html_string
 
 
 # TODO: Make this a horizontal box to support side-by-side editing

@@ -14,9 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-
-from draftsrc.parsers.mistune import escape
-from draftsrc.parsers.mistune import Markdown, InlineLexer, BlockLexer, Renderer
+import mistune
 
 
 # one class for each markup, storing starting symbols. Every class should have
@@ -45,7 +43,7 @@ class MarkdownSymbols(object):
     code_block = '```\ncursor\n```'
 
 
-class MathBlockLexer(BlockLexer):
+class MathBlockLexer(mistune.BlockLexer):
     def __init__(self):
         super(MathBlockLexer, self).__init__()
         self.enable_math()
@@ -81,7 +79,7 @@ class MathBlockLexer(BlockLexer):
                 })
 
 
-class MathInlineLexer(InlineLexer):
+class MathInlineLexer(mistune.InlineLexer):
     def __init__(self, renderer):
         super(MathInlineLexer, self).__init__(renderer)
         self.enable_math()
@@ -97,7 +95,7 @@ class MathInlineLexer(InlineLexer):
         return self.renderer.math(m.group(1))
 
 
-class CustomRenderer(Renderer):
+class CustomRenderer(mistune.Renderer):
     def block_math(self, text):
         return '$$%s$$' % text
 
@@ -111,7 +109,7 @@ class CustomRenderer(Renderer):
         return code
 
 
-class CustomMarkdown(Markdown):
+class CustomMarkdown(mistune.Markdown):
     def output_block_math(self):
         return self.renderer.block_math(self.token['text'])
 
@@ -136,7 +134,7 @@ def format_code(text, lang, inlinestyles=False, linenos=False):
     except Exception as e:
         # Maybe a warning message needed here
         text = text.strip()
-        return '\n<pre><code>%s</code></pre>\n' % escape(text)
+        return '\n<pre><code>%s</code></pre>\n' % mistune.escape(text)
 
 def render_markdown(markup):
     renderer = CustomRenderer(hard_wrap=True)
