@@ -609,7 +609,7 @@ class DraftEditor(Gtk.Overlay):
         view = self._view_for_buffer(buffer)
         view_data = self.open_views.get(view)
         last_edited_position = view_data.text_data['last_edit_position']
-        if last_edited_position:
+        if last_edited_position is not None:
             insert_iter = buffer.get_iter_at_offset(last_edited_position)
             buffer.place_cursor(insert_iter)
 
