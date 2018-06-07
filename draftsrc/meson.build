@@ -21,7 +21,8 @@ app_sources = [
 db_sources = [
   'db/__init__.py',
   'db/data.py',
-  'db/migrations.py'
+  'db/migrations.py',
+  'db/requestqueue.py'
 ]
 
 editor_sources = [
@@ -49,6 +50,7 @@ views_sources = [
 
 widgets_sources = [
   'widgets/grouptree.py',
+  'widgets/headerbar.py',
   'widgets/__init__.py',
   'widgets/collectionlist.py',
   'widgets/preview.py',

@@ -15,15 +15,12 @@
 
 import os.path
 import sqlite3
-import threading
 from contextlib import contextmanager
 from datetime import datetime, timedelta
-from collections import OrderedDict
-
-from gi.repository import GLib, Gio
 
 from draftsrc.file import USER_DATA_DIR, make_backup
 from draftsrc.db import data
+from draftsrc.db import requestqueue
 from draftsrc.db.migrations import migrate_db
 
 DB_URL = os.path.join(USER_DATA_DIR, 'draft.db')
@@ -161,128 +158,25 @@ def get_datetime_from_string(dt_str):
     return datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f')
 
 
-class RequestQueue(OrderedDict):
-    """A dict with queue like FIFO methods, and supports asynchronous work
-    to be done with the items contained within."""
-    active = False
-
-    def __init__(self, async=True, immediate_activation=True):
-        super().__init__()
-        self.async = async
-        self.immediate_activation = immediate_activation
-
-    def enqueue(self, key, val):
-        """Put an item in queue with a unique key. If the queue was empty and
-        should immeadiately be working on the requests, activate it."""
-        self[key] = val
-        if not self.active and self.immediate_activation:
-            self.activate()
-
-    def remove_if_exists(self, key):
-        """Remove the item with given key if it exists"""
-        if key in self:
-            self.pop(key)
-
-    def activate(self):
-        """Work on the contents of the queue, in a separate thread."""
-        self.active = True
-        if self.async:
-            thread = threading.Thread(target=self.do_work)
-            thread.daemon = True
-            thread.start()
-        else:
-            self.do_work()
-
-    def dequeue(self):
-        """Get the oldest item inserted into the queue."""
-        key, val = None, None
-        if len(self):
-            key, val = self.popitem(last=False)
-
-        return key, val
-
-    def do_work(self):
-        """Defines what should be done with the items in queue. This method
-        must be defined by subclasses accordingly."""
-        self.active = False
-
-
-class UpdateRequestQueue(RequestQueue):
-    """A RequestQueue meant for performing updates to the database."""
-    execution_fn = None
-    fetch_fn = None
-
-    def do_work(self):
-        """Loop over the queue and for each item perform `execution_fn`
-        operation."""
-        if self.execution_fn is None:
-            self.active = False
-            return
-
-        while True:
-            id, values = self.dequeue()
-            if not (id and values):
-                break
-
-            with connect() as connection:
-                if self.fetch_fn:
-                    try:
-                        current_values = self.fetch_fn(connection, id)
-                        last_modified = get_datetime_from_string(current_values['last_modified'])
-                        new_last_modified = get_datetime_from_string(values['last_modified'])
-                        if last_modified > new_last_modified:
-                            continue
-                    except Exception as e:
-                         # (notify): maybe text with given id does not exist,
-                         # or some other sqlite exception; regardless it is
-                         # unsafe to proceed with update execution -- skip this.
-                         continue
-
-                self.execution_fn(connection, id, values)
-
-        self.active = False
-
-
-class DeleteRequestQueue(RequestQueue):
-    """A RequestQueue for async deletion of items from the database"""
-    deletion_fn = None
-
-    def do_work(self):
-        """Loop over the queue and perform `deletion_fn` for each of the
-        items"""
-        if self.deletion_fn is None:
-            self.active = False
-            return
-
-        while True:
-            id, values = self.dequeue()
-            if id is None:
-                break
-
-            with connect() as connection:
-                self.deletion_fn(connection, id)
-
-        self.active = False
-
-
 # a queue for regular updates that need to be performed immediately
-async_text_updater = UpdateRequestQueue()
+async_text_updater = requestqueue.UpdateRequestQueue()
 async_text_updater.execution_fn = data.update_text
 async_text_updater.fetch_fn = data.text_for_id
 
 # a queue for asynchrnously deleting texts immediately
-async_text_deleter = DeleteRequestQueue()
+async_text_deleter = requestqueue.DeleteRequestQueue()
 async_text_deleter.deletion_fn = data.delete_text
 
 # a queue for asynchrnously deleting texts immediately
-async_group_deleter = DeleteRequestQueue()
+async_group_deleter = requestqueue.DeleteRequestQueue()
 async_group_deleter.deletion_fn = data.delete_group
 
 # TODO: a queue for updates which could be issued periodically
-timed_updater = UpdateRequestQueue()
+timed_updater = requestqueue.UpdateRequestQueue()
 time_period = 180
 
 # a queue of updates that will be executed when the app quits
-final_text_updater = UpdateRequestQueue(async=False, immediate_activation=False)
+final_text_updater = requestqueue.UpdateRequestQueue(async=False,
+                                                     immediate_activation=False)
 final_text_updater.execution_fn = data.update_text
 final_text_updater.fetch_fn = data.text_for_id
