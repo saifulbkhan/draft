@@ -207,6 +207,7 @@ class DraftEditor(Gtk.Overlay):
 
     def _prep_buffer(self, buffer, markup_type='markdown'):
         buffer.connect('modified-changed', self._on_modified_changed)
+        self._place_insert_for_buffer(buffer)
         self._on_buffer_changed_id = buffer.connect('changed',
                                                     self._on_buffer_changed)
         self.set_buffer_style_scheme_from_settings(buffer)
@@ -520,7 +521,7 @@ class DraftEditor(Gtk.Overlay):
         self.view.grab_focus()
 
         if scroll_to_insert:
-            insert = self._get_insert_for_current_buffer()
+            insert = self.view.get_buffer().get_insert()
             GLib.idle_add(self.view.scroll_mark_onscreen, insert)
 
     def _view_for_buffer(self, buffer):
@@ -604,9 +605,10 @@ class DraftEditor(Gtk.Overlay):
         file.write_to_source_file_async(self._current_file,
                                         buffer)
 
-    def _get_insert_for_current_buffer(self):
-        buffer = self.view.get_buffer()
-        last_edited_position = self.current_text_data['last_edit_position']
+    def _place_insert_for_buffer(self, buffer):
+        view = self._view_for_buffer(buffer)
+        view_data = self.open_views.get(view)
+        last_edited_position = view_data.text_data['last_edit_position']
         if last_edited_position:
             insert_iter = buffer.get_iter_at_offset(last_edited_position)
             buffer.place_cursor(insert_iter)
