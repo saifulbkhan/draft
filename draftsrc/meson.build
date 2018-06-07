@@ -47,7 +47,9 @@ parsers_sources = [
 
 views_sources = [
   'views/contentview.py',
-  'views/panelview.py'
+  'views/__init__.py',
+  'views/librarypanelview.py',
+  'views/textpanelview.py'
 ]
 
 widgets_sources = [

@@ -16,7 +16,8 @@
 from gi.repository import Gtk, Gdk, Gio, GLib, GObject
 from gettext import gettext as _
 
-from draftsrc.views.panelview import DraftTextListView, DraftLibraryView
+from draftsrc.views.librarypanelview import DraftLibraryView
+from draftsrc.views.textpanelview import DraftTextListView
 from draftsrc.views.contentview import ContentView
 from draftsrc.models.collectionliststore import CollectionClassType
 from draftsrc.parsers.markup import MarkdownSymbols
