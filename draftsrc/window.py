@@ -312,6 +312,7 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         if empty_selection:
             self.contentview.set_empty_selection_state()
             self.partial_headerbar_interaction()
+            self.set_content_title("", update_sub=True)
         else:
             self.update_content_view_and_headerbar()
 
