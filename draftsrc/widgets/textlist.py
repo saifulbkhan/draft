@@ -111,7 +111,9 @@ class DraftBaseList(Gtk.ListBox):
                 row = self._row_at_event_coordinates(event)
                 if not row:
                     return
-                self.set_multi_selection_mode(False)
+                elif self.in_multi_selection_mode():
+                    self.set_multi_selection_mode(False)
+                    self.select_row(row)
 
     def _on_row_selected(self, widget, row):
         """Handler for signal `row-selected`"""
@@ -119,7 +121,9 @@ class DraftBaseList(Gtk.ListBox):
                 or self._text_view_selection_in_progress):
             return
 
-        if not row and not self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
+        if not row and not self.in_multi_selection_mode():
+            if len(self.get_selected_rows()) == 0:
+                self.emit('no-text-selected')
             return
 
         # if row loses focus then grayed selection, but if selection is within
@@ -152,21 +156,15 @@ class DraftBaseList(Gtk.ListBox):
         elif not set_class and ctx.has_class(listview_class):
             ctx.remove_class(listview_class)
 
-    def set_multi_selection_mode(self, multi_mode, escape=False):
+    def set_multi_selection_mode(self, multi_mode):
         """Set or unset multiple selection mode for the ListView"""
-        if not hasattr(self, '_model'):
-            return
-
         if multi_mode:
             self.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
         else:
             self.set_selection_mode(Gtk.SelectionMode.BROWSE)
 
-            if escape:
-                position = self._model.get_latest_modified_position()
-                if position is not None:
-                    row = self.get_row_at_index(position)
-                    self.select_row(row)
+    def in_multi_selection_mode(self):
+        return self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE
 
     def set_editor(self, editor):
         """Set editor for @self
@@ -470,8 +468,7 @@ class DraftTextList(DraftBaseList):
         8. set the row as selected"""
         row = widget.get_ancestor(Gtk.ListBoxRow.__gtype__)
         num_selected = len(self.get_selected_rows())
-        if (not row.is_selected()
-                and self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE):
+        if (not row.is_selected() and self.in_multi_selection_mode()):
             num_selected += 1
 
         self.unselect_row(row)
@@ -599,26 +596,41 @@ class DraftTextList(DraftBaseList):
 
         self._items_changed_handler_id = self._model.connect('items-changed',
                                                              self._on_items_changed)
+
+        self._set_listview_class(True)
+
         if self._texts_being_moved:
-            if len(self._texts_being_moved) > 1:
-                self.set_multi_selection_mode(True)
+            self.set_multi_selection_mode(len(self._texts_being_moved) > 1)
             positions = [self._model.get_position_for_id(text_id)
                          for text_id in self._texts_being_moved]
             if positions:
                 for position in positions:
                     row = self.get_row_at_index(position)
-                    self.select_row(row)
+                    GLib.idle_add(self.select_row, row)
+                first_moved_row = self.get_row_at_index(positions[0])
+                GLib.idle_add(self.scroll_to_row, first_moved_row)
             self._texts_being_moved = []
         else:
             position = self._model.get_latest_modified_position()
             if position is not None:
                 row = self.get_row_at_index(position)
                 self.select_row(row)
+                GLib.idle_add(self.scroll_to_row, row)
 
         for row in self.get_children():
             self._connect_focus_based_styling(row)
 
-        self._set_listview_class(True)
+    def scroll_to_row(self, row):
+        """Scroll to the given row."""
+        alloc = self.get_parent().get_allocation()
+        adj = self.get_adjustment()
+        current_y = adj.get_value()
+
+        row_alloc = row.get_allocation()
+        if row_alloc.y < current_y:
+            adj.set_value(row_alloc.y)
+        elif row_alloc.y > current_y + alloc.height:
+            adj.set_value(row_alloc.y + row_alloc.height - alloc.height)
 
     def new_text_request(self):
         """Request for creation of a new text and append it to the list"""
