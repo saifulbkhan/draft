@@ -393,6 +393,7 @@ class DraftSourceView(GtkSource.View):
             # need to do this for margins to properly update with blank space
             GtkSource.View.do_style_updated(self)
         else:
+            self.set_top_margin(self._calculated_top_margin)
             self.set_bottom_margin(new_margin)
 
     def do_move_cursor(self, step, count, extend_selection):
@@ -985,6 +986,7 @@ class DraftSourceView(GtkSource.View):
     def _on_focus_in(self, widget, cb_data):
         self._delayed_vertical_scroll = True
         GLib.idle_add(self.emit, 'insert-changed')
+        self.refresh_overscroll()
         # self._show_hint_window()
 
     def _on_focus_out(self, widget, cb_data):
@@ -1019,7 +1021,6 @@ class DraftSourceView(GtkSource.View):
         else:
             self.scroll_offset = DEFAULT_SCROLL_OFFSET
             self.overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
-        self.refresh_overscroll()
 
     def set_font(self, font_name, default_font=False):
         if default_font:
