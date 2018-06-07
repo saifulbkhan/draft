@@ -1019,6 +1019,7 @@ class DraftSourceView(GtkSource.View):
         else:
             self.scroll_offset = DEFAULT_SCROLL_OFFSET
             self.overscroll_num_lines = DEFAULT_NUM_OVERSCROLL
+        self.refresh_overscroll()
 
     def set_font(self, font_name, default_font=False):
         if default_font:
