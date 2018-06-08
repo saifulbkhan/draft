@@ -379,7 +379,6 @@ class DraftGroupTree(Gtk.TreeView):
         model, treeiter = self.selection.get_selected()
         if treeiter is None:
             treeiter = model.get_iter(self._root_path())
-            self.selection.select_iter(treeiter)
         num_groups = model.count_groups_for_iter(treeiter)
         num_texts = model.count_texts_for_iter(treeiter)
         return num_groups, num_texts
