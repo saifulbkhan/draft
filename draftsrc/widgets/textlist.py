@@ -340,6 +340,11 @@ class DraftBaseList(Gtk.ListBox):
 
         return self._model.get_position_for_id_in_range(text_id, positions)
 
+    def do_grab_focus(self):
+        Gtk.ListBox.do_grab_focus(self)
+        row = self.get_selected_row()
+        GLib.idle_add(row.grab_focus)
+
 
 class DraftTextList(DraftBaseList):
     """The listbox containing all the texts in a text group"""
