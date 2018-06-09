@@ -346,3 +346,6 @@ caption{display:table-caption;font-weight:300;font-size:1.3em;text-transform:upp
 .highlight .vi { color: #003333 } /* Name.Variable.Instance */
 .highlight .vm { color: #003333 } /* Name.Variable.Magic */
 .highlight .il { color: #FF6600 } /* Literal.Number.Integer.Long */
+
+/* Styling for KaTeX formula */
+.katex { font-size: 1em !important; }

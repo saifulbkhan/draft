@@ -23,27 +23,43 @@ meta_string = '<meta charset="UTF-8">'
 
 title_string = '<title>%s</title>'
 
-mathjax_local_src = os.path.join(DRAFT_DIR, 'mathjax', 'MathJax.js')
-mathjax_remote_src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js"
-mathjax_config = "?config=TeX-AMS-MML_HTMLorMML"
+katex_style_local_src = os.path.join(DRAFT_DIR,
+                                     'katex',
+                                     'katex.min.css')
+katex_style_remote_src = 'https://cdn.jsdelivr.net/npm/katex@0.10.0-alpha/dist/katex.min.css'
+katex_local_src = os.path.join(DRAFT_DIR,
+                               'katex',
+                               'katex.min.js')
+katex_remote_src = 'https://cdn.jsdelivr.net/npm/katex@0.10.0-alpha/dist/katex.min.js'
+auto_render_local_src = os.path.join(DRAFT_DIR,
+                                     'katex',
+                                     'contrib',
+                                     'auto-render.min.js')
+auto_render_remote_src = 'https://cdn.jsdelivr.net/npm/katex@0.10.0-alpha/dist/contrib/auto-render.min.js'
 
-script_string = '''<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-    tex2jax: {
-        inlineMath: [ ['$','$'] ],
-        processEscapes: true,
-        imageFont: null
-    },
-    showMathMenu: false,
-    "HTML-CSS": { scale: 90, linebreaks: { automatic: true } }
-    });
-</script>
-<script type="text/javascript"
-    src="%s">
+script_string = '''<link rel="stylesheet" href="%s">
+<script src="%s" type="text/javascript"></script>
+<script src="%s" type="text/javascript"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    renderMathInElement(
+      document.body,
+      {
+        delimiters: [
+          {left: "$$", right: "$$", display: true},
+          {left: "$", right: "$", display: false}
+        ]
+      }
+    );
+  });
 </script>'''
 
-mathjax_script_string = script_string % (mathjax_local_src + mathjax_config)
-export_mathjax_script_string = script_string % (mathjax_remote_src + mathjax_config)
+katex_script_string = script_string % (katex_style_local_src,
+                                       katex_local_src,
+                                       auto_render_local_src)
+export_katex_script_string = script_string % (katex_style_remote_src,
+                                              katex_remote_src,
+                                              auto_render_remote_src)
 
 style_string = '''<style type="text/css">%s</style>'''
 
@@ -52,7 +68,7 @@ head_string = '''
 %s
 %s
 </head>
-''' % (meta_string, mathjax_script_string)
+''' % (meta_string, katex_script_string)
 
 export_head_string = '''
 <head>
@@ -60,7 +76,7 @@ export_head_string = '''
 %s
 %s
 </head>
-''' % (meta_string, title_string, export_mathjax_script_string)
+''' % (meta_string, title_string, export_katex_script_string)
 
 export_styled_head_string = '''
 <head>
@@ -69,7 +85,7 @@ export_styled_head_string = '''
 %s
 %s
 </head>
-''' % (meta_string, title_string, export_mathjax_script_string, style_string)
+''' % (meta_string, title_string, export_katex_script_string, style_string)
 
 body_string = '<body>\n%s</body>'
 

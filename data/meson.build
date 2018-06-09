@@ -18,9 +18,9 @@ install_data(
   install_dir: join_paths(datadir, 'glib-2.0/schemas')
 )
 
-message('Installing mathjax')
+message('Installing KaTeX')
 install_subdir(
-  'mathjax',
+  'katex',
   install_dir: join_paths(datadir, 'draft')
 )
 

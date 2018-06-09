@@ -445,3 +445,6 @@ body {
     padding: 0;
   }
 }
+
+/* Styling for KaTeX formula */
+.katex { font-size: 1em !important; }

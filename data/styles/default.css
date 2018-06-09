@@ -408,7 +408,5 @@ table td {
 .highlight .vi { color: #c82829 } /* Name.Variable.Instance */
 .highlight .il { color: #f5871f } /* Literal.Number.Integer.Long */
 
-/* Styling for MathJax formula */
-.MathJax {
-    color: #666;
-}
+/* Styling for KaTeX formula */
+.katex { font-size: 1em !important; }
