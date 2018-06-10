@@ -7,6 +7,12 @@ project_id = 'org.gnome.Draft'
 i18n = import('i18n')
 python3 = import('python3')
 
+dependency('glib-2.0')
+dependency('gobject-introspection-1.0', version: '>=1.35.0')
+dependency('gtk+-3.0', version :'>=3.20.2')
+dependency('gtksourceview-3.0', version: '>= 3.24.0')
+dependency('webkit2gtk-4.0', version: '>= 2.18')
+
 python_bin = python3.find_python()
 prefix = get_option('prefix')
 
