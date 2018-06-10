@@ -42,6 +42,7 @@ configure_file(
 	install_dir: bindir
 )
 
+subproject('wkjscore-result')
 subdir('draftsrc')
 subdir('data')
 subdir('po')
