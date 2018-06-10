@@ -170,7 +170,8 @@ class Application(Gtk.Application):
         def about_response(dialog, response):
             dialog.destroy()
 
-        about = Gtk.AboutDialog()
+        self.builder.add_from_resource('/org/gnome/Draft/aboutdialog.ui')
+        about = self.builder.get_object('about_dialog')
         about.set_transient_for(self._window)
         about.connect("response", about_response)
         about.show()

@@ -2,6 +2,7 @@
 <gresources>
   <gresource prefix="/org/gnome/Draft">
     <file>application.css</file> 
+    <file preprocess="xml-stripblanks">aboutdialog.ui</file>
     <file preprocess="xml-stripblanks">headerbar.ui</file>
     <file preprocess="xml-stripblanks">appmenu.ui</file>
     <file preprocess="xml-stripblanks">textpanelview.ui</file>

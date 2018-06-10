@@ -9,6 +9,11 @@ gnome.compile_resources(
   source_dir: '.',
   install_dir: datadir,
   install: true,
+  dependencies: configure_file(
+    input: 'aboutdialog.ui.in',
+    output: 'aboutdialog.ui',
+    configuration: conf
+  )
 )
 
 message('Installing schemas')
