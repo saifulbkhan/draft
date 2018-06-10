@@ -37,5 +37,12 @@ install_subdir(
 
 subdir('icons')
 
-# TODO: Making a desktop file
-# TODO: Preparing appdata
+message('Merging the translations with the desktop file')
+i18n.merge_file(
+  output: project_id + '.desktop',
+  input: project_id + '.desktop.in',
+  po_dir: join_paths(meson.source_root(), 'po'),
+  type: 'desktop',
+  install: true,
+  install_dir: join_paths(get_option('prefix'), get_option('datadir'), 'applications')
+)
