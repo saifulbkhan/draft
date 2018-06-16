@@ -606,14 +606,13 @@ class DraftTextList(DraftBaseList):
 
         if self._texts_being_moved:
             self.set_multi_selection_mode(len(self._texts_being_moved) > 1)
-            positions = [self._model.get_position_for_id(text_id)
-                         for text_id in self._texts_being_moved]
-            if positions:
-                for position in positions:
-                    row = self.get_row_at_index(position)
+            for row in self.get_children():
+                position = row.get_index()
+                row_item = self._model.get_item(position)
+                if row_item.db_id in self._texts_being_moved:
                     GLib.idle_add(self.select_row, row)
-                first_moved_row = self.get_row_at_index(positions[0])
-                GLib.idle_add(self.scroll_to_row, first_moved_row)
+                    if row_item.db_id == self._texts_being_moved[0]:
+                        GLib.idle_add(self.scroll_to_row, row)
             self._texts_being_moved = []
         else:
             position = self._model.get_latest_modified_position()
@@ -622,8 +621,8 @@ class DraftTextList(DraftBaseList):
                 self.select_row(row)
                 GLib.idle_add(self.scroll_to_row, row)
 
-        for row in self.get_children():
-            self._connect_focus_based_styling(row)
+            for row in self.get_children():
+                self._connect_focus_based_styling(row)
 
     def scroll_to_row(self, row):
         """Scroll to the given row."""
@@ -656,12 +655,9 @@ class DraftTextList(DraftBaseList):
         """Send texts with @text_ids to the group with id @group. Assuming this
         is not the same group as the texts is currently in, it will be removed
         from the selected model."""
-        for text_id in text_ids:
-            pos = self._model.get_position_for_id(text_id)
-            if pos is not None:
-                text_id = self._model.set_prop_for_position(pos,
-                                                            'parent_id',
-                                                            group)
+        positions = [self._model.get_position_for_id(text_id) for text_id in text_ids]
+        items = [self._model.get_item(pos) for pos in positions if pos is not None]
+        self._model.set_parent_for_items(items, group)
         self.emit('text-moved-to-group', group)
 
     def set_title_for_selection(self, widget, title):

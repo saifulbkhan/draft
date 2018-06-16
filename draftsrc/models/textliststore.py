@@ -278,33 +278,38 @@ class DraftTextListStore(Gio.ListStore):
         """Set the parent id for text at given position and move the text to
         the corresponding folder"""
         item = self.get_item(position)
-        item.parent_id = parent
-        item.last_modified = db.get_datetime()
-        id = item.db_id
-
-        with db.connect() as connection:
-            text = data.text_for_id(connection, id)
-            text_file_name = text['hash_id']
-            text_file_parents = text['parents']
-            group_dir_parents = []
-            if parent is not None:
-                group = data.group_for_id(connection, parent)
-                group_dir_name = group['hash_id']
-                group_dir_parents = group['parents']
-                group_dir_parents.append(group_dir_name)
-
-                # update group just to update its last modified status
-                data.update_group(connection, parent, group)
-
-            file.move_file(text_file_name, text_file_parents, group_dir_parents)
-
-            data.update_text(connection, id, item.to_dict())
-
-        self.dequeue_final_save(id)
-
+        self.set_parent_for_item(item, parent)
         if self._parent_group and parent != self._parent_group:
             self.remove(position)
         return item.db_id
+
+    def set_parent_for_items(self, items, parent):
+        """A method to ease setting parent id for a batch of items."""
+        if not isinstance(items, list):
+            items = [items]
+
+        with db.connect() as connection:
+            for item in items:
+                item.parent_id = parent
+                item.last_modified = db.get_datetime()
+                id = item.db_id
+                text = data.text_for_id(connection, id)
+                text_file_name = text['hash_id']
+                text_file_parents = text['parents']
+                group_dir_parents = []
+                if parent is not None:
+                    group = data.group_for_id(connection, parent)
+                    group_dir_name = group['hash_id']
+                    group_dir_parents = group['parents']
+                    group_dir_parents.append(group_dir_name)
+
+                    # update group just to update its last modified status
+                    data.update_group(connection, parent, group)
+
+                file.move_file(text_file_name, text_file_parents, group_dir_parents)
+
+                data.update_text(connection, id, item.to_dict())
+                self.dequeue_final_save(id)
 
     def set_tags_for_position(self, position, tags):
         """Set the tags for the item at given position
