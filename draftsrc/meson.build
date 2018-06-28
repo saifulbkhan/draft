@@ -35,10 +35,10 @@ editor_sources = [
   'widgets/editor/thesaurusbox.py'
 ]
 
-models_sources = [
-  'models/grouptreestore.py',
-  'models/collectionliststore.py',
-  'models/textliststore.py'
+widgetmodels_sources = [
+  'widgetmodels/grouptreestore.py',
+  'widgetmodels/collectionliststore.py',
+  'widgetmodels/textliststore.py'
 ]
 
 views_sources = [
@@ -60,6 +60,6 @@ widgets_sources = [
 install_data(app_sources, install_dir: draftsrcdir)
 install_data(db_sources, install_dir: draftsrcdir + '/db')
 install_data(editor_sources, install_dir: draftsrcdir + '/widgets/editor')
-install_data(models_sources, install_dir: draftsrcdir + '/models')
+install_data(widgetmodels_sources, install_dir: draftsrcdir + '/widgetmodels')
 install_data(views_sources, install_dir: draftsrcdir + '/views')
 install_data(widgets_sources, install_dir: draftsrcdir + '/widgets')

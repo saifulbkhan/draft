@@ -18,7 +18,7 @@ from gettext import gettext as _
 from gi.repository import Gtk, GLib, Gdk
 
 from draftsrc import search
-from draftsrc.models.collectionliststore import CollectionClassType
+from draftsrc.widgetmodels.collectionliststore import CollectionClassType
 from draftsrc.widgets.textlist import DraftTextList, DraftResultList
 
 

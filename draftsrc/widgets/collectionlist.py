@@ -16,7 +16,7 @@
 from gettext import gettext as _
 from gi.repository import Gtk, GObject, Pango
 
-from draftsrc.models.collectionliststore import DraftCollectionListStore, Column
+from draftsrc.widgetmodels.collectionliststore import DraftCollectionListStore, Column
 
 
 class DraftCollectionList(Gtk.TreeView):

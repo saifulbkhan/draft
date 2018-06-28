@@ -19,8 +19,8 @@ from xml.sax.saxutils import escape as xml_escape
 
 from gi.repository import Gtk, GLib, Pango, Gdk, GObject
 
-from draftsrc.models.textliststore import DraftTextListStore, TextListType
-from draftsrc.models.collectionliststore import CollectionClassType
+from draftsrc.widgetmodels.textliststore import DraftTextListStore, TextListType
+from draftsrc.widgetmodels.collectionliststore import CollectionClassType
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 
 

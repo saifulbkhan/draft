@@ -20,7 +20,7 @@ from draftsrc.widgets.headerbar import DraftHeaderBar
 from draftsrc.views.librarypanelview import DraftLibraryView
 from draftsrc.views.textpanelview import DraftTextListView
 from draftsrc.views.contentview import ContentView
-from draftsrc.models.collectionliststore import CollectionClassType
+from draftsrc.widgetmodels.collectionliststore import CollectionClassType
 from draftsrc import export
 
 

@@ -17,8 +17,8 @@ from gettext import gettext as _
 
 from gi.repository import Gtk, Pango, Gdk, GObject
 
-from draftsrc.models.grouptreestore import DraftGroupTreeStore, Column, GroupTreeType
-from draftsrc.models.collectionliststore import CollectionClassType
+from draftsrc.widgetmodels.grouptreestore import DraftGroupTreeStore, Column, GroupTreeType
+from draftsrc.widgetmodels.collectionliststore import CollectionClassType
 from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 from draftsrc.widgets import GROUP_MOVE_INFO, GROUP_MOVE_TARGET
 
