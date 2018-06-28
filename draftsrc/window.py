@@ -277,8 +277,8 @@ class ApplicationWindow(Gtk.ApplicationWindow):
         self.app_settings.set_value('library-panel-visible',
                                     GLib.Variant('b', False))
 
-    def reveal_library_panel(self):
-        if self.lock_library_panel:
+    def reveal_library_panel(self, override_lock=False):
+        if self.lock_library_panel and not override_lock:
             return
         self.library_panel_hidden = False
         self.libraryview.reveal_panel()

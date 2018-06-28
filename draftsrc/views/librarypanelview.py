@@ -384,7 +384,7 @@ class DraftLibraryView(Gtk.Bin):
         """Cater to the request for new group creation. Pops up an entry to set
         the name of the new group as well"""
         # use parent's reveal method to ensure size group allotment
-        self.parent_window.reveal_library_panel()
+        self.parent_window.reveal_library_panel(override_lock=True)
 
         self.local_groups_view.new_group_request()
         self.local_groups_view.set_faded_selection(True)
