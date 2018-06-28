@@ -148,6 +148,18 @@ class DraftBaseList(Gtk.ListBox):
     def _on_row_activated(self, widget, row):
         GLib.idle_add(self.editor.focus_view, True)
 
+    def _on_items_changed(self, model, position, removed, added):
+        """Handler for model's `items-changed` signal"""
+        position_to_select = position
+        num_items = self._model.get_n_items()
+        if position_to_select >= num_items:
+            position_to_select = num_items - 1
+        if position_to_select < 0:
+            position_to_select = 0
+        row = self.get_row_at_index(position_to_select)
+        if row:
+            GLib.idle_add(self.select_row, row)
+
     def _set_listview_class(self, set_class):
         listview_class = 'draft-listview'
         ctx = self.get_style_context()
@@ -449,18 +461,6 @@ class DraftTextList(DraftBaseList):
             # Delete row and file with (Del)
             if event.keyval == Gdk.KEY_Delete:
                 self.delete_selected()
-
-    def _on_items_changed(self, model, position, removed, added):
-        """Handler for model's `items-changed` signal"""
-        position_to_select = position
-        num_items = self._model.get_n_items()
-        if position_to_select >= num_items:
-            position_to_select = num_items - 1
-        if position_to_select < 0:
-            position_to_select = 0
-        row = self.get_row_at_index(position_to_select)
-        if row:
-            GLib.idle_add(self.select_row, row)
 
     def _on_drag_begin(self, widget, drag_context):
         """When drag action begins this function does several things:
@@ -791,18 +791,6 @@ class DraftResultList(DraftBaseList):
         label.set_justify(Gtk.Justification.LEFT)
         label.set_halign(Gtk.Align.START)
         label.set_visible(True)
-
-    def _on_items_changed(self, model, position, removed, added):
-        """Handler for model's `items-changed` signal"""
-        position_to_select = position
-        num_items = self._model.get_n_items()
-        if position_to_select >= num_items:
-            position_to_select = num_items - 1
-        if position_to_select < 0:
-            position_to_select = 0
-        row = self.get_row_at_index(position_to_select)
-        if row:
-            GLib.idle_add(self.select_row, row)
 
     def set_model(self, results=None, tagged_results=False, trashed=False):
         self._model = DraftTextListStore(list_type=TextListType.RESULT_TEXTS,
