@@ -343,7 +343,8 @@ class DraftBaseList(Gtk.ListBox):
     def do_grab_focus(self):
         Gtk.ListBox.do_grab_focus(self)
         row = self.get_selected_row()
-        GLib.idle_add(row.grab_focus)
+        if row:
+            GLib.idle_add(row.grab_focus)
 
 
 class DraftTextList(DraftBaseList):

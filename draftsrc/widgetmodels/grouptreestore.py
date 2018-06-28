@@ -364,4 +364,6 @@ class DraftGroupTreeStore(Gtk.TreeStore):
     def get_last_modified_parent_id(self):
         with db.connect() as connection:
             parent_id = data.group_for_last_modified_text(connection)
-            return parent_id[0]
+            if parent_id is not None:
+                return parent_id[0]
+            return None
