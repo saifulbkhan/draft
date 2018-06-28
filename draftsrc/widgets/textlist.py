@@ -292,7 +292,7 @@ class DraftBaseList(Gtk.ListBox):
         subtitle, if multiple items selected. """
         subtitle = ""
         if position and total:
-            subtitle = _("%s of %s") % (position, total)
+            subtitle = _("{} of {}".format(position, total))
         self.emit('text-title-changed', title, subtitle, True)
 
     def set_escape_focus(self, widget):
