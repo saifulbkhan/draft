@@ -136,7 +136,7 @@ class DraftTextListView(Gtk.Bin):
         self._group_shown = group
         self._title_label.set_label(group.get('name'))
         self.view.set_model(parent_group=group)
-        if not self.view.text_view_selection_is_in_progress():
+        if not self.view.text_view_selection_in_progress:
             self.search_mode_off()
 
     def set_collection_class_type(self, collection_class_type):
@@ -148,8 +148,8 @@ class DraftTextListView(Gtk.Bin):
         self.view.set_model(collection_class_type)
 
     def set_editor(self, editor):
-        self.view.set_editor(editor)
-        self.resultlistview.set_editor(editor)
+        self.view.editor = editor
+        self.resultlistview.editor = editor
 
     def new_text_request(self):
         if not self._group_shown or self._group_shown['in_trash']:
@@ -217,7 +217,7 @@ class DraftTextListView(Gtk.Bin):
 
     def _on_selection_requested(self, widget, group_id, text_id, in_trash):
         self.parent_window.libraryview.selection_request(group_id, in_trash)
-        self.view.finish_selection_for_id(text_id)
+        self.view.select_for_id(text_id)
 
     def _on_open_clicked(self, widget):
         self.view.activate_selected_row()

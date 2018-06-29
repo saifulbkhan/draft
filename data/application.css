@@ -125,7 +125,7 @@
     background-color: @unfocused_selection_color;
 }
 
-.draft-listview > row:selected:not(:focus) {
+.draft-focused-listview > row:selected:not(:focus) {
     background-color: @unfocused_selection_color;
 }
 

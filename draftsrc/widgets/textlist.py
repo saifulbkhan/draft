@@ -26,6 +26,7 @@ from draftsrc.widgets import TEXT_MOVE_INFO, TEXT_MOVE_TARGET
 
 class DraftBaseList(Gtk.ListBox):
     """A list view widget meant for displaying texts"""
+
     __gtype_name__ = 'DraftBaseList'
 
     __gsignals__ = {
@@ -42,7 +43,7 @@ class DraftBaseList(Gtk.ListBox):
         'reveal-requested': (GObject.SignalFlags.RUN_FIRST, None, ()),
     }
 
-    editor = None
+    _editor = None
     _double_click_in_progress = False
     _text_view_selection_in_progress = False
     _items_changed_handler_id =None
@@ -54,23 +55,31 @@ class DraftBaseList(Gtk.ListBox):
         Gtk.ListBox.__init__(self)
         self.connect('button-press-event', self._on_button_press_base)
         self.connect('button-release-event', self._on_button_release_base)
-        self._row_selected_handler_id = self.connect('row-selected',
-                                                     self._on_row_selected)
-        self._selected_rows_changed_handler_id = self.connect('selected-rows-changed',
-                                                              self._on_selected_rows_changed)
+        self._row_selected_handler = self.connect('row-selected',
+                                                  self._on_row_selected)
+        self._rows_changed_handler = self.connect('selected-rows-changed',
+                                                  self._on_selected_rows_changed)
         self.connect('row-activated', self._on_row_activated)
         self.set_activate_on_single_click(False)
         self.set_selection_mode(Gtk.SelectionMode.BROWSE)
         self.set_can_focus(True)
 
     def _row_at_event_coordinates(self, event):
+        """Given a Gdk.ButtonEvent, obtains the row the pointer was pointing
+        to when the event occurred
+
+        :param event: a Gdk.ButtonEvent type of event
+
+        :returns: the index of row at pointer if found
+        :rtype: a non-negative int or None
+        """
         device = event.device
         win = device.get_window_at_position()[0]
         x, y, width, height = win.get_geometry()
         return self.get_row_at_y(y)
 
     def _on_button_press_base(self, widget, event):
-        """Handler for signal `button-press-event`"""
+        """Handler for signal ``button-press-event`` signal"""
         if not hasattr(self, '_model'):
             return
 
@@ -81,8 +90,8 @@ class DraftBaseList(Gtk.ListBox):
             control_mask = Gdk.ModifierType.CONTROL_MASK
             shift_mask = Gdk.ModifierType.SHIFT_MASK
 
-            if (event.button == Gdk.BUTTON_PRIMARY
-                    and (modifiers == control_mask or modifiers == shift_mask)):
+            if (event.button == Gdk.BUTTON_PRIMARY and
+                    (modifiers == control_mask or modifiers == shift_mask)):
                 self.set_multi_selection_mode(True)
         else:
             if event.triggers_context_menu():
@@ -94,11 +103,12 @@ class DraftBaseList(Gtk.ListBox):
                 position = row.get_index()
                 row_data = self._model.get_data_for_position(position)
                 self.emit('menu-requested', rect, row_data['in_trash'])
-            elif (event.button == Gdk.BUTTON_PRIMARY
-                    and event.type == Gdk.EventType._2BUTTON_PRESS):
+            elif (event.button == Gdk.BUTTON_PRIMARY and
+                    event.type == Gdk.EventType._2BUTTON_PRESS):
                 self._double_click_in_progress = True
 
     def _on_button_release_base(self, widget, event):
+        """Handler for signal ``button-release-event`` signal"""
         modifiers = Gtk.accelerator_get_default_mod_mask()
         modifiers = (event.state & modifiers)
 
@@ -116,9 +126,9 @@ class DraftBaseList(Gtk.ListBox):
                     self.select_row(row)
 
     def _on_row_selected(self, widget, row):
-        """Handler for signal `row-selected`"""
+        """Handler for signal ``row-selected`` signal"""
         if (not hasattr(self, '_model')
-                or self._text_view_selection_in_progress):
+                or self.text_view_selection_in_progress):
             return
 
         if not row and not self.in_multi_selection_mode():
@@ -130,7 +140,7 @@ class DraftBaseList(Gtk.ListBox):
         # the list itself then remove gray selection class
         if row:
             row.grab_focus()
-            self._set_listview_class(False)
+            self._set_focused_listview_class(False)
 
         positions = [row.get_index() for row in self.get_selected_rows()]
         if len(positions) > 0:
@@ -143,13 +153,15 @@ class DraftBaseList(Gtk.ListBox):
                                      self.editor.load_file)
 
     def _on_selected_rows_changed(self, widget):
+        """Handler for signal ``selected-rows-changed`` signal"""
         self._on_row_selected(widget, None)
 
     def _on_row_activated(self, widget, row):
+        """Handler for signal ``row-activated`` signal"""
         GLib.idle_add(self.editor.focus_view, True)
 
     def _on_items_changed(self, model, position, removed, added):
-        """Handler for model's `items-changed` signal"""
+        """Handler for model's ``items-changed`` signal"""
         position_to_select = position
         num_items = self._model.get_n_items()
         if position_to_select >= num_items:
@@ -160,8 +172,13 @@ class DraftBaseList(Gtk.ListBox):
         if row:
             GLib.idle_add(self.select_row, row)
 
-    def _set_listview_class(self, set_class):
-        listview_class = 'draft-listview'
+    def _set_focused_listview_class(self, set_class):
+        """Sets or unsets a style class on ``self`` that highlights selected
+        rows with a theme-specific color.
+
+        :param set_class: Add or remove class from widget's style context
+        """
+        listview_class = 'draft-focused-listview'
         ctx = self.get_style_context()
         if set_class and not ctx.has_class(listview_class):
             ctx.add_class(listview_class)
@@ -169,23 +186,40 @@ class DraftBaseList(Gtk.ListBox):
             ctx.remove_class(listview_class)
 
     def set_multi_selection_mode(self, multi_mode):
-        """Set or unset multiple selection mode for the ListView"""
+        """A simple wrapper to increase the verbosity of setting
+        multi-selection mode
+
+        :param multi_mode: Set or unset multi-selection mode"""
         if multi_mode:
             self.set_selection_mode(Gtk.SelectionMode.MULTIPLE)
         else:
             self.set_selection_mode(Gtk.SelectionMode.BROWSE)
 
     def in_multi_selection_mode(self):
+        """Check ``self`` for multi-selection mode
+
+        :returns: If multi-selection mode is active or not
+        :rtype: bool
+        """
         return self.get_selection_mode() == Gtk.SelectionMode.MULTIPLE
 
-    def set_editor(self, editor):
-        """Set editor for @self
+    @GObject.Property(type=GObject.TYPE_PYOBJECT)
+    def editor(self):
+        """Getter for ``editor`` property. This editor displays selected texts
+        and signals editing changes that need to be conveyed to the backend
 
-        @self: DraftBaseList
-        @editor: DraftEditor, the editor to display selected texts and listen
-                 for changes that need to be conveyed to the backend
+        :returns: The editor associated with ``self``
+        :rtype: DraftEditor
         """
-        self.editor = editor
+        return self._editor
+
+    @editor.setter
+    def editor(self, editor):
+        """Setter for ``editor`` prop
+
+        :param editor: a DraftEditor
+        """
+        self._editor = editor
         editor.connect('title-changed', self.set_title_for_selection)
         editor.connect('subtitle-changed', self.set_subtitle_for_selection)
         editor.connect('markup-changed', self.set_markup_for_selection)
@@ -200,8 +234,7 @@ class DraftBaseList(Gtk.ListBox):
         """Set the title for currently selected text, as well as write this to
         the db.
 
-        @self: DraftTextsList
-        @title: string, the title to be saved for current selection
+        :param title: the title string to be saved for current selection
         """
         if not hasattr(self, '_model'):
             return
@@ -215,8 +248,7 @@ class DraftBaseList(Gtk.ListBox):
         """Set the subtitle for currently selected text, as well as write this
         to the db.
 
-        @self: DraftTextsList
-        @subtitle: string, the subtitle to be saved for current selection
+        :param subtitle: the subtitle string to be saved for current selection
         """
         if not hasattr(self, '_model'):
             return
@@ -229,8 +261,7 @@ class DraftBaseList(Gtk.ListBox):
     def set_markup_for_selection(self, widget, markup):
         """Save the markup for currently selected text to the db.
 
-        @self: DraftTextsList
-        @markup: string, the markup to be saved for current selection
+        :param markup: the markup to be saved for current selection
         """
         if not hasattr(self, '_model'):
             return
@@ -243,8 +274,7 @@ class DraftBaseList(Gtk.ListBox):
     def set_word_goal_for_selection(self, widget, goal):
         """Save the word count goal for currently selected text to the db.
 
-        @self: DraftTextsList
-        @markup: int, the word count goal to be saved for current selection
+        :param markup: the word count goal to be saved for current selection
         """
         if not hasattr(self, '_model'):
             return
@@ -258,9 +288,8 @@ class DraftBaseList(Gtk.ListBox):
         """Ask store to make changes to the tags of the currently selected text
         so that it can be written to db.
 
-        @self: DraftTextsList
-        @tags: list, the list of string tags which the selected text will be
-               tagged with.
+        :param tags: the list of string tags which the selected text will be
+                     tagged with.
         """
         if not hasattr(self, '_model'):
             return
@@ -279,8 +308,7 @@ class DraftBaseList(Gtk.ListBox):
         """Save last metdata that would be associated with the last edit session
         of the text.
 
-        @self: DraftTextsList
-        @metadata: dict, contains metadata associated with a text
+        :param metadata: A dictionary of metadata associated with a text
         """
         if not hasattr(self, '_model'):
             return
@@ -292,7 +320,10 @@ class DraftBaseList(Gtk.ListBox):
             self._model.queue_final_save(metadata)
 
     def save_text_data(self, widget, metadata):
-        """Queue this metadata for save immeadiately"""
+        """Queue this metadata for save immeadiately
+
+        :param metadata: A dictionary of metadata associated with a text
+        """
         if not hasattr(self, '_model'):
             return
 
@@ -301,27 +332,38 @@ class DraftBaseList(Gtk.ListBox):
 
     def set_header_title_for_view(self, widget, title, position, total):
         """Sets the headerbar title for the item being viewed. Also set the
-        subtitle, if multiple items selected. """
+        subtitle, if multiple items selected
+
+        :param title: A title string for the headerbar
+        :param position: The position of the visible text within selected views
+        """
         subtitle = ""
         if position and total:
             subtitle = _("{} of {}".format(position, total))
         self.emit('text-title-changed', title, subtitle, True)
 
     def set_escape_focus(self, widget):
+        """Reveal the current visible text, select and focus it within the
+        ListBox"""
         self.emit('reveal-requested')
         self.selected_row_grab_focus()
 
     def selected_row_grab_focus(self):
+        """Focus the currently selected row in the ListBox"""
         row = self.get_selected_row()
         if row is not None:
             row.grab_focus()
 
     def activate_selected_row(self):
-        """Activate selected row"""
+        """Manually activate selected row"""
         row = self.get_selected_row()
         row.emit('activate')
 
     def select_for_id(self, text_id):
+        """Select the text, if present, with the given db id
+
+        :param text_id: valid integer id of a text
+        """
         if not hasattr(self, '_model'):
             return
 
@@ -331,19 +373,39 @@ class DraftBaseList(Gtk.ListBox):
             if row and not row.is_selected():
                 self.select_row(row)
 
-    def finish_selection_for_id(self, text_id):
-        self.select_for_id(text_id)
-        self._text_view_selection_in_progress = False
+        self.text_view_selection_in_progress = False
 
-    def text_view_selection_is_in_progress(self):
+    @GObject.Property(type=bool, default=False)
+    def text_view_selection_in_progress(self):
+        """Helps to check if there are any current selections in progress, i.e.
+        if there are any outstanding selection requests within the ListBox
+
+        :returns: Whether selections are in progress or not
+        :rtype: bool
+        """
         return self._text_view_selection_in_progress
 
+    @text_view_selection_in_progress.setter
+    def text_view_selection_in_progress(self, value):
+        self._text_view_selection_in_progress = value
+
     def get_num_items(self):
+        """Get the number of items within the ListBox
+
+        :returns: number of items in ListBox
+        :rtype: int"""
         if self._model is not None:
             return self._model.get_n_items()
         return 0
 
     def get_selected_index_for_id(self, text_id):
+        """Within the selected rows, get the position of the row representing
+        text with ``text_id``.
+
+        :param text_id: valid db id of a text
+
+        :returns: The position of row or None if not within selected set
+        :rtype: int or None"""
         positions = []
         rows = self.get_selected_rows()
         for row in rows:
@@ -384,13 +446,13 @@ class DraftTextList(DraftBaseList):
         return '<DraftTextList>'
 
     def __init__(self):
-        """Initialize a new DraftTextsList, without any items. Use `set_model`
-        for setting a model and populating view with items."""
+        """Initialize a new DraftTextsList, without any items. Use ``set_model``
+        for setting a model and populating view with items"""
         DraftBaseList.__init__(self)
         self.connect('key-press-event', self._on_key_press)
 
     def _create_row_widget(self, text_data, user_data):
-        """Create a row widget for @text_data"""
+        """Create a row widget for given text data (meant for internal usage)"""
         data_dict = text_data.to_dict()
         title = data_dict['title']
         subtitle = data_dict['subtitle']
@@ -416,14 +478,22 @@ class DraftTextList(DraftBaseList):
         return event_box
 
     def _set_title_label(self, box, title):
-        """Set label for @label to @title"""
+        """Set label for the first child of ``box`` to ``title``
+
+        :param box: A GtkBox whose first child is a GtkLabel
+        :param title: A string to set the label with
+        """
         labels = box.get_children()
         label = labels[0]
         label.set_markup('<b>%s</b>' % xml_escape(title))
         self._shape_row_label(label)
 
     def _append_subtitle_label(self, box, subtitle):
-        """Set label for @label to @subtitle"""
+        """Set label for the second child of ``box`` to ``subtitle``
+
+        :param box: A GtkBox whose second child is a GtkLabel
+        :param subtitle: A string to set the label with
+        """
         subtitle_label = None
         labels = box.get_children()
 
@@ -453,7 +523,7 @@ class DraftTextList(DraftBaseList):
         label.set_visible(True)
 
     def _on_key_press(self, widget, event):
-        """Handler for signal `key-press-event`"""
+        """Handler for signal ``key-press-event``"""
         modifiers = Gtk.accelerator_get_default_mod_mask()
         event_and_modifiers = (event.state & modifiers)
 
@@ -463,15 +533,18 @@ class DraftTextList(DraftBaseList):
                 self.delete_selected()
 
     def _on_drag_begin(self, widget, drag_context):
-        """When drag action begins this function does several things:
-        1. find the row for @widget,
-        2. estimate the number of rows being moved
-        3. unselect it (if selected)
-        4. add a frame style for opaque background and borders
-        5. create a cairo surface for row (if single), a text surface otherwise
-        6. set it as icon for the drag context
-        7. remove the frame style
-        8. set the row as selected"""
+        """Handler for ``drag-begin`` signal
+
+        When drag action begins this function does several things:
+            1. find the row for @widget,
+            2. estimate the number of rows being moved
+            3. unselect it (if selected)
+            4. add a frame style for opaque background and borders
+            5. create a cairo surface for row (if single), a text surface otherwise
+            6. set it as icon for the drag context
+            7. remove the frame style
+            8. set the row as selected
+        """
         row = widget.get_ancestor(Gtk.ListBoxRow.__gtype__)
         num_selected = len(self.get_selected_rows())
         if (not row.is_selected() and self.in_multi_selection_mode()):
@@ -530,7 +603,10 @@ class DraftTextList(DraftBaseList):
         self.select_row(row)
 
     def _on_drag_data_get(self, widget, drag_context, selection, info, time):
-        """Supply selection data with the db id of the row being dragged"""
+        """Handler for ``drag-data-get`` signal
+
+        Expects selection data containing the db id of the row being dragged
+        """
         rows = self.get_selected_rows()
         positions = [row.get_index() for row in rows]
         text_data_list = [self._model.get_data_for_position(position)
@@ -541,8 +617,11 @@ class DraftTextList(DraftBaseList):
         self._texts_being_moved = ids
 
     def _on_text_viewed(self, widget, text_metadata):
-        """Select the text in textlist for which given metadata has been
-        provided"""
+        """Select the text in textlist for given metadata
+
+        :param widget: Widget on which event was triggered
+        :param text_metadata: A dictionary of text metadata
+        """
         if not hasattr(self, '_model'):
             return
 
@@ -550,7 +629,7 @@ class DraftTextList(DraftBaseList):
         if list_type == TextListType.GROUP_TEXTS:
             group_id = text_metadata['parent_id']
             text_id = text_metadata['id']
-            self._text_view_selection_in_progress = True
+            self.text_view_selection_in_progress = True
             if group['id'] != text_metadata['parent_id']:
                 if in_trash and group_id is not None:
                     pos = self._model.get_position_for_id(text_id)
@@ -561,26 +640,45 @@ class DraftTextList(DraftBaseList):
                             group_id = None
                 self.emit('selection-requested', group_id, text_id, in_trash)
             else:
-                self.finish_selection_for_id(text_id)
+                self.select_for_id(text_id)
 
     def _connect_focus_based_styling(self, row):
+        """For given row connect ``focus-in`` and ``focus-out`` handlers
+
+        :param row: A GtkListBoxRow object
+        """
 
         def on_row_unfocused(widget, cb_data=None):
             if not self.get_focus_child():
-                self._set_listview_class(True)
+                self._set_focused_listview_class(True)
 
         def on_row_focused(widget, cb_data=None):
-            self._set_listview_class(False)
+            self._set_focused_listview_class(False)
 
         row.connect('focus-out-event', on_row_unfocused)
         row.connect('focus-in-event', on_row_focused)
 
-    def set_editor(self, editor):
+    @GObject.Property(type=GObject.TYPE_PYOBJECT)
+    def editor(self):
+        return DraftBaseList.editor.fget(self)
+
+    @editor.setter
+    def editor(self, editor):
         """Set editor and connect any other signal(s)."""
-        DraftBaseList.set_editor(self, editor)
+        DraftBaseList.editor.fset(self, editor)
         editor.connect('text-viewed', self._on_text_viewed)
 
     def set_model(self, collection_class=None, parent_group=None):
+        """Set the model for the ListBox according to given parameters
+
+        If a ``parent_group`` is provided, the model will contain the texts
+        present within this group, otherwise the model will contain the texts
+        contained within the given collection class. If neither is provided,
+        all non-trashed texts are shown.
+
+        :param collection_class: A collection class type
+        :param parent_group: A dictionary representing some group metadata
+        """
         self._model = None
         if parent_group:
             if parent_group['in_trash']:
@@ -596,15 +694,19 @@ class DraftTextList(DraftBaseList):
             else:
                 self._model = DraftTextListStore(list_type=TextListType.ALL_TEXTS)
 
-        with self.handler_block(self._row_selected_handler_id):
-            with self.handler_block(self._selected_rows_changed_handler_id):
+        # block handler before attempting rebind a new model
+        with self.handler_block(self._row_selected_handler):
+            with self.handler_block(self._rows_changed_handler):
                 self.bind_model(self._model, self._create_row_widget, None)
 
+        # register/re-register this only after a model has been bound
         self._items_changed_handler_id = self._model.connect('items-changed',
                                                              self._on_items_changed)
 
-        self._set_listview_class(True)
+        self._set_focused_listview_class(True)
 
+        # if the new model has some texts that were just moved within,
+        # select these newly-moved texts so that the user knows them to be
         if self._texts_being_moved:
             self.set_multi_selection_mode(len(self._texts_being_moved) > 1)
             for row in self.get_children():
@@ -626,7 +728,10 @@ class DraftTextList(DraftBaseList):
                 self._connect_focus_based_styling(row)
 
     def scroll_to_row(self, row):
-        """Scroll to the given row."""
+        """Scroll to a given row
+
+        :param row: A GtkListBoxRow
+        """
         alloc = self.get_parent().get_allocation()
         adj = self.get_adjustment()
         current_y = adj.get_value()
@@ -653,15 +758,21 @@ class DraftTextList(DraftBaseList):
         GLib.idle_add(scroll_to_new_row)
 
     def set_group_for_ids(self, text_ids, group):
-        """Send texts with @text_ids to the group with id @group. Assuming this
-        is not the same group as the texts is currently in, it will be removed
-        from the selected model."""
+        """Move texts to a given group
+
+        Send texts with ids within the given ``text_ids`` list, to the group
+        with id ``group``. Assuming this is not the same group as the texts is
+        currently in, it will be removed from the selected model.
+
+        :param text_ids: A list of valid text ids
+        :param group: A valid group id to move the texts to"""
         positions = [self._model.get_position_for_id(text_id) for text_id in text_ids]
         items = [self._model.get_item(pos) for pos in positions if pos is not None]
         self._model.set_parent_for_items(items, group)
         self.emit('text-moved-to-group', group)
 
     def set_title_for_selection(self, widget, title):
+        """Save title for selected row and update label"""
         DraftBaseList.set_title_for_selection(self, widget, title)
         row = self.get_selected_row()
         box = row.get_child().get_child()
@@ -669,13 +780,17 @@ class DraftTextList(DraftBaseList):
         self.emit('text-title-changed', title, "", False)
 
     def set_subtitle_for_selection(self, widget, subtitle):
+        """Save subtitle for selected row and update label"""
         DraftBaseList.set_subtitle_for_selection(self, widget, subtitle)
         row = self.get_selected_row()
         box = row.get_child().get_child()
         self._append_subtitle_label(box, subtitle)
 
     def delete_selected(self, permanent=False):
-        """Delete currently selected texts in the list"""
+        """Delete currently selected texts in the list
+
+        :param permanent: If true, deletes those entries permanently from the db
+        """
         selected_rows = self.get_selected_rows()
         self.delete_rows(selected_rows, permanent=permanent)
         self.set_multi_selection_mode(False)
@@ -706,6 +821,11 @@ class DraftTextList(DraftBaseList):
         return count
 
     def delete_rows(self, rows, permanent=False):
+        """Delete rows and associated texts in the list. The texts are sent to
+        trash or permanently deleted if the ``permanent`` parameter is ``True``
+
+        :param permanent: If true, deletes those entries permanently from the db
+        """
         for row in rows:
             position = row.get_index()
             if permanent:
@@ -714,8 +834,13 @@ class DraftTextList(DraftBaseList):
                 self._model.delete_item_at_postion(position)
 
     def delete_all_rows_permanently(self):
+        """Delete all rows in ListBox and permanently delete the associated
+        texts
+
+        Helpful when we need to empty a group (for eg. emptying trash)
+        """
         all_rows = self.get_children()
-        with self.handler_block(self._row_selected_handler_id):
+        with self.handler_block(self._row_selected_handler):
             with self._model.handler_block(self._items_changed_handler_id):
                 self.delete_rows(all_rows, permanent=True)
         self.emit('text-deleted', True)
@@ -734,7 +859,7 @@ class DraftResultList(DraftBaseList):
         DraftBaseList.__init__(self)
 
     def _create_row_widget(self, text_data, user_data):
-        """Create a row widget for @text_data"""
+        """Create a row widget for given text data (meant for internal usage)"""
         data_dict = text_data.to_dict()
         title = data_dict['title']
         highlights = data_dict['misc']
@@ -760,14 +885,26 @@ class DraftResultList(DraftBaseList):
         return row_box
 
     def _set_title_label(self, box, title):
-        """Set label for @label to @title"""
+        """Set label for the first child of ``box`` to ``title``
+
+        :param box: A GtkBox whose first child is a GtkLabel
+        :param title: A string to set the label with
+        """
         labels = box.get_children()
         label = labels[0]
         label.set_markup('<b>%s</b>' % xml_escape(title))
         self._shape_row_label(label)
 
     def _append_highlights(self, box, highlights):
-        """Append highlights to the row"""
+        """Append highlights to the row
+
+        Be careful when using this method - both the parameters are expected to
+        be of different structure depending on whether ``self`` is showing
+        results for tag or content based search.
+
+        :param box: A GtkBox having a situational second child as Box or Label
+        :param highlights: A list of matched tags or a string of highlight markup
+        """
         if self._showing_tagged_results:
             children = box.get_children()
             tags_box = children[1]
@@ -793,6 +930,15 @@ class DraftResultList(DraftBaseList):
         label.set_visible(True)
 
     def set_model(self, results=None, tagged_results=False, trashed=False):
+        """Set a model for this view according to the parameters
+
+        If ``tagged_results`` is ``True`` then, a more appropriate kind of row
+        highlights will be shown.
+
+        :param results: A dictionary maaping text id to matches
+        :param tagged_results: Whether this view will be showing tag-search results
+        :param trashed: Whether the searched items are within trash
+        """
         self._model = DraftTextListStore(list_type=TextListType.RESULT_TEXTS,
                                          results=results,
                                          trashed=trashed)
@@ -801,5 +947,10 @@ class DraftResultList(DraftBaseList):
         self._items_changed_handler_id = self._model.connect('items-changed',
                                                              self._on_items_changed)
 
-    def set_editor(self, editor):
-        self.editor = editor
+    @GObject.Property(type=GObject.TYPE_PYOBJECT)
+    def editor(self):
+        return self._editor
+
+    @editor.setter
+    def editor(self, editor):
+        self._editor = editor
