@@ -135,7 +135,7 @@ class DraftStatusbar(Gtk.Bin):
         word_count_string = ('{:,}'.format(word_count))
         self._word_count_label.set_label(word_count_string + ' ' + _("Words"))
 
-        goal = self._editor.current_text_data['word_goal']
+        goal = self._editor.current_text_data.word_goal
         if goal and str(goal) != self._goal_set_entry.get_text():
             self._goal_set_entry.set_text(str(goal))
             self._goal_set_entry.activate()
@@ -158,9 +158,7 @@ class DraftStatusbar(Gtk.Bin):
     def update_text_data(self):
         """Updates the text specific information presented by @self, such
         as tags"""
-        data_dict = self._editor.current_text_data
-
-        tags = data_dict['tags']
+        tags = self._editor.current_text_data.tags
         self._refresh_tag_widget(tags)
 
         # TODO: Update other information

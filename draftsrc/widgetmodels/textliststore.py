@@ -33,8 +33,8 @@ class TextRowData(GObject.Object):
 
     __gtype_name__ = 'TextRowData'
 
-    def __init__(self, title='', tags=[], last_modified='', db_id=None,
-                 hash_id='', in_trash=False, parent_id=None, parent_list=[],
+    def __init__(self, title='', tags=[], last_modified='', id=None,
+                 hash_id='', in_trash=False, parent_id=None, parents=[],
                  markup=None, subtitle=None, word_goal=None,
                  last_edit_position=None, misc=None):
         """Initialize a TextRowData object representing a single sheet with
@@ -44,13 +44,13 @@ class TextRowData(GObject.Object):
         :param tags: A list of string labels tagged to the sheet
         :param last_modified: Date-time when sheet was last modified (ISO8601
                               formatted)
-        :param db_id: Valid DB ID from the "text" table, for this sheet
+        :param id: Valid DB ID from the "text" table, for this sheet
         :param hash_id: A unique hash, to be used as filename for sheet's
                         contents
         :param in_trash: Boolean denoting whether sheet has been trashed or not
         :param parent_id: Valid DB ID from the "group" table, denoting parent
                           association
-        :param parent_list: A list unique hashes, to locate the containing
+        :param parents: A list unique hashes, to locate the containing
                             folder of sheet
         :param markup: A string denoting the type of markup used by sheet
                        contents
@@ -64,16 +64,22 @@ class TextRowData(GObject.Object):
         self.title = title
         self.tags = tags
         self.last_modified = last_modified
-        self.db_id = db_id
+        self.id = id
         self.hash_id = hash_id
         self.in_trash = in_trash
         self.parent_id = parent_id
-        self.parent_list = parent_list
+        self.parents = parents
         self.markup = markup
         self.subtitle = subtitle
         self.word_goal = word_goal
         self.last_edit_position = last_edit_position
         self.misc = misc
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
 
     @classmethod
     def from_dict(cls, data_dict):
@@ -99,11 +105,11 @@ class TextRowData(GObject.Object):
             'title': self.title,
             'tags': self.tags,
             'last_modified': self.last_modified,
-            'id': self.db_id,
+            'id': self.id,
             'hash_id': self.hash_id,
             'in_trash': int(self.in_trash),
             'parent_id': self.parent_id,
-            'parent_list': self.parent_list,
+            'parents': self.parents,
             'markup': self.markup,
             'subtitle': self.subtitle,
             'word_goal': int(self.word_goal),
@@ -119,11 +125,11 @@ class TextRowData(GObject.Object):
         self.title = data_dict['title']
         self.tags = data_dict['tags']
         self.last_modified = data_dict['last_modified']
-        self.db_id = data_dict['id']
+        self.id = data_dict['id']
         self.hash_id = data_dict['hash_id']
         self.in_trash = bool(data_dict['in_trash'])
         self.parent_id = data_dict['parent_id']
-        self.parent_list = data_dict['parents']
+        self.parents = data_dict['parents']
         self.markup = data_dict['markup']
         self.subtitle = data_dict['subtitle']
 
@@ -252,31 +258,20 @@ class DraftTextListStore(Gio.ListStore):
         if None in items:
             return
 
-        buffers = switch_view([item.to_dict() for item in items])
+        buffers = switch_view(items)
         if not buffers:
             return
 
         for item in items:
-            if item.db_id in buffers:
+            if item.id in buffers:
                 hash_id = item.hash_id
-                parent_hashes = list(item.parent_list)
+                parent_hashes = list(item.parents)
                 in_trash = self.trashed_texts_only
                 file.read_file_contents(hash_id,
                                         parent_hashes,
-                                        buffers.get(item.db_id),
+                                        buffers.get(item.id),
                                         load_file,
                                         in_trash)
-
-    def update_model_item_for_position(self, position, metadata):
-        """Only updates the model entry at ``position`` with given ``metadata``
-
-        Note - updates are *not* made to the db
-
-        :param position: A non-negative integer position to update
-        :param metdata: A dictionary of sheet metdata
-        """
-        item = self.get_item(position)
-        item.update_from_dict(metadata)
 
     def set_prop_for_position(self, position, prop, value):
         """Set a property for given ``position`` to a new value
@@ -293,7 +288,7 @@ class DraftTextListStore(Gio.ListStore):
             return self.set_parent_for_position(position, value)
 
         item = self.get_item(position)
-        id = item.db_id
+        id = item.id
         setattr(item, prop, value)
         item.last_modified = db.get_datetime()
         # TODO: 'notify' view that a prop for an item has changed
@@ -312,7 +307,7 @@ class DraftTextListStore(Gio.ListStore):
         self.set_parent_for_item(item, parent)
         if self._parent_group and parent != self._parent_group:
             self.remove(position)
-        return item.db_id
+        return item.id
 
     def set_parent_for_items(self, items, parent):
         """A method to ease setting parent id for a batch of items
@@ -328,7 +323,7 @@ class DraftTextListStore(Gio.ListStore):
             for item in items:
                 item.parent_id = parent
                 item.last_modified = db.get_datetime()
-                id = item.db_id
+                id = item.id
                 text = data.text_for_id(connection, id)
                 text_file_name = text['hash_id']
                 text_file_parents = text['parents']
@@ -342,7 +337,9 @@ class DraftTextListStore(Gio.ListStore):
                     # update group just to update its last modified status
                     data.update_group(connection, parent, group)
 
-                file.move_file(text_file_name, text_file_parents, group_dir_parents)
+                file.move_file(text_file_name,
+                               text_file_parents,
+                               group_dir_parents)
 
                 data.update_text(connection, id, item.to_dict())
                 self.dequeue_final_save(id)
@@ -356,7 +353,7 @@ class DraftTextListStore(Gio.ListStore):
         item = self.get_item(position)
         item.tags = tags
         item.last_modified = db.get_datetime()
-        id = item.db_id
+        id = item.id
 
         with db.connect() as connection:
             data.update_text(connection, id, item.to_dict())
@@ -368,23 +365,23 @@ class DraftTextListStore(Gio.ListStore):
 
         return item.tags
 
-    def queue_save(self, metadata):
+    def queue_save(self, text_data):
         """Queue given metadata to be updated in DB, as soon as a connection is
         available for the operation
 
-        :param metadata: A dictionary of metadata for a sheet
+        :param text_data: A TextRowData object associated with a text
         """
-        text_id = metadata['id']
+        text_id = text_data.id
         db.final_text_updater.remove_if_exists(text_id)
-        db.async_text_updater.enqueue(text_id, metadata)
+        db.async_text_updater.enqueue(text_id, text_data.to_dict())
 
-    def queue_final_save(self, metadata):
+    def queue_final_save(self, text_data):
         """Queue given metadata to be updated in DB, but only done when the app
         quits
 
-        :param metadata: A dictionary of metadata for a sheet
+        :param text_data: A TextRowData object associated with a text
         """
-        db.final_text_updater.enqueue(metadata['id'], metadata)
+        db.final_text_updater.enqueue(text_data.id, text_data.to_dict())
 
     def dequeue_final_save(self, id):
         """Dequeue any metadata update that was meant to be done when app quits
@@ -399,9 +396,9 @@ class DraftTextListStore(Gio.ListStore):
         :param position: integer position at which item is located
         """
         item = self.get_item(position)
-        id = item.db_id
+        id = item.id
         hash_id = item.hash_id
-        parent_hashes = item.parent_list
+        parent_hashes = item.parents
         item.in_trash = True
         item.last_modified = db.get_datetime()
 
@@ -409,7 +406,7 @@ class DraftTextListStore(Gio.ListStore):
         file.trash_file(hash_id, parent_hashes)
 
         with db.connect() as connection:
-            self.queue_save(item.to_dict())
+            self.queue_save(item)
 
         self.dequeue_final_save(id)
 
@@ -422,9 +419,9 @@ class DraftTextListStore(Gio.ListStore):
         if not item.in_trash:
             return
 
-        id = item.db_id
+        id = item.id
         hash_id = item.hash_id
-        parent_hashes = item.parent_list
+        parent_hashes = item.parents
         item.in_trash = False
         item.last_modified = db.get_datetime()
 
@@ -451,7 +448,7 @@ class DraftTextListStore(Gio.ListStore):
         if not item.in_trash:
             return
 
-        id = item.db_id
+        id = item.id
         hash_id = item.hash_id
 
         self.remove(position)
@@ -460,27 +457,20 @@ class DraftTextListStore(Gio.ListStore):
 
         self.dequeue_final_save(id)
 
-    def get_data_for_position(self, position, parent_group=False):
-        """Obtain a dictionary of metadata for the given position
-
-        If the optional argument ``parent_group`` is supplied ``True``, then the
-        group is returned as a dictionary of metadata as well
+    def get_parent_for_position(self, position):
+        """Obtain parent group data for the given position
 
         :param position: integer position at which item is located
-        :param parent_group: boolean signifying whether group metadata is needed
 
-        :returns: sheet metadata as dict and optionally group metadata dict
-        :rtype: dict or (dict, dict)
+        :returns: group metadata as a dictionary
+        :rtype: dict
         """
         item = self.get_item(position)
-        if parent_group:
-            if item.parent_id:
-                with db.connect() as connection:
-                    group = data.group_for_id(connection, item.parent_id)
-                    return item.to_dict(), group
-            else:
-                return item.to_dict(), None
-        return item.to_dict()
+        if item.parent_id:
+            with db.connect() as connection:
+                group = data.group_for_id(connection, item.parent_id)
+                return group
+        return None
 
     def get_position_for_id_in_range(self, text_id, pos_range):
         """For a given set of item positions, check if the sheet for given
@@ -495,7 +485,7 @@ class DraftTextListStore(Gio.ListStore):
         """
         for i in pos_range:
             item = self.get_item(i)
-            if item.db_id == text_id:
+            if item.id == text_id:
                 return i
 
         return None
@@ -511,7 +501,7 @@ class DraftTextListStore(Gio.ListStore):
         """
         length = self.get_n_items()
         return self.get_position_for_id_in_range(text_id,
-                                                  range(self.get_n_items()))
+                                                 range(self.get_n_items()))
 
     def get_latest_modified_position(self):
         """Get the position of the last modified sheet
@@ -528,8 +518,7 @@ class DraftTextListStore(Gio.ListStore):
 
         for i in range(length):
             item = self.get_item(i)
-            text_data = item.to_dict()
-            text_last_modified = datetime.strptime(text_data['last_modified'],
+            text_last_modified = datetime.strptime(item.last_modified,
                                                    '%Y-%m-%dT%H:%M:%S.%f')
             if not latest_modified or text_last_modified > latest_modified:
                 latest_modified = text_last_modified

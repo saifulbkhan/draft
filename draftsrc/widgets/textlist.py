@@ -101,8 +101,8 @@ class DraftBaseList(Gtk.ListBox):
                 self.select_row(row)
                 rect = row.get_allocation()
                 position = row.get_index()
-                row_data = self._model.get_data_for_position(position)
-                self.emit('menu-requested', rect, row_data['in_trash'])
+                row_data = self._model.get_item(position)
+                self.emit('menu-requested', rect, row_data.in_trash)
             elif (event.button == Gdk.BUTTON_PRIMARY and
                     event.type == Gdk.EventType._2BUTTON_PRESS):
                 self._double_click_in_progress = True
@@ -127,8 +127,8 @@ class DraftBaseList(Gtk.ListBox):
 
     def _on_row_selected(self, widget, row):
         """Handler for signal ``row-selected`` signal"""
-        if (not hasattr(self, '_model')
-                or self.text_view_selection_in_progress):
+        if (not hasattr(self, '_model') or
+                self.text_view_selection_in_progress):
             return
 
         if not row and not self.in_multi_selection_mode():
@@ -239,10 +239,10 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        text_id = self.editor.current_text_data['id']
+        text_id = self.editor.current_text_data.id
         position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'title', title)
-        self.editor.current_text_data['title'] = title
+        self.editor.current_text_data.title = title
 
     def set_subtitle_for_selection(self, widget, subtitle):
         """Set the subtitle for currently selected text, as well as write this
@@ -253,10 +253,10 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        text_id = self.editor.current_text_data['id']
+        text_id = self.editor.current_text_data.id
         position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'subtitle', subtitle)
-        self.editor.current_text_data['subtitle'] = subtitle
+        self.editor.current_text_data.subtitle = subtitle
 
     def set_markup_for_selection(self, widget, markup):
         """Save the markup for currently selected text to the db.
@@ -266,10 +266,10 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        text_id = self.editor.current_text_data['id']
+        text_id = self.editor.current_text_data.id
         position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'markup', markup)
-        self.editor.current_text_data['markup'] = markup
+        self.editor.current_text_data.markup = markup
 
     def set_word_goal_for_selection(self, widget, goal):
         """Save the word count goal for currently selected text to the db.
@@ -279,10 +279,10 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        text_id = self.editor.current_text_data['id']
+        text_id = self.editor.current_text_data.id
         position = self.get_selected_index_for_id(text_id)
         self._model.set_prop_for_position(position, 'word_goal', goal)
-        self.editor.current_text_data['word_goal'] = goal
+        self.editor.current_text_data.word_goal = goal
 
     def set_tags_for_selection(self, widget, tags):
         """Ask store to make changes to the tags of the currently selected text
@@ -294,41 +294,38 @@ class DraftBaseList(Gtk.ListBox):
         if not hasattr(self, '_model'):
             return
 
-        text_id = self.editor.current_text_data['id']
+        text_id = self.editor.current_text_data.id
         position = self.get_selected_index_for_id(text_id)
         new_tags = self._model.set_tags_for_position(position, tags)
 
         # since @new_tags might have slightly different letter case tags, we
         # should re-update editor tags as well and then update statusbar, though
         # this is probably not the best place to do it.
-        self.editor.current_text_data['tags'] = new_tags
+        self.editor.current_text_data.tags = new_tags
         self.editor.statusbar.update_text_data()
 
-    def save_last_edit_data(self, widget, metadata):
+    def save_last_edit_data(self, widget, text_data):
         """Save last metdata that would be associated with the last edit session
         of the text.
 
-        :param metadata: A dictionary of metadata associated with a text
+        :param text_data: A TextRowData object associated with a text
         """
         if not hasattr(self, '_model'):
             return
 
-        if metadata:
-            text_id = self.editor.current_text_data['id']
-            position = self.get_selected_index_for_id(text_id)
-            self._model.update_model_item_for_position(position, metadata)
-            self._model.queue_final_save(metadata)
+        if text_data:
+            self._model.queue_final_save(text_data)
 
-    def save_text_data(self, widget, metadata):
-        """Queue this metadata for save immeadiately
+    def save_text_data(self, widget, text_data):
+        """Queue given text data for save immeadiately
 
-        :param metadata: A dictionary of metadata associated with a text
+        :param text_data: A TextRowData object associated with a text
         """
         if not hasattr(self, '_model'):
             return
 
-        if metadata:
-            self._model.queue_save(metadata)
+        if text_data:
+            self._model.queue_save(text_data)
 
     def set_header_title_for_view(self, widget, title, position, total):
         """Sets the headerbar title for the item being viewed. Also set the
@@ -453,9 +450,8 @@ class DraftTextList(DraftBaseList):
 
     def _create_row_widget(self, text_data, user_data):
         """Create a row widget for given text data (meant for internal usage)"""
-        data_dict = text_data.to_dict()
-        title = data_dict['title']
-        subtitle = data_dict['subtitle']
+        title = text_data.title
+        subtitle = text_data.subtitle
 
         row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         row_box.set_visible(True)
@@ -609,34 +605,33 @@ class DraftTextList(DraftBaseList):
         """
         rows = self.get_selected_rows()
         positions = [row.get_index() for row in rows]
-        text_data_list = [self._model.get_data_for_position(position)
+        text_data_list = [self._model.get_item(position)
                           for position in positions]
-        ids = [text_data['id'] for text_data in text_data_list]
+        ids = [text_data.id for text_data in text_data_list]
 
         selection.set(selection.get_target(), -1, bytearray(ids))
         self._texts_being_moved = ids
 
-    def _on_text_viewed(self, widget, text_metadata):
-        """Select the text in textlist for given metadata
+    def _on_text_viewed(self, widget, text_data):
+        """Select the text in textlist for given text data
 
         :param widget: Widget on which event was triggered
-        :param text_metadata: A dictionary of text metadata
+        :param text_data: A TextRowData object associated with a text
         """
         if not hasattr(self, '_model'):
             return
 
         list_type, group, in_trash = self._model.get_model_attributes()
         if list_type == TextListType.GROUP_TEXTS:
-            group_id = text_metadata['parent_id']
-            text_id = text_metadata['id']
+            group_id = text_data.parent_id
+            text_id = text_data.id
             self.text_view_selection_in_progress = True
-            if group['id'] != text_metadata['parent_id']:
+            if group['id'] != text_data.parent_id:
                 if in_trash and group_id is not None:
                     pos = self._model.get_position_for_id(text_id)
                     if pos is not None:
-                        _, parent_group = self._model.get_data_for_position(pos,
-                                                                            True)
-                        if not parent_group['in_trash']:
+                        parent_group = self._model.get_parent_for_position(pos)
+                        if parent_group and not parent_group['in_trash']:
                             group_id = None
                 self.emit('selection-requested', group_id, text_id, in_trash)
             else:
@@ -711,10 +706,10 @@ class DraftTextList(DraftBaseList):
             self.set_multi_selection_mode(len(self._texts_being_moved) > 1)
             for row in self.get_children():
                 position = row.get_index()
-                row_item = self._model.get_item(position)
-                if row_item.db_id in self._texts_being_moved:
+                row_data = self._model.get_item(position)
+                if row_data.id in self._texts_being_moved:
                     GLib.idle_add(self.select_row, row)
-                    if row_item.db_id == self._texts_being_moved[0]:
+                    if row_data.id == self._texts_being_moved[0]:
                         GLib.idle_add(self.scroll_to_row, row)
             self._texts_being_moved = []
         else:
@@ -814,8 +809,8 @@ class DraftTextList(DraftBaseList):
         selected_rows = self.get_selected_rows()
         for row in selected_rows:
             position = row.get_index()
-            text, parent_group = self._model.get_data_for_position(position,
-                                                                   parent_group=True)
+            text = self._model.get_item(position)
+            parent_group = self._model.get_parent_for_position(position)
             if parent_group and parent_group['in_trash']:
                 count += 1
         return count
@@ -860,9 +855,8 @@ class DraftResultList(DraftBaseList):
 
     def _create_row_widget(self, text_data, user_data):
         """Create a row widget for given text data (meant for internal usage)"""
-        data_dict = text_data.to_dict()
-        title = data_dict['title']
-        highlights = data_dict['misc']
+        title = text_data.title
+        highlights = text_data.misc
 
         row_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         row_box.set_visible(True)
