@@ -164,7 +164,7 @@ class DraftTextListView(Gtk.Bin):
 
     def escape_selection_mode(self):
         if self.view.get_selection_mode() == Gtk.SelectionMode.MULTIPLE:
-            self.view.set_multi_selection_mode(False, escape=True)
+            self.view.set_multi_selection_mode(False)
 
     def delete_all_texts_permanently(self):
         # warning: assuming the user has been already informed by library view.
