@@ -30,12 +30,36 @@ class TextListType(object):
 
 class TextRowData(GObject.Object):
     """Represents one entry in list of texts"""
+
     __gtype_name__ = 'TextRowData'
 
     def __init__(self, title='', tags=[], last_modified='', db_id=None,
                  hash_id='', in_trash=False, parent_id=None, parent_list=[],
                  markup=None, subtitle=None, word_goal=None,
                  last_edit_position=None, misc=None):
+        """Initialize a TextRowData object representing a single sheet with
+        given attributes
+
+        :param title: A string title for the sheet
+        :param tags: A list of string labels tagged to the sheet
+        :param last_modified: Date-time when sheet was last modified (ISO8601
+                              formatted)
+        :param db_id: Valid DB ID from the "text" table, for this sheet
+        :param hash_id: A unique hash, to be used as filename for sheet's
+                        contents
+        :param in_trash: Boolean denoting whether sheet has been trashed or not
+        :param parent_id: Valid DB ID from the "group" table, denoting parent
+                          association
+        :param parent_list: A list unique hashes, to locate the containing
+                            folder of sheet
+        :param markup: A string denoting the type of markup used by sheet
+                       contents
+        :param subtitle: A subtitle string for the sheet
+        :param word_goal: Writing goal in terms of word count
+        :param last_edit_position: The position offset of the cursor when last
+                                   viewed
+        :param misc: Any other miscellaneous details
+        """
         super().__init__()
         self.title = title
         self.tags = tags
@@ -53,33 +77,24 @@ class TextRowData(GObject.Object):
 
     @classmethod
     def from_dict(cls, data_dict):
-        title = data_dict['title']
-        tags = data_dict['tags']
-        last_modified = data_dict['last_modified']
-        db_id = data_dict['id']
-        hash_id = data_dict['hash_id']
-        in_trash = bool(data_dict['in_trash'])
-        parent_id = data_dict['parent_id']
-        parent_list = data_dict['parents']
-        markup = data_dict['markup']
-        subtitle = data_dict['subtitle']
+        """Create an instance of TextRowData using the given metadata
 
-        word_goal = 0
-        if data_dict['word_goal']:
-            word_goal = int(data_dict['word_goal'])
+        :param data_dict: A dictionary of metdata for a sheet
 
-        last_edit_position = 0
-        if data_dict['last_edit_position']:
-            last_edit_position = int(data_dict['last_edit_position'])
-
-        misc = data_dict.get('misc')
-
-        row = cls(title, tags, last_modified, db_id, hash_id, in_trash,
-                  parent_id, parent_list, markup, subtitle, word_goal,
-                  last_edit_position, misc)
+        :returns: A row data object that can be used as an entry within
+                  DraftTextListStore
+        :rtype: TextRowData
+        """
+        row = cls()
+        cls.update_from_dict(row, data_dict)
         return row
 
     def to_dict(self):
+        """Convert ``self`` to a dictionary of sheet attributes
+
+        :returns: Key-value mapping for useful sheet metadata
+        :rtype: dict
+        """
         return {
             'title': self.title,
             'tags': self.tags,
@@ -97,6 +112,10 @@ class TextRowData(GObject.Object):
         }
 
     def update_from_dict(self, data_dict):
+        """Update ``self`` attributes from the given metadata
+
+        :param data_dict: A dictionary of sheet metadata
+        """
         self.title = data_dict['title']
         self.tags = data_dict['tags']
         self.last_modified = data_dict['last_modified']
@@ -104,7 +123,7 @@ class TextRowData(GObject.Object):
         self.hash_id = data_dict['hash_id']
         self.in_trash = bool(data_dict['in_trash'])
         self.parent_id = data_dict['parent_id']
-        self.parent_list = data_dict['parent_list']
+        self.parent_list = data_dict['parents']
         self.markup = data_dict['markup']
         self.subtitle = data_dict['subtitle']
 
@@ -129,9 +148,9 @@ class DraftTextListStore(Gio.ListStore):
         """Initialises a new DraftListStore of given type. For some types extra
         information like the parent group or tag need to be provided as well.
 
-        @parent_group: dict, storing parent group details
-        @tag: dict, sotring details of tag
-        @trashed: boolean, whether the model should show trashed texts only
+        :param parent_group: A dict storing parent group details
+        :param tag: A dict storing details of tag
+        :param trashed: Whether the model should show trashed texts only
         """
         Gio.ListStore.__init__(self, item_type=TextRowData.__gtype__)
         self._list_type = list_type
@@ -147,7 +166,7 @@ class DraftTextListStore(Gio.ListStore):
         self._load_texts()
 
     def _load_texts(self):
-        """Asks db to fetch the set of texts in @parent_group"""
+        """Asks db to fetch the set of texts according to init conditions"""
         self.remove_all()
         with db.connect() as connection:
             load_fn = None
@@ -196,7 +215,9 @@ class DraftTextListStore(Gio.ListStore):
                     self.append(row)
 
     def _row_data_for_text(self, text_metadata):
-        """Create TextRowData for one text document. Expects a dict of metadata"""
+        """Create TextRowData for one text document
+
+        :param text_metadata: A dict of metadata"""
         if self._list_type == TextListType.RESULT_TEXTS:
             text_id = str(text_metadata['id'])
             text_metadata['misc'] = self._results[text_id]
@@ -204,10 +225,7 @@ class DraftTextListStore(Gio.ListStore):
         return row_data
 
     def new_text_request(self):
-        """Request for a new text
-
-        @self: DraftListStore model
-        """
+        """Request for a new text"""
         if self._parent_group is None:
             return
 
@@ -220,13 +238,15 @@ class DraftTextListStore(Gio.ListStore):
             return self.append(text_row)
 
     def prepare_for_edit(self, positions, switch_view, load_file):
-        """Prepare text at @position in @self to be edited.
+        """Prepare text at ``position`` in ``self`` to be edited
 
-        @self: DraftListStore model
-        @positions: list, positions at which the item to be edited is located
-                    in the model
-        @switch_view: method, called to check if a new editor buffer is needed
-        @load_file: method, passed on to `file.read_file_contents` function
+        :param self: DraftListStore model
+        :param positions: A list of positions at which the items to be edited
+                          are located in the model
+        :param switch_view: A method called to check if a new editor buffer is
+                            needed
+        :param load_file: A method passed on to ``file.read_file_contents``
+                          function - post-load callback
         """
         items = [self.get_item(position) for position in positions]
         if None in items:
@@ -248,18 +268,24 @@ class DraftTextListStore(Gio.ListStore):
                                         in_trash)
 
     def update_model_item_for_position(self, position, metadata):
-        """Only updates the model entry (at @position) with given metadata. No
-        updates are made to the db."""
+        """Only updates the model entry at ``position`` with given ``metadata``
+
+        Note - updates are *not* made to the db
+
+        :param position: A non-negative integer position to update
+        :param metdata: A dictionary of sheet metdata
+        """
         item = self.get_item(position)
         item.update_from_dict(metadata)
 
     def set_prop_for_position(self, position, prop, value):
-        """Set property @prop for item at @position to @value
+        """Set a property for given ``position`` to a new value
 
-        @self: DraftListStore model
-        @position: integer, position at which item is located
-        @prop: string, property to be set
-        @value: obj, value to be assigned to @prop
+        The database is also updated reflecting this change
+
+        :param position: A non-negative integer position of item to be changed
+        :param prop: Name of property to update the value
+        :param value: The value to be assigned to ``prop``
         """
         if prop == 'tags':
             return self.set_tags_for_position(position, value)
@@ -276,7 +302,12 @@ class DraftTextListStore(Gio.ListStore):
 
     def set_parent_for_position(self, position, parent):
         """Set the parent id for text at given position and move the text to
-        the corresponding folder"""
+        the corresponding folder
+
+        :param position: A non-negative integer position of item to be changed
+        :param parent: A valid database ID for a group, denoting parent
+                       association
+        """
         item = self.get_item(position)
         self.set_parent_for_item(item, parent)
         if self._parent_group and parent != self._parent_group:
@@ -284,7 +315,12 @@ class DraftTextListStore(Gio.ListStore):
         return item.db_id
 
     def set_parent_for_items(self, items, parent):
-        """A method to ease setting parent id for a batch of items."""
+        """A method to ease setting parent id for a batch of items
+
+        :param items: A list of row data items or a single item, to be moved
+        :param parent: A valid database ID for a group, denoting parent
+                       association
+        """
         if not isinstance(items, list):
             items = [items]
 
@@ -314,9 +350,8 @@ class DraftTextListStore(Gio.ListStore):
     def set_tags_for_position(self, position, tags):
         """Set the tags for the item at given position
 
-        @self: DraftListStore model
-        @position: integer, position at which  item is located
-        @tags: list, the collection of strings as tags for the item
+        :param position: integer position at which item is located
+        :parm tags: the collection (list) of strings as tags for the item
         """
         item = self.get_item(position)
         item.tags = tags
@@ -334,21 +369,34 @@ class DraftTextListStore(Gio.ListStore):
         return item.tags
 
     def queue_save(self, metadata):
+        """Queue given metadata to be updated in DB, as soon as a connection is
+        available for the operation
+
+        :param metadata: A dictionary of metadata for a sheet
+        """
         text_id = metadata['id']
         db.final_text_updater.remove_if_exists(text_id)
         db.async_text_updater.enqueue(text_id, metadata)
 
     def queue_final_save(self, metadata):
+        """Queue given metadata to be updated in DB, but only done when the app
+        quits
+
+        :param metadata: A dictionary of metadata for a sheet
+        """
         db.final_text_updater.enqueue(metadata['id'], metadata)
 
     def dequeue_final_save(self, id):
+        """Dequeue any metadata update that was meant to be done when app quits
+
+        :param id: A valid sheet ID, present as a key in update queue dict
+        """
         db.final_text_updater.remove_if_exists(id)
 
     def delete_item_at_postion(self, position):
-        """Delete item at @position in model
+        """Delete item at ``position`` in model
 
-        @self: DraftListStore model
-        @position: integer, position at which the item to be deleted is located
+        :param position: integer position at which item is located
         """
         item = self.get_item(position)
         id = item.db_id
@@ -366,7 +414,10 @@ class DraftTextListStore(Gio.ListStore):
         self.dequeue_final_save(id)
 
     def restore_item_at_position(self, position):
-        """Restore an item from trash, assuming its there already"""
+        """Restore an item from trash, assuming its there already
+
+        :param position: integer position at which item is located
+        """
         item = self.get_item(position)
         if not item.in_trash:
             return
@@ -392,7 +443,10 @@ class DraftTextListStore(Gio.ListStore):
         self.dequeue_final_save(id)
 
     def delete_item_at_postion_permanently(self, position):
-        """Delete an item from trash permanently"""
+        """Delete an item from trash permanently
+
+        :param position: integer position at which item is located
+        """
         item = self.get_item(position)
         if not item.in_trash:
             return
@@ -407,9 +461,17 @@ class DraftTextListStore(Gio.ListStore):
         self.dequeue_final_save(id)
 
     def get_data_for_position(self, position, parent_group=False):
-        """Obtain a dictionary of metadata for the given position. If the
-        optional argument @parent_group is supplied `True`, then the group is
-        returned as a dictionary as well."""
+        """Obtain a dictionary of metadata for the given position
+
+        If the optional argument ``parent_group`` is supplied ``True``, then the
+        group is returned as a dictionary of metadata as well
+
+        :param position: integer position at which item is located
+        :param parent_group: boolean signifying whether group metadata is needed
+
+        :returns: sheet metadata as dict and optionally group metadata dict
+        :rtype: dict or (dict, dict)
+        """
         item = self.get_item(position)
         if parent_group:
             if item.parent_id:
@@ -421,6 +483,16 @@ class DraftTextListStore(Gio.ListStore):
         return item.to_dict()
 
     def get_position_for_id_in_range(self, text_id, pos_range):
+        """For a given set of item positions, check if the sheet for given
+        ``text_id`` is present within and return its position
+
+        :param text_id: A valid DB ID for sheet that would be checked for
+        :param pos_range: A list of positions to be checked
+
+        :returns: The position of sheet with matching DB ID if found, otherwise
+                  None
+        :rtype: int or None
+        """
         for i in pos_range:
             item = self.get_item(i)
             if item.db_id == text_id:
@@ -429,11 +501,24 @@ class DraftTextListStore(Gio.ListStore):
         return None
 
     def get_position_for_id(self, text_id):
+        """Obtian the position of sheet within the list using its DB ID
+
+        :param text_id: A valid DB ID of the sheet to be found
+
+        :returns: A position within the list if ``text_id`` is found, otherwise
+                  None
+        :rtype: int or None
+        """
         length = self.get_n_items()
         return self.get_position_for_id_in_range(text_id,
                                                   range(self.get_n_items()))
 
     def get_latest_modified_position(self):
+        """Get the position of the last modified sheet
+
+        :returns: The position of a sheet within the model
+        :rtype: int
+        """
         length = self.get_n_items()
 
         # move to utils
@@ -453,7 +538,11 @@ class DraftTextListStore(Gio.ListStore):
         return latest_position
 
     def get_model_attributes(self):
-        """Obtain details about this model."""
+        """Obtain details about this model
+
+        :returns: A tuple containing list type, parent group ID and trash status
+        :rtype: (TextListType, int or None, bool)
+        """
         group = None
         if self._list_type == TextListType.GROUP_TEXTS:
             group = self._parent_group
