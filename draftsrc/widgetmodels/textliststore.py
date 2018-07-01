@@ -304,7 +304,7 @@ class DraftTextListStore(Gio.ListStore):
                        association
         """
         item = self.get_item(position)
-        self.set_parent_for_item(item, parent)
+        self.set_parent_for_items(item, parent)
         if self._parent_group and parent != self._parent_group:
             self.remove(position)
         return item.id
@@ -341,6 +341,7 @@ class DraftTextListStore(Gio.ListStore):
                                text_file_parents,
                                group_dir_parents)
 
+                item.parents = group_dir_parents
                 data.update_text(connection, id, item.to_dict())
                 self.dequeue_final_save(id)
 
