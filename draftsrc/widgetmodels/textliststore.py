@@ -33,18 +33,18 @@ class TextRowData(GObject.Object):
 
     __gtype_name__ = 'TextRowData'
 
-    def __init__(self, title='', tags=[], last_modified='', id=None,
+    def __init__(self, id, title='', tags=[], last_modified='',
                  hash_id='', in_trash=False, parent_id=None, parents=[],
                  markup=None, subtitle=None, word_goal=None,
                  last_edit_position=None, misc=None):
         """Initialize a TextRowData object representing a single sheet with
         given attributes
 
+        :param id: Valid DB ID from the "text" table, for this sheet
         :param title: A string title for the sheet
         :param tags: A list of string labels tagged to the sheet
         :param last_modified: Date-time when sheet was last modified (ISO8601
                               formatted)
-        :param id: Valid DB ID from the "text" table, for this sheet
         :param hash_id: A unique hash, to be used as filename for sheet's
                         contents
         :param in_trash: Boolean denoting whether sheet has been trashed or not
@@ -61,10 +61,10 @@ class TextRowData(GObject.Object):
         :param misc: Any other miscellaneous details
         """
         super().__init__()
+        self._id = id
         self.title = title
         self.tags = tags
         self.last_modified = last_modified
-        self.id = id
         self.hash_id = hash_id
         self.in_trash = in_trash
         self.parent_id = parent_id
@@ -81,6 +81,15 @@ class TextRowData(GObject.Object):
     def __setitem__(self, key, value):
         setattr(self, key, value)
 
+    @property
+    def id(self):
+        """Read only property that returns DB ID of sheet it respresents
+
+        :returns: Valid ID for an entry in "text" table
+        :rtype: int
+        """
+        return self._id
+
     @classmethod
     def from_dict(cls, data_dict):
         """Create an instance of TextRowData using the given metadata
@@ -91,7 +100,7 @@ class TextRowData(GObject.Object):
                   DraftTextListStore
         :rtype: TextRowData
         """
-        row = cls()
+        row = cls(id=data_dict['id'])
         cls.update_from_dict(row, data_dict)
         return row
 
@@ -120,12 +129,14 @@ class TextRowData(GObject.Object):
     def update_from_dict(self, data_dict):
         """Update ``self`` attributes from the given metadata
 
+        The ``id`` attribute is ignored, even if present in the data dict.
+        Setting a ``TextRowData``'s ``id`` is only allowed during init.
+
         :param data_dict: A dictionary of sheet metadata
         """
         self.title = data_dict['title']
         self.tags = data_dict['tags']
         self.last_modified = data_dict['last_modified']
-        self.id = data_dict['id']
         self.hash_id = data_dict['hash_id']
         self.in_trash = bool(data_dict['in_trash'])
         self.parent_id = data_dict['parent_id']
