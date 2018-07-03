@@ -33,6 +33,12 @@ class TextRowData(GObject.Object):
 
     __gtype_name__ = 'TextRowData'
 
+    __gsignals__ = {
+        'changed': (GObject.SignalFlags.RUN_FIRST,
+                    None,
+                    (GObject.TYPE_STRING,))
+    }
+
     def __init__(self, id, title='', tags=[], last_modified='',
                  hash_id='', in_trash=False, parent_id=None, parents=[],
                  markup=None, subtitle=None, word_goal=None,
@@ -74,6 +80,16 @@ class TextRowData(GObject.Object):
         self.word_goal = word_goal
         self.last_edit_position = last_edit_position
         self.misc = misc
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+
+        # exclude certain fields; they should be handled separately or ignored
+        update_fields = ['title', 'tags', 'last_modified', 'markup',
+                         'in_trash', 'parent_id', 'subtitle', 'word_goal',
+                         'last_edit_position']
+        if name in update_fields:
+            self.emit('changed', name)
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -158,6 +174,8 @@ class TextRowData(GObject.Object):
 class DraftTextListStore(Gio.ListStore):
     """Model for a list of texts (only) from one particular text group"""
 
+    _item_changed_handlers = {}
+
     def __repr__(self):
         return '<DraftListStore>'
 
@@ -239,7 +257,37 @@ class DraftTextListStore(Gio.ListStore):
             text_id = str(text_metadata['id'])
             text_metadata['misc'] = self._results[text_id]
         row_data = TextRowData.from_dict(text_metadata)
+        handler_id = row_data.connect('changed', self._on_row_data_changed)
+        self._item_changed_handlers[row_data] = handler_id
         return row_data
+
+    def _on_row_data_changed(self, item, prop_name):
+        """Handle ``changed`` signal for each row item
+
+        :param item: The TextRowData which is the source of signal
+        :param prop_name: A string name of the property that was changed
+        """
+        position = -1
+        for i in range(self.get_n_items()):
+            ith_item = self.get_item(i)
+            if item is ith_item:
+                position = i
+                break
+
+        if position < 0:
+            return
+
+        # not handling any other changes to the item (avoid infinite recursion)
+        with item.handler_block(self._item_changed_handlers.get(item)):
+            if prop_name == 'parent_id':
+                self.save_parent_for_position(position)
+            elif prop_name == 'in_trash' and item.in_trash:
+                self.delete_item_at_postion(position)
+            elif prop_name == 'in_trash' and not item.in_trash:
+                self.restore_item_at_position(position)
+            else:
+                self.save_for_position(position)
+                self.items_changed(position, 0, 0)
 
     def new_text_request(self):
         """Request for a new text"""
@@ -284,98 +332,52 @@ class DraftTextListStore(Gio.ListStore):
                                         load_file,
                                         in_trash)
 
-    def set_prop_for_position(self, position, prop, value):
-        """Set a property for given ``position`` to a new value
+    def save_for_position(self, position):
+        """Update DB with current metdata for TextRowData at given position
 
-        The database is also updated reflecting this change
-
-        :param position: A non-negative integer position of item to be changed
-        :param prop: Name of property to update the value
-        :param value: The value to be assigned to ``prop``
+        :param position: A non-negative integer position of item to be updated
         """
-        if prop == 'tags':
-            return self.set_tags_for_position(position, value)
-        elif prop == 'parent_id':
-            return self.set_parent_for_position(position, value)
-
         item = self.get_item(position)
         id = item.id
-        setattr(item, prop, value)
         item.last_modified = db.get_datetime()
-        # TODO: 'notify' view that a prop for an item has changed
 
         db.async_text_updater.enqueue(id, item.to_dict())
+        self.dequeue_final_save(id)
 
-    def set_parent_for_position(self, position, parent):
-        """Set the parent id for text at given position and move the text to
+    def save_parent_for_position(self, position):
+        """Save the parent id for text at given position and move the text to
         the corresponding folder
 
         :param position: A non-negative integer position of item to be changed
-        :param parent: A valid database ID for a group, denoting parent
-                       association
         """
         item = self.get_item(position)
-        self.set_parent_for_items(item, parent)
-        if self._parent_group and parent != self._parent_group:
-            self.remove(position)
-        return item.id
-
-    def set_parent_for_items(self, items, parent):
-        """A method to ease setting parent id for a batch of items
-
-        :param items: A list of row data items or a single item, to be moved
-        :param parent: A valid database ID for a group, denoting parent
-                       association
-        """
-        if not isinstance(items, list):
-            items = [items]
-
         with db.connect() as connection:
-            for item in items:
-                item.parent_id = parent
-                item.last_modified = db.get_datetime()
-                id = item.id
-                text = data.text_for_id(connection, id)
-                text_file_name = text['hash_id']
-                text_file_parents = text['parents']
-                group_dir_parents = []
-                if parent is not None:
-                    group = data.group_for_id(connection, parent)
-                    group_dir_name = group['hash_id']
-                    group_dir_parents = group['parents']
-                    group_dir_parents.append(group_dir_name)
+            item.last_modified = db.get_datetime()
+            id = item.id
+            parent = item.parent_id
+            text = data.text_for_id(connection, id)
+            text_file_name = text['hash_id']
+            text_file_parents = text['parents']
+            group_dir_parents = []
+            if parent is not None:
+                group = data.group_for_id(connection, parent)
+                group_dir_name = group['hash_id']
+                group_dir_parents = group['parents']
+                group_dir_parents.append(group_dir_name)
 
-                    # update group just to update its last modified status
-                    data.update_group(connection, parent, group)
+                # update group just to update its last modified status
+                data.update_group(connection, parent, group)
 
-                file.move_file(text_file_name,
-                               text_file_parents,
-                               group_dir_parents)
+            file.move_file(text_file_name,
+                           text_file_parents,
+                           group_dir_parents)
 
-                item.parents = group_dir_parents
-                data.update_text(connection, id, item.to_dict())
-                self.dequeue_final_save(id)
-
-    def set_tags_for_position(self, position, tags):
-        """Set the tags for the item at given position
-
-        :param position: integer position at which item is located
-        :parm tags: the collection (list) of strings as tags for the item
-        """
-        item = self.get_item(position)
-        item.tags = tags
-        item.last_modified = db.get_datetime()
-        id = item.id
-
-        with db.connect() as connection:
+            item.parents = group_dir_parents
             data.update_text(connection, id, item.to_dict())
+            self.dequeue_final_save(id)
 
-            # update tags after, they have been updated in db
-            item.tags = data.fetch_tags_for_text(connection, id)
-
-        self.dequeue_final_save(id)
-
-        return item.tags
+            if self._parent_group and parent != self._parent_group:
+                self.remove(position)
 
     def queue_save(self, text_data):
         """Queue given metadata to be updated in DB, as soon as a connection is
@@ -411,7 +413,6 @@ class DraftTextListStore(Gio.ListStore):
         id = item.id
         hash_id = item.hash_id
         parent_hashes = item.parents
-        item.in_trash = True
         item.last_modified = db.get_datetime()
 
         self.remove(position)
@@ -427,14 +428,13 @@ class DraftTextListStore(Gio.ListStore):
 
         :param position: integer position at which item is located
         """
-        item = self.get_item(position)
-        if not item.in_trash:
+        if not self.trashed_texts_only:
             return
 
+        item = self.get_item(position)
         id = item.id
         hash_id = item.hash_id
         parent_hashes = item.parents
-        item.in_trash = False
         item.last_modified = db.get_datetime()
 
         self.remove(position)

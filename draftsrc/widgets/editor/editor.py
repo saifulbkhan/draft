@@ -20,7 +20,7 @@ from string import whitespace
 import gi
 gi.require_version('GtkSource', '3.0')
 
-from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib
+from gi.repository import Gtk, GObject, GtkSource, Gdk, GLib, Gio
 
 from draftsrc import file
 from draftsrc import db
@@ -39,19 +39,12 @@ class DraftEditor(Gtk.Overlay):
 
     __gsignals__ = {
         'text-viewed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
-        'title-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
-        'subtitle-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
-        'markup-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,)),
-        'word-goal-set': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_INT,)),
-        'tags-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
-        'view-modified': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_PYOBJECT,)),
-        'view-changed': (GObject.SignalFlags.RUN_FIRST, None, (GObject.TYPE_STRING,
-                                                               GObject.TYPE_INT,
-                                                               GObject.TYPE_INT)),
-        'escape-edit': (GObject.SignalFlags.RUN_FIRST, None, ()),
-        'update-requested': (GObject.SignalFlags.RUN_FIRST,
-                             None,
-                             (GObject.TYPE_PYOBJECT,))
+        'view-transposed': (GObject.SignalFlags.RUN_FIRST,
+                            None,
+                            (GObject.TYPE_STRING,
+                             GObject.TYPE_INT,
+                             GObject.TYPE_INT)),
+        'escape-edit': (GObject.SignalFlags.RUN_FIRST, None, ())
     }
 
     class _ViewData(object):
@@ -125,11 +118,6 @@ class DraftEditor(Gtk.Overlay):
 
     @view.setter
     def view(self, sourceview):
-        # every time view is changed, update the metadata for last view in db
-        view_data = self.open_views.get(self._current_sourceview)
-        if view_data:
-            self.emit('update-requested', view_data.text_data)
-
         self._current_sourceview = sourceview
         if self.open_views[sourceview].text_data.in_trash:
             self.statusbar.set_sensitive(False)
@@ -246,7 +234,7 @@ class DraftEditor(Gtk.Overlay):
 
     def _on_word_goal_set(self, widget, goal):
         if self.current_text_data.word_goal != goal:
-            self.emit('word-goal-set', goal)
+            self.current_text_data.word_goal = goal
 
     def _on_modified_changed(self, buffer):
         assert buffer is self.view.get_buffer()
@@ -290,7 +278,6 @@ class DraftEditor(Gtk.Overlay):
 
         view_data = self.open_views.get(sourceview)
         view_data.text_data.last_edit_position = offset
-        self.emit('view-modified', self.current_text_data)
 
     def fullscreen_mode(self):
         self._main_box.remove(self.statusbar)
@@ -370,21 +357,23 @@ class DraftEditor(Gtk.Overlay):
         return text
 
     def add_tag(self, tag):
-        lower_case_tags = [x.lower() for x in self.current_text_data.tags]
-        if tag.lower() in lower_case_tags:
+        if tag in self.current_text_data.tags:
             return
 
-        self.current_text_data.tags.append(tag)
-        self.emit('tags-changed', self.current_text_data.tags)
+        taglist = self.current_text_data.tags[:]
+        taglist.append(tag)
+        self.current_text_data.tags = taglist
+        self.statusbar.update_text_data()
 
     def delete_tag(self, tag):
-        lower_case_tags = [x.lower() for x in self.current_text_data.tags]
-        if tag.lower() not in lower_case_tags:
+        if tag not in self.current_text_data.tags:
             return
 
-        index = lower_case_tags.index(tag.lower())
-        self.current_text_data.tags.pop(index)
-        self.emit('tags-changed', self.current_text_data.tags)
+        taglist = self.current_text_data.tags[:]
+        index = taglist.index(tag)
+        taglist.pop(index)
+        self.current_text_data.tags = taglist
+        self.statusbar.update_text_data()
 
     def init_markup(self, buffer, markup_type):
         view = self._view_for_buffer(buffer)
@@ -399,7 +388,7 @@ class DraftEditor(Gtk.Overlay):
 
     def set_markup(self, markup_type):
         if self.current_text_data.markup != markup_type:
-            self.emit('markup-changed', markup_type)
+            self.current_text_data.markup = markup_type
 
     def set_utility_child(self, child):
         current_child = self.util_revealer.get_child()
@@ -436,33 +425,36 @@ class DraftEditor(Gtk.Overlay):
             if scrolled:
                 view = scrolled.get_child()
                 assert view in self.open_views
+
                 view_data = self.open_views.get(view)
-                if view_data.text_data.in_trash == data.in_trash:
+                if view_data.text_data is not data:
                     view_data.text_data = data
-                    self._prep_view(view)
+                    self._refresh_view(view)
 
-                    if self.single_mode:
-                        self.view_store.set_visible_child(scrolled)
-                    else:
-                        self.view_store.remove(scrolled)
-                        self._multi_view_stack.add_named(scrolled, id)
-                        self._multi_mode_order.append(id)
+                self._prep_view(view)
 
-                    if i == 0:
-                        self.view = view
-                        self.statusbar.update_state()
-                        if not self.single_mode:
-                            vadj = scrolled.get_vadjustment()
-                            vadj.set_value(vadj.get_lower())
-                            self._multi_view_stack.set_visible_child(scrolled)
+                if self.single_mode:
+                    self.view_store.set_visible_child(scrolled)
+                else:
+                    self.view_store.remove(scrolled)
+                    self._multi_view_stack.add_named(scrolled, id)
+                    self._multi_mode_order.append(id)
 
-                    if i == len(texts_data) - 1:
-                        self._update_content_header_title()
+                if i == 0:
+                    self.view = view
+                    self.statusbar.update_state()
+                    if not self.single_mode:
+                        vadj = scrolled.get_vadjustment()
+                        vadj.set_value(vadj.get_lower())
+                        self._multi_view_stack.set_visible_child(scrolled)
 
-                    if self.parent_container.in_preview_mode():
-                        self.parent_container.preview_content()
+                if i == len(texts_data) - 1:
+                    self._update_content_header_title()
 
-                    continue
+                if self.parent_container.in_preview_mode():
+                    self.parent_container.preview_content()
+
+                continue
 
             view = DraftSourceView()
             view_data = self._ViewData()
@@ -597,6 +589,23 @@ class DraftEditor(Gtk.Overlay):
             elif scroll_event.direction == Gdk.ScrollDirection.DOWN or del_y > 0:
                 self.multi_mode_next()
 
+    def _refresh_view(self, view):
+        view_data = self.open_views.get(view)
+        text_data = view_data.text_data
+
+        filename = text_data.hash_id
+        parent_dir = file.sep.join(text_data.parents)
+        fpath = file.join(file.BASE_TEXT_DIR, parent_dir, filename)
+        if text_data.in_trash:
+            fpath = file.join(file.TRASH_DIR, filename)
+        f = Gio.File.new_for_path(fpath)
+        view_data.source_file.set_location(f)
+
+        if text_data.in_trash:
+            view.set_editable(False)
+        else:
+            view.set_editable(True)
+
     def _write_current_buffer(self):
         if not self.view or not self._current_file:
             return
@@ -624,10 +633,10 @@ class DraftEditor(Gtk.Overlay):
         title, subtitle = self._get_title_and_subtitle_for_text(content)
 
         if title != self.current_text_data.title:
-            self.emit('title-changed', title)
+            self.current_text_data.title = title
 
         if subtitle != self.current_text_data.subtitle:
-            self.emit('subtitle-changed', subtitle)
+            self.current_text_data.subtitle = subtitle
 
     def _update_content_header_title(self):
         text = self.get_text()
@@ -639,7 +648,7 @@ class DraftEditor(Gtk.Overlay):
         index = -1
         if id in self._multi_mode_order:
             index = self._multi_mode_order.index(id)
-        self.emit('view-changed', title, index+1, len(self._multi_mode_order))
+        self.emit('view-transposed', title, index+1, len(self._multi_mode_order))
 
     def _get_title_and_subtitle_for_text(self, text):
         # TODO: title identifier for specific markup, only markdown for now

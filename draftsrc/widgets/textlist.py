@@ -160,17 +160,18 @@ class DraftBaseList(Gtk.ListBox):
         """Handler for signal ``row-activated`` signal"""
         GLib.idle_add(self.editor.focus_view, True)
 
-    def _on_items_changed(self, model, position, removed, added):
+    def items_changed_base(self, model, position, removed, added):
         """Handler for model's ``items-changed`` signal"""
-        position_to_select = position
-        num_items = self._model.get_n_items()
-        if position_to_select >= num_items:
-            position_to_select = num_items - 1
-        if position_to_select < 0:
-            position_to_select = 0
-        row = self.get_row_at_index(position_to_select)
-        if row:
-            GLib.idle_add(self.select_row, row)
+        if removed or added:
+            position_to_select = position
+            num_items = self._model.get_n_items()
+            if position_to_select >= num_items:
+                position_to_select = num_items - 1
+            if position_to_select < 0:
+                position_to_select = 0
+            row = self.get_row_at_index(position_to_select)
+            if row:
+                GLib.idle_add(self.select_row, row)
 
     def _set_focused_listview_class(self, set_class):
         """Sets or unsets a style class on ``self`` that highlights selected
@@ -220,114 +221,10 @@ class DraftBaseList(Gtk.ListBox):
         :param editor: a DraftEditor
         """
         self._editor = editor
-        editor.connect('title-changed', self.set_title_for_selection)
-        editor.connect('subtitle-changed', self.set_subtitle_for_selection)
-        editor.connect('markup-changed', self.set_markup_for_selection)
-        editor.connect('word-goal-set', self.set_word_goal_for_selection)
-        editor.connect('tags-changed', self.set_tags_for_selection)
-        editor.connect('view-modified', self.save_last_edit_data)
-        editor.connect('view-changed', self.set_header_title_for_view)
-        editor.connect('escape-edit', self.set_escape_focus)
-        editor.connect('update-requested', self.save_text_data)
+        editor.connect('view-transposed', self._on_view_transposed)
+        editor.connect('escape-edit', self._on_escape_edit)
 
-    def set_title_for_selection(self, widget, title):
-        """Set the title for currently selected text, as well as write this to
-        the db.
-
-        :param title: the title string to be saved for current selection
-        """
-        if not hasattr(self, '_model'):
-            return
-
-        text_id = self.editor.current_text_data.id
-        position = self.get_selected_index_for_id(text_id)
-        self._model.set_prop_for_position(position, 'title', title)
-        self.editor.current_text_data.title = title
-
-    def set_subtitle_for_selection(self, widget, subtitle):
-        """Set the subtitle for currently selected text, as well as write this
-        to the db.
-
-        :param subtitle: the subtitle string to be saved for current selection
-        """
-        if not hasattr(self, '_model'):
-            return
-
-        text_id = self.editor.current_text_data.id
-        position = self.get_selected_index_for_id(text_id)
-        self._model.set_prop_for_position(position, 'subtitle', subtitle)
-        self.editor.current_text_data.subtitle = subtitle
-
-    def set_markup_for_selection(self, widget, markup):
-        """Save the markup for currently selected text to the db.
-
-        :param markup: the markup to be saved for current selection
-        """
-        if not hasattr(self, '_model'):
-            return
-
-        text_id = self.editor.current_text_data.id
-        position = self.get_selected_index_for_id(text_id)
-        self._model.set_prop_for_position(position, 'markup', markup)
-        self.editor.current_text_data.markup = markup
-
-    def set_word_goal_for_selection(self, widget, goal):
-        """Save the word count goal for currently selected text to the db.
-
-        :param markup: the word count goal to be saved for current selection
-        """
-        if not hasattr(self, '_model'):
-            return
-
-        text_id = self.editor.current_text_data.id
-        position = self.get_selected_index_for_id(text_id)
-        self._model.set_prop_for_position(position, 'word_goal', goal)
-        self.editor.current_text_data.word_goal = goal
-
-    def set_tags_for_selection(self, widget, tags):
-        """Ask store to make changes to the tags of the currently selected text
-        so that it can be written to db.
-
-        :param tags: the list of string tags which the selected text will be
-                     tagged with.
-        """
-        if not hasattr(self, '_model'):
-            return
-
-        text_id = self.editor.current_text_data.id
-        position = self.get_selected_index_for_id(text_id)
-        new_tags = self._model.set_tags_for_position(position, tags)
-
-        # since @new_tags might have slightly different letter case tags, we
-        # should re-update editor tags as well and then update statusbar, though
-        # this is probably not the best place to do it.
-        self.editor.current_text_data.tags = new_tags
-        self.editor.statusbar.update_text_data()
-
-    def save_last_edit_data(self, widget, text_data):
-        """Save last metdata that would be associated with the last edit session
-        of the text.
-
-        :param text_data: A TextRowData object associated with a text
-        """
-        if not hasattr(self, '_model'):
-            return
-
-        if text_data:
-            self._model.queue_final_save(text_data)
-
-    def save_text_data(self, widget, text_data):
-        """Queue given text data for save immeadiately
-
-        :param text_data: A TextRowData object associated with a text
-        """
-        if not hasattr(self, '_model'):
-            return
-
-        if text_data:
-            self._model.queue_save(text_data)
-
-    def set_header_title_for_view(self, widget, title, position, total):
+    def _on_view_transposed(self, widget, title, position, total):
         """Sets the headerbar title for the item being viewed. Also set the
         subtitle, if multiple items selected
 
@@ -339,7 +236,7 @@ class DraftBaseList(Gtk.ListBox):
             subtitle = _("{} of {}".format(position, total))
         self.emit('text-title-changed', title, subtitle, True)
 
-    def set_escape_focus(self, widget):
+    def _on_escape_edit(self, widget):
         """Reveal the current visible text, select and focus it within the
         ListBox"""
         self.emit('reveal-requested')
@@ -637,6 +534,22 @@ class DraftTextList(DraftBaseList):
             else:
                 self.select_for_id(text_id)
 
+    def _on_items_changed(self, model, position, removed, added):
+        DraftBaseList.items_changed_base(self,
+                                         model,
+                                         position,
+                                         removed,
+                                         added)
+        if not added or not removed:
+            text_data = self._model.get_item(position)
+            if not text_data:
+                return
+
+            title = text_data.title
+            subtitle = text_data.subtitle
+            self.set_title_for_position(position, title)
+            self.set_subtitle_for_position(position, subtitle)
+
     def _connect_focus_based_styling(self, row):
         """For given row connect ``focus-in`` and ``focus-out`` handlers
 
@@ -761,23 +674,31 @@ class DraftTextList(DraftBaseList):
 
         :param text_ids: A list of valid text ids
         :param group: A valid group id to move the texts to"""
-        positions = [self._model.get_position_for_id(text_id) for text_id in text_ids]
-        items = [self._model.get_item(pos) for pos in positions if pos is not None]
-        self._model.set_parent_for_items(items, group)
+        for id in text_ids:
+            position = self._model.get_position_for_id(id)
+            if position is not None:
+                item = self._model.get_item(position)
+                item.parent_id = group
         self.emit('text-moved-to-group', group)
 
-    def set_title_for_selection(self, widget, title):
-        """Save title for selected row and update label"""
-        DraftBaseList.set_title_for_selection(self, widget, title)
-        row = self.get_selected_row()
+    def set_title_for_position(self, position, title):
+        """Update title label
+
+        :param position: Index position for which update is needed
+        :param title: Title string to be set for label
+        """
+        row = self.get_row_at_index(position)
         box = row.get_child().get_child()
         self._set_title_label(box, title)
         self.emit('text-title-changed', title, "", False)
 
-    def set_subtitle_for_selection(self, widget, subtitle):
-        """Save subtitle for selected row and update label"""
-        DraftBaseList.set_subtitle_for_selection(self, widget, subtitle)
-        row = self.get_selected_row()
+    def set_subtitle_for_position(self, position, subtitle):
+        """Update subtitle label
+
+        :param position: Index position for which update is needed
+        :param title: Subtitle string to be set for label
+        """
+        row = self.get_row_at_index(position)
         box = row.get_child().get_child()
         self._append_subtitle_label(box, subtitle)
 
@@ -797,7 +718,8 @@ class DraftTextList(DraftBaseList):
         selected_rows = self.get_selected_rows()
         for row in selected_rows:
             position = row.get_index()
-            self._model.restore_item_at_position(position)
+            item = self._model.get_item(position)
+            item.in_trash = False
 
         self.set_multi_selection_mode(False)
         self.emit('text-restored')
@@ -826,7 +748,8 @@ class DraftTextList(DraftBaseList):
             if permanent:
                 self._model.delete_item_at_postion_permanently(position)
             else:
-                self._model.delete_item_at_postion(position)
+                item = self._model.get_item(position)
+                item.in_trash = True
 
     def delete_all_rows_permanently(self):
         """Delete all rows in ListBox and permanently delete the associated
